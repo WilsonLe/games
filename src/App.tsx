@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   BadgeCheck,
   Bike,
@@ -20,11 +21,9 @@ import {
   Star,
   Store,
   Trees,
-  Utensils,
   Volume2,
   X,
 } from "lucide-react";
-import spriteSheetUrl from "./assets/conveyor-kitchen-sprite-sheet.png";
 import customerBenUrl from "./assets/sprites/customer-ben.png";
 import customerIvyUrl from "./assets/sprites/customer-ivy.png";
 import customerLeoUrl from "./assets/sprites/customer-leo.png";
@@ -40,6 +39,7 @@ import foodRiceUrl from "./assets/sprites/food-rice.png";
 import foodSaladUrl from "./assets/sprites/food-salad.png";
 import foodSoupUrl from "./assets/sprites/food-soup.png";
 import foodTeaUrl from "./assets/sprites/food-tea.png";
+import gameKitchenBgUrl from "./assets/game-kitchen-bg.png";
 import playerChefUrl from "./assets/player-chef.png";
 
 type FoodId = "rice" | "fish" | "chicken" | "egg" | "noodles" | "soup" | "salad" | "tea" | "bread";
@@ -53,6 +53,8 @@ type CustomerProfile = {
   id: "mai" | "leo" | "nora" | "ben" | "ivy" | "sam";
   name: string;
 };
+
+type GuestPhase = "entering" | "seated" | "leaving";
 
 type DifficultyProfile = {
   level: number;
@@ -76,6 +78,10 @@ type ActiveGuest = {
   createdAt: number;
   expiresAt: number;
   level: number;
+  seatIndex: number;
+  heardOrder: boolean;
+  phase: GuestPhase;
+  leavingAt?: number;
 };
 
 type ScheduledFood = {
@@ -100,15 +106,10 @@ type Feedback = {
   text: string;
 };
 
-type GameId = "kitchen" | "city";
 type GameStatus = "ready" | "playing" | "paused" | "ended";
 type SoundKind = "correct" | "complete" | "wrong";
 type AudioContextWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
-};
-
-type GameScreenProps = {
-  onGameChange: (game: GameId) => void;
 };
 
 type LocationId =
@@ -199,18 +200,64 @@ const customerSpriteById: Record<CustomerProfile["id"], string> = {
 };
 
 const TARGET_SERVES = 24;
-const MAX_MISSES = 5;
 const ORDERS_PER_LEVEL = 4;
 const MAX_LEVEL = Math.ceil(TARGET_SERVES / ORDERS_PER_LEVEL);
-const STREAK_BONUS_PER_HIT = 8;
+const HAPPY_GUEST_COMBO_BONUS = 15;
 const FIRST_DISH_DELAY_MS = 1800;
 const NEXT_GUEST_AFTER_COMPLETE_MS = 3_000;
+const LEAVING_GUEST_VISIBLE_MS = 2_200;
 const ORDER_LANES = 2;
-const CONVEYOR_KITCHEN_PATH = "/games/conveyor-kitchen";
+const GAME_TITLE = "Table Talk Diner";
+const GAME_PATH = "/games/table-talk-diner";
+const TINY_CITY_TITLE = "Tiny City Delivery";
 const TINY_CITY_PATH = "/games/tiny-city-delivery";
 const TARGET_CITY_DELIVERIES = 10;
 const MAX_CITY_MISTAKES = 5;
 const CITY_STREAK_BONUS = 12;
+
+const ORDER_TEMPLATES: Array<(items: string) => string> = [
+  (items) => `Could I please have ${items}?`,
+  (items) => `I'd like ${items}, please.`,
+  (items) => `May I order ${items}?`,
+  (items) => `Can I get ${items} for dinner?`,
+  (items) => `I'm hungry for ${items}.`,
+  (items) => `Please bring me ${items}.`,
+  (items) => `I'd love ${items} today.`,
+  (items) => `Do you have ${items}? I'd like that.`,
+  (items) => `For my meal, I want ${items}.`,
+  (items) => `Could you serve ${items}, please?`,
+];
+
+const GREETING_LINES = [
+  "Welcome in. What would you like for dinner?",
+  "Hi there. How can I help you today?",
+  "Good evening. What can I get started for you?",
+  "Hello. What are you having tonight?",
+  "Thanks for coming in. What do you need?",
+  "Welcome to the diner. What sounds good?",
+  "Hi. Are you ready to order?",
+  "Nice to see you. What would you like?",
+  "Good to have you here. What can I bring you?",
+  "Hello. What are you in the mood for?",
+];
+
+const HAPPY_GUEST_LINES = [
+  "That was perfect. Thank you.",
+  "Great service. I am happy.",
+  "Everything is right. Thanks.",
+  "Wonderful. That is exactly what I ordered.",
+  "Delicious. I will come back again.",
+  "Nice work. The meal was great.",
+];
+
+const SEAT_LAYOUT = [
+  { x: "23%", y: "58%", waiterX: "30%", waiterY: "66%", bubbleShift: "-34%" },
+  { x: "49%", y: "56%", waiterX: "54%", waiterY: "65%", bubbleShift: "-50%" },
+  { x: "74%", y: "58%", waiterX: "68%", waiterY: "66%", bubbleShift: "-66%" },
+  { x: "28%", y: "80%", waiterX: "34%", waiterY: "86%", bubbleShift: "-36%" },
+  { x: "55%", y: "82%", waiterX: "50%", waiterY: "87%", bubbleShift: "-50%" },
+  { x: "78%", y: "79%", waiterX: "72%", waiterY: "85%", bubbleShift: "-66%" },
+];
 
 const foodById = new Map(FOODS.map((food) => [food.id, food]));
 
@@ -415,20 +462,12 @@ function getCityItemLabel(item: DeliveryItem, quantity: number) {
   return `${quantity} ${item.pluralName}`;
 }
 
-function formatEarnedPoints(earned: number, streakBonus: number) {
-  return streakBonus > 0 ? `+${earned} streak +${streakBonus}` : `+${earned}`;
+function formatEarnedPoints(earned: number, comboBonus: number) {
+  return comboBonus > 0 ? `+${earned} happy guest combo +${comboBonus}` : `+${earned}`;
 }
 
 function formatCityEarnedPoints(earned: number, streakBonus: number) {
   return streakBonus > 0 ? `+${earned} route streak +${streakBonus}` : `+${earned}`;
-}
-
-function getInitialGameFromPath(): GameId {
-  return window.location.pathname.includes("tiny-city") ? "city" : "kitchen";
-}
-
-function getGamePath(game: GameId) {
-  return game === "city" ? TINY_CITY_PATH : CONVEYOR_KITCHEN_PATH;
 }
 
 function getNextCityMission(index: number) {
@@ -474,11 +513,16 @@ function selectFoods(sequence: number, count: number, level: number) {
   return foods;
 }
 
+function makeOrderPhrase(seed: number, foodNames: string[]) {
+  const template = ORDER_TEMPLATES[Math.abs(seed) % ORDER_TEMPLATES.length];
+  return template(formatList(foodNames));
+}
+
 function makeGuest(sequence: number, now: number, profile: DifficultyProfile) {
   const customer = CUSTOMERS[sequence % CUSTOMERS.length];
   const foods = selectFoods(sequence, profile.orderSize, profile.level);
   const foodNames = foods.map((foodId) => foodById.get(foodId)?.name ?? foodId);
-  const phrase = `Could I please have ${formatList(foodNames)}?`;
+  const phrase = makeOrderPhrase(sequence + Math.floor(now / 1000), foodNames);
   const instanceId = `guest-${sequence}-${now}`;
   const expiresAt = now + profile.timeToLastDishMs + profile.patienceBufferMs;
 
@@ -492,6 +536,9 @@ function makeGuest(sequence: number, now: number, profile: DifficultyProfile) {
     createdAt: now,
     expiresAt,
     level: profile.level,
+    seatIndex: sequence % SEAT_LAYOUT.length,
+    heardOrder: false,
+    phase: "entering",
   };
 
   const scheduledFoods: ScheduledFood[] = foods.map((foodId, index) => {
@@ -601,7 +648,13 @@ function FoodArt({ id }: { id: FoodId }) {
 function CustomerSprite({ customer, active }: { customer: CustomerProfile; active?: boolean }) {
   return (
     <span className={cx("customerSprite", `customerSprite--${customer.id}`, active && "customerSprite--active")} aria-hidden="true">
-      <img src={customerSpriteById[customer.id]} alt="" draggable="false" />
+      <span className="customerSprite__shadow" />
+      <span className="customerSprite__legs" />
+      <span className="customerSprite__body" />
+      <span className="customerSprite__arms" />
+      <span className="customerSprite__head">
+        <img src={customerSpriteById[customer.id]} alt="" draggable="false" />
+      </span>
     </span>
   );
 }
@@ -611,7 +664,7 @@ function StatPill({
   label,
   value,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string | number;
 }) {
@@ -624,135 +677,84 @@ function StatPill({
   );
 }
 
-function GameRail({
-  activeGame,
-  badgeLabel,
-  badgeValue,
-  onGameChange,
-}: {
-  activeGame: GameId;
-  badgeLabel: string;
-  badgeValue: string;
-  onGameChange: (game: GameId) => void;
-}) {
-  return (
-    <aside className="portalRail" aria-label="Game portal">
-      <div className="brandLockup">
-        <span className="brandMark">
-          <ChefHat size={24} />
-        </span>
-        <div>
-          <strong>Amsoft Games</strong>
-          <span>English Arcade</span>
-        </div>
-      </div>
-
-      <nav className="gameNav" aria-label="Games">
-        <button
-          className={cx("gameNavItem", activeGame === "kitchen" && "gameNavItem--active")}
-          type="button"
-          onClick={() => onGameChange("kitchen")}
-        >
-          <span className="gameNavIcon">
-            <Utensils size={20} />
-          </span>
-          <span>
-            <strong>Conveyor Kitchen</strong>
-            <small>Food order rush</small>
-          </span>
-        </button>
-
-        <button
-          className={cx("gameNavItem", activeGame === "city" && "gameNavItem--active")}
-          type="button"
-          onClick={() => onGameChange("city")}
-        >
-          <span className="gameNavIcon">
-            <MapPin size={20} />
-          </span>
-          <span>
-            <strong>Tiny City Delivery</strong>
-            <small>Preposition routes</small>
-          </span>
-        </button>
-      </nav>
-
-      <div className="learnerBadge">
-        <span>{badgeLabel}</span>
-        <strong>{badgeValue}</strong>
-      </div>
-    </aside>
-  );
-}
-
-function GuestCard({
+function GuestTable({
   guest,
   now,
   selected,
   onSelect,
-  onListen,
 }: {
   guest: ActiveGuest;
   now: number;
   selected: boolean;
   onSelect: () => void;
-  onListen: () => void;
 }) {
   const patienceRatio = clamp((guest.expiresAt - now) / (guest.expiresAt - guest.createdAt), 0, 1);
   const remainingMs = Math.max(0, guest.expiresAt - now);
+  const seat = SEAT_LAYOUT[guest.seatIndex % SEAT_LAYOUT.length];
+  const tableStyle = {
+    "--seat-x": seat.x,
+    "--seat-y": seat.y,
+    "--bubble-shift": seat.bubbleShift,
+  } as CSSProperties;
+  const showOrder = guest.heardOrder || selected;
 
   return (
-    <article className={cx("guestCard", selected && "guestCard--selected")} onClick={onSelect}>
-      <div className="guestCard__top">
-        <CustomerSprite active={selected} customer={guest.customer} />
-        <div>
-          <strong>{guest.customer.name}</strong>
-          <span>Order {guest.orderNumber}</span>
-        </div>
-        <button
-          className="iconButton iconButton--soft"
-          type="button"
-          aria-label={`Play ${guest.customer.name}'s order`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onListen();
-          }}
-        >
-          <Volume2 size={18} />
-        </button>
-      </div>
+    <button
+      className={cx(
+        "guestTable",
+        selected && "guestTable--selected",
+        !guest.heardOrder && "guestTable--unheard",
+        guest.phase === "entering" && "guestTable--entering",
+        guest.phase === "leaving" && "guestTable--leaving",
+      )}
+      disabled={guest.phase === "leaving"}
+      key={guest.instanceId}
+      style={tableStyle}
+      type="button"
+      onClick={onSelect}
+      aria-label={guest.heardOrder ? `${guest.customer.name} ordered ${formatList(guest.foods)}` : `Ask ${guest.customer.name} for an order`}
+    >
+      <span className="dinerChair dinerChair--top" aria-hidden="true" />
+      <span className="dinerChair dinerChair--right" aria-hidden="true" />
+      <span className="dinerChair dinerChair--bottom" aria-hidden="true" />
+      <span className="dinerChair dinerChair--left" aria-hidden="true" />
+      <span className="dinerTable" aria-hidden="true" />
+      <CustomerSprite customer={guest.customer} />
+      <span className="guestTable__name">{guest.customer.name}</span>
 
-      <p className="guestPhrase">{guest.phrase}</p>
+      <span className="guestSpeech">
+        <strong>{showOrder ? guest.phrase : "Tap to order"}</strong>
+        {showOrder && (
+          <span className="guestSpeech__foods" aria-label={`${guest.customer.name}'s requested food`}>
+            {guest.foods.map((foodId, index) => {
+              const servedCount = guest.servedFoods.filter((servedFoodId) => servedFoodId === foodId).length;
+              const requiredThroughThisChip = guest.foods
+                .slice(0, index + 1)
+                .filter((orderedFoodId) => orderedFoodId === foodId).length;
+              const served = servedCount >= requiredThroughThisChip;
+              const food = foodById.get(foodId);
 
-      <div className="foodChecklist" aria-label={`${guest.customer.name}'s requested food`}>
-        {guest.foods.map((foodId, index) => {
-          const servedCount = guest.servedFoods.filter((servedFoodId) => servedFoodId === foodId).length;
-          const requiredThroughThisChip = guest.foods.slice(0, index + 1).filter((orderedFoodId) => orderedFoodId === foodId).length;
-          const served = servedCount >= requiredThroughThisChip;
-          const food = foodById.get(foodId);
+              return (
+                <span className={cx("foodChip", served && "foodChip--served")} key={`${guest.instanceId}-bubble-${foodId}-${index}`}>
+                  <FoodArt id={foodId} />
+                  <span>{food?.name ?? foodId}</span>
+                  {served && <Check size={13} />}
+                </span>
+              );
+            })}
+          </span>
+        )}
+        <small>{guest.phase === "leaving" ? "Leaving happy" : `${formatTime(remainingMs)} patience`}</small>
+      </span>
 
-          return (
-            <span className={cx("foodChip", served && "foodChip--served")} key={`${guest.instanceId}-${foodId}-${index}`}>
-              <FoodArt id={foodId} />
-              <span>{food?.name ?? foodId}</span>
-              {served && <Check size={13} />}
-            </span>
-          );
-        })}
-      </div>
-
-      <div className="guestTimer">
+      <span className="guestTimer">
         <span style={{ width: `${patienceRatio * 100}%` }} />
-      </div>
-      <div className="guestMeta">
-        <span>Level {guest.level}</span>
-        <strong>{formatTime(remainingMs)}</strong>
-      </div>
-    </article>
+      </span>
+    </button>
   );
 }
 
-function ConveyorBelt({
+function KitchenStation({
   beltFoods,
   now,
   profile,
@@ -764,22 +766,21 @@ function ConveyorBelt({
   onSelectFood: (food: BeltFood) => void;
 }) {
   return (
-    <div className="conveyorPanel" aria-label="Running food conveyor">
-      <div className="beltHeader">
-        <div>
-          <p className="eyebrow">Conveyor</p>
-          <h2>Food Belt</h2>
-        </div>
-        <span>{formatTime(profile.beltTravelMs)} crossing</span>
+    <div className="kitchenStation" aria-label="Kitchen cooking station">
+      <div className="stoveBank" aria-hidden="true">
+        <span />
+        <span />
+        <span />
       </div>
-
-      <div className="conveyorBelt">
-        <div className="beltTrack beltTrack--top" />
-        <div className="beltTrack beltTrack--bottom" />
+      <div className="prepCounter" aria-hidden="true">
+        <span>Kitchen</span>
+      </div>
+      <div className="dishRail" aria-label="Kitchen pass dishes">
+        <span className="dishRail__label">{formatTime(profile.beltTravelMs)} pass</span>
 
         {beltFoods.map((food) => {
           const progress = clamp((now - food.spawnedAt) / food.travelMs, 0, 1);
-          const left = 104 - progress * 116;
+          const left = 6 + progress * 88;
           const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
 
           return (
@@ -803,66 +804,63 @@ function ConveyorBelt({
   );
 }
 
-function EnginePanel({
+function RestaurantStage({
+  guests,
+  now,
+  selectedGuest,
+  gameStatus,
+  beltFoods,
   profile,
-  activeGuestCount,
-  levelProgress,
-  streak,
+  onSelectGuest,
+  onSelectFood,
 }: {
+  guests: ActiveGuest[];
+  now: number;
+  selectedGuest: ActiveGuest | null;
+  gameStatus: GameStatus;
+  beltFoods: BeltFood[];
   profile: DifficultyProfile;
-  activeGuestCount: number;
-  levelProgress: number;
-  streak: number;
+  onSelectGuest: (guest: ActiveGuest) => void;
+  onSelectFood: (food: BeltFood) => void;
 }) {
-  const ordersUntilNextLevel = profile.level >= MAX_LEVEL ? 0 : ORDERS_PER_LEVEL - levelProgress;
-  const ordersUntilNextLevelText =
-    ordersUntilNextLevel === 0 ? "Max" : `${ordersUntilNextLevel} order${ordersUntilNextLevel === 1 ? "" : "s"}`;
-  const nextStreakBonus = streak * STREAK_BONUS_PER_HIT;
+  const selectedSeat =
+    selectedGuest && selectedGuest.phase !== "leaving"
+      ? SEAT_LAYOUT[selectedGuest.seatIndex % SEAT_LAYOUT.length]
+      : null;
+  const playerStyle = {
+    "--player-x": selectedSeat?.waiterX ?? "12%",
+    "--player-y": selectedSeat?.waiterY ?? "78%",
+  } as CSSProperties;
 
   return (
-    <aside className="enginePanel">
-      <div>
-        <p className="eyebrow">Generator</p>
-        <h2>Difficulty Engine</h2>
+    <section className="restaurantStage" aria-label="Top down restaurant floor">
+      <div className="floorTiles" aria-hidden="true" />
+      <div className="restaurantDoor" aria-hidden="true">
+        <span />
       </div>
+      <KitchenStation beltFoods={beltFoods} now={now} profile={profile} onSelectFood={onSelectFood} />
 
-      <div className="engineGrid">
-        <span>
-          <small>Level</small>
-          <strong>{profile.level}</strong>
-        </span>
-        <span>
-          <small>Next level</small>
-          <strong>{ordersUntilNextLevelText}</strong>
-        </span>
-        <span>
-          <small>Guests</small>
-          <strong>
-            {activeGuestCount}/{profile.maxGuests}
-          </strong>
-        </span>
-        <span>
-          <small>Order size</small>
-          <strong>{profile.orderSize} dishes</strong>
-        </span>
-        <span>
-          <small>Time to last dish</small>
-          <strong>{formatTime(profile.timeToLastDishMs)}</strong>
-        </span>
-        <span>
-          <small>Dish gap</small>
-          <strong>{formatTime(profile.dishGapMs)}</strong>
-        </span>
-        <span>
-          <small>Next streak bonus</small>
-          <strong>+{nextStreakBonus}</strong>
-        </span>
-      </div>
+      {guests.map((guest) => (
+        <GuestTable
+          guest={guest}
+          key={guest.instanceId}
+          now={now}
+          selected={selectedGuest?.instanceId === guest.instanceId}
+          onSelect={() => onSelectGuest(guest)}
+        />
+      ))}
 
-      <div className="assetPreview">
-        <img src={spriteSheetUrl} alt="Generated Conveyor Kitchen food and guest sprite sheet" />
+      {guests.length === 0 && (
+        <div className="emptyGuests">
+          <ChefHat size={24} />
+          <span>{gameStatus === "ended" ? "All guests served." : "Waiting for guests to be seated."}</span>
+        </div>
+      )}
+
+      <div className={cx("playerSprite", Boolean(selectedGuest) && "playerSprite--walking")} style={playerStyle} aria-hidden="true">
+        <img src={playerChefUrl} alt="" draggable="false" />
       </div>
-    </aside>
+    </section>
   );
 }
 
@@ -1046,7 +1044,7 @@ function CityMap({
   );
 }
 
-function TinyCityDeliveryGame({ onGameChange }: GameScreenProps) {
+function TinyCityDeliveryGame() {
   const [gameStatus, setGameStatus] = useState<GameStatus>("ready");
   const [missionIndex, setMissionIndex] = useState(0);
   const [currentLocationId, setCurrentLocationId] = useState<LocationId>("depot");
@@ -1302,8 +1300,6 @@ function TinyCityDeliveryGame({ onGameChange }: GameScreenProps) {
         <div className="sceneBackdrop__image sceneBackdrop__image--city" />
       </div>
 
-      <GameRail activeGame="city" badgeLabel="English routes" badgeValue="Map arcade" onGameChange={onGameChange} />
-
       <main className="mainSurface">
         <header className="topBar">
           <div>
@@ -1437,7 +1433,7 @@ function TinyCityDeliveryGame({ onGameChange }: GameScreenProps) {
   );
 }
 
-function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
+function RestaurantGame() {
   const [gameStatus, setGameStatus] = useState<GameStatus>("ready");
   const [now, setNow] = useState(Date.now());
   const [activeGuests, setActiveGuests] = useState<ActiveGuest[]>([]);
@@ -1446,30 +1442,27 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
   const [beltFoods, setBeltFoods] = useState<BeltFood[]>([]);
   const [score, setScore] = useState(0);
   const [served, setServed] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [misses, setMisses] = useState(0);
-  const [feedback, setFeedback] = useState<Feedback>({
+  const [combo, setCombo] = useState(0);
+  const [, setFeedback] = useState<Feedback>({
     kind: "neutral",
-    text: "Ready for the first conveyor shift.",
+    text: "Guests are arriving. Tap a guest to take an order.",
   });
 
   const guestSequenceRef = useRef(0);
   const foodSequenceRef = useRef(0);
   const nextGuestAtRef = useRef(Date.now());
   const nextDecoyAtRef = useRef(Date.now());
-  const pauseStartedRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const level = levelForServed(served);
-  const levelProgress = served % ORDERS_PER_LEVEL;
   const difficulty = useMemo(() => difficultyForLevel(level), [level]);
 
   const selectedGuest = useMemo(
-    () => activeGuests.find((guest) => guest.instanceId === selectedGuestId) ?? activeGuests[0] ?? null,
+    () => activeGuests.find((guest) => guest.instanceId === selectedGuestId && guest.phase !== "leaving") ?? null,
     [activeGuests, selectedGuestId],
   );
 
-  const livesLeft = Math.max(0, MAX_MISSES - misses);
+  const activeGuestCount = activeGuests.filter((guest) => guest.phase !== "leaving").length;
   const isShiftWon = served >= TARGET_SERVES;
 
   const playSound = useCallback((kind: SoundKind) => {
@@ -1511,9 +1504,7 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
 
     setActiveGuests((currentGuests) => [...currentGuests, guest]);
     setScheduledFoods((currentFoods) => [...currentFoods, ...guestFoods]);
-    setSelectedGuestId((currentSelected) => currentSelected ?? guest.instanceId);
-    setFeedback({ kind: "neutral", text: `${guest.customer.name}: ${guest.phrase}` });
-    speak(guest.phrase);
+    setFeedback({ kind: "neutral", text: `${guest.customer.name} walked in and took a table.` });
   }, []);
 
   const resetGame = useCallback(() => {
@@ -1526,93 +1517,39 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
     foodSequenceRef.current = 0;
     nextGuestAtRef.current = startTime + profile.guestIntervalMs;
     nextDecoyAtRef.current = startTime + 2_000;
-    pauseStartedRef.current = null;
 
     setNow(startTime);
     setActiveGuests([firstGuest.guest, secondGuest.guest]);
-    setSelectedGuestId(firstGuest.guest.instanceId);
+    setSelectedGuestId(null);
     setScheduledFoods([...firstGuest.scheduledFoods, ...secondGuest.scheduledFoods]);
     setBeltFoods([]);
     setScore(0);
     setServed(0);
-    setStreak(0);
-    setMisses(0);
-    setFeedback({ kind: "neutral", text: "Conveyor started." });
-    speak(firstGuest.guest.phrase);
+    setCombo(0);
+    setFeedback({ kind: "neutral", text: "Tap a guest, listen to the order, then serve dishes from the kitchen pass." });
     setGameStatus("playing");
   }, []);
 
-  const pauseGame = useCallback(() => {
-    pauseStartedRef.current = Date.now();
-    setGameStatus("paused");
-    setFeedback({ kind: "neutral", text: "Conveyor paused." });
-  }, []);
-
-  const resumeGame = useCallback(() => {
-    const pauseStarted = pauseStartedRef.current;
-    const pausedFor = pauseStarted ? Date.now() - pauseStarted : 0;
-    pauseStartedRef.current = null;
-
-    if (pausedFor > 0) {
-      setActiveGuests((currentGuests) =>
-        currentGuests.map((guest) => ({
-          ...guest,
-          createdAt: guest.createdAt + pausedFor,
-          expiresAt: guest.expiresAt + pausedFor,
-        })),
-      );
-      setScheduledFoods((currentFoods) =>
-        currentFoods.map((food) => ({
-          ...food,
-          dueAt: food.dueAt + pausedFor,
-        })),
-      );
-      setBeltFoods((currentFoods) =>
-        currentFoods.map((food) => ({
-          ...food,
-          spawnedAt: food.spawnedAt + pausedFor,
-        })),
-      );
-      nextGuestAtRef.current += pausedFor;
-      nextDecoyAtRef.current += pausedFor;
-    }
-
-    setNow(Date.now());
-    setGameStatus("playing");
-    setFeedback({ kind: "neutral", text: "Conveyor resumed." });
-  }, []);
-
-  const toggleGameStatus = useCallback(() => {
-    if (gameStatus === "ready" || gameStatus === "ended") {
-      resetGame();
-      return;
-    }
-
-    if (gameStatus === "playing") {
-      pauseGame();
-      return;
-    }
-
-    resumeGame();
-  }, [gameStatus, pauseGame, resetGame, resumeGame]);
-
-  const addMiss = useCallback((text: string) => {
-    setMisses((currentMisses) => {
-      const nextMisses = currentMisses + 1;
-
-      if (nextMisses >= MAX_MISSES) {
-        setGameStatus("ended");
-      }
-
-      return nextMisses;
-    });
-    setStreak(0);
+  const resetCombo = useCallback((text: string) => {
+    setCombo(0);
     setFeedback({ kind: "bad", text });
   }, []);
 
-  const listenToGuest = useCallback((guest: ActiveGuest) => {
-    const hasAudio = speak(guest.phrase);
+  const handleGuestSelect = useCallback((guest: ActiveGuest) => {
+    if (guest.phase === "leaving") {
+      return;
+    }
+
+    const greeting = GREETING_LINES[(guest.orderNumber + guest.level) % GREETING_LINES.length];
+    const hasAudio = speak(`${greeting} ${guest.phrase}`);
     setSelectedGuestId(guest.instanceId);
+    setActiveGuests((currentGuests) =>
+      currentGuests.map((currentGuest) =>
+        currentGuest.instanceId === guest.instanceId
+          ? { ...currentGuest, heardOrder: true, phase: "seated" }
+          : currentGuest,
+      ),
+    );
     setFeedback({
       kind: hasAudio ? "neutral" : "bad",
       text: hasAudio ? `${guest.customer.name}: ${guest.phrase}` : "Audio is not available in this browser.",
@@ -1622,63 +1559,75 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
   const handleFoodClick = useCallback(
     (food: BeltFood) => {
       if (gameStatus !== "playing") {
-        setFeedback({ kind: "neutral", text: "Start the conveyor first." });
+        setFeedback({ kind: "neutral", text: "The diner is getting ready." });
         return;
       }
 
       const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
       const owningGuest =
         food.targetGuestId &&
-        activeGuests.find((guest) => guest.instanceId === food.targetGuestId && needsFood(guest, food.foodId));
+        activeGuests.find(
+          (guest) => guest.phase !== "leaving" && guest.instanceId === food.targetGuestId && needsFood(guest, food.foodId),
+        );
       const preferredGuest =
-        selectedGuest && activeGuests.some((guest) => guest.instanceId === selectedGuest.instanceId)
+        selectedGuest && activeGuests.some((guest) => guest.phase !== "leaving" && guest.instanceId === selectedGuest.instanceId)
           ? selectedGuest
           : null;
       const matchingGuest =
-        owningGuest ||
-        (preferredGuest && needsFood(preferredGuest, food.foodId)
+        preferredGuest && needsFood(preferredGuest, food.foodId)
           ? preferredGuest
-          : activeGuests.find((guest) => needsFood(guest, food.foodId)));
+          : owningGuest || activeGuests.find((guest) => guest.phase !== "leaving" && needsFood(guest, food.foodId));
 
       setBeltFoods((currentFoods) => currentFoods.filter((currentFood) => currentFood.id !== food.id));
 
       if (!matchingGuest) {
         playSound("wrong");
         speak(`No one ordered ${foodName}.`, 1.02);
-        addMiss(`No guest needs ${foodName}.`);
+        resetCombo(`No guest needs ${foodName}.`);
         return;
       }
 
-      const nextStreak = streak + 1;
       const secondsLeft = Math.ceil((matchingGuest.expiresAt - Date.now()) / 1000);
       const timeBonus = Math.max(0, secondsLeft);
       const levelBonus = difficulty.level * 5;
-      const streakBonus = Math.max(0, nextStreak - 1) * STREAK_BONUS_PER_HIT;
-      const earned = 35 + timeBonus + levelBonus + streakBonus;
-      const earnedLabel = formatEarnedPoints(earned, streakBonus);
       const nextMatchingGuest: ActiveGuest = {
         ...matchingGuest,
+        heardOrder: true,
+        phase: "seated",
         servedFoods: [...matchingGuest.servedFoods, food.foodId],
       };
       const completedGuest = isGuestComplete(nextMatchingGuest) ? nextMatchingGuest : null;
-      const nextGuests = completedGuest
-        ? activeGuests.filter((guest) => guest.instanceId !== matchingGuest.instanceId)
-        : activeGuests.map((guest) =>
-            guest.instanceId === matchingGuest.instanceId ? nextMatchingGuest : guest,
-          );
+      const nextCombo = completedGuest ? combo + 1 : combo;
+      const comboBonus = completedGuest ? Math.max(0, nextCombo - 1) * HAPPY_GUEST_COMBO_BONUS : 0;
+      const earned = 35 + timeBonus + levelBonus + comboBonus;
+      const earnedLabel = formatEarnedPoints(earned, comboBonus);
+      const completedAt = Date.now();
+      const nextGuests: ActiveGuest[] = activeGuests.map((guest) =>
+        guest.instanceId === matchingGuest.instanceId
+          ? completedGuest
+            ? { ...nextMatchingGuest, phase: "leaving" as const, leavingAt: completedAt }
+            : nextMatchingGuest
+          : guest,
+      );
 
       setActiveGuests(nextGuests);
 
       setScore((currentScore) => currentScore + earned);
-      setStreak(nextStreak);
+      if (completedGuest) {
+        setCombo(nextCombo);
+      }
 
       if (completedGuest) {
         const nextServed = served + 1;
-        const completedAt = Date.now();
+        const happyLine = HAPPY_GUEST_LINES[(completedGuest.orderNumber + nextServed) % HAPPY_GUEST_LINES.length];
         setServed(nextServed);
         setScheduledFoods((currentFoods) =>
           currentFoods.filter((scheduledFood) => scheduledFood.targetGuestId !== completedGuest?.instanceId),
         );
+        setBeltFoods((currentFoods) =>
+          currentFoods.filter((currentFood) => currentFood.targetGuestId !== completedGuest?.instanceId),
+        );
+        setSelectedGuestId((currentSelected) => (currentSelected === completedGuest.instanceId ? null : currentSelected));
         if (nextGuestAtRef.current <= completedAt) {
           nextGuestAtRef.current = completedAt + NEXT_GUEST_AFTER_COMPLETE_MS;
         }
@@ -1686,16 +1635,11 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
           kind: "good",
           text:
             nextServed >= TARGET_SERVES
-              ? `Shift complete. ${earnedLabel}`
-              : `${completedGuest.customer.name}'s order is complete. ${earnedLabel}`,
+              ? `Dinner service complete. ${earnedLabel}`
+              : `${completedGuest.customer.name} leaves happy. ${earnedLabel}`,
         });
         playSound("complete");
-        speak(
-          nextServed >= TARGET_SERVES
-            ? "Shift complete. All orders served."
-            : `Thank you. ${completedGuest.customer.name}'s order is complete.`,
-          1,
-        );
+        speak(nextServed >= TARGET_SERVES ? "Dinner service complete. All guests are happy." : happyLine, 1);
 
         if (nextServed >= TARGET_SERVES) {
           setGameStatus("ended");
@@ -1706,7 +1650,7 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
         speak(`Served ${foodName}.`, 1.04);
       }
     },
-    [activeGuests, addMiss, difficulty.level, gameStatus, playSound, selectedGuest, served, streak],
+    [activeGuests, combo, difficulty.level, gameStatus, playSound, resetCombo, selectedGuest, served],
   );
 
   useEffect(() => {
@@ -1723,7 +1667,7 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
       return;
     }
 
-    if (activeGuests.length < difficulty.maxGuests && now >= nextGuestAtRef.current && served < TARGET_SERVES) {
+    if (activeGuestCount < difficulty.maxGuests && now >= nextGuestAtRef.current && served < TARGET_SERVES) {
       addGuest(now, difficulty);
       nextGuestAtRef.current = now + difficulty.guestIntervalMs;
     }
@@ -1740,7 +1684,7 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
         nextDecoyAtRef.current = now + difficulty.decoyIntervalMs;
       }
     }
-  }, [activeGuests.length, addGuest, beltFoods, difficulty, gameStatus, now, served]);
+  }, [activeGuestCount, addGuest, beltFoods, difficulty, gameStatus, now, served]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -1802,7 +1746,9 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
 
       const guestStillNeedsFood =
         food.targetGuestId &&
-        activeGuests.some((guest) => guest.instanceId === food.targetGuestId && needsFood(guest, food.foodId));
+        activeGuests.some(
+          (guest) => guest.phase !== "leaving" && guest.instanceId === food.targetGuestId && needsFood(guest, food.foodId),
+        );
 
       if (guestStillNeedsFood) {
         const recycleSequence = foodSequenceRef.current;
@@ -1847,13 +1793,19 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
       return;
     }
 
-    const expiredGuests = activeGuests.filter((guest) => guest.expiresAt <= now);
+    const expiredGuests = activeGuests.filter((guest) => guest.phase !== "leaving" && guest.expiresAt <= now);
 
     if (expiredGuests.length === 0) {
       return;
     }
 
-    setActiveGuests((currentGuests) => currentGuests.filter((guest) => guest.expiresAt > now));
+    setActiveGuests((currentGuests) =>
+      currentGuests.map((guest) =>
+        expiredGuests.some((expiredGuest) => expiredGuest.instanceId === guest.instanceId)
+          ? { ...guest, phase: "leaving", leavingAt: now }
+          : guest,
+      ),
+    );
     setScheduledFoods((currentFoods) =>
       currentFoods.filter((food) => !expiredGuests.some((guest) => guest.instanceId === food.targetGuestId)),
     );
@@ -1863,16 +1815,38 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
     setSelectedGuestId((currentSelected) =>
       expiredGuests.some((guest) => guest.instanceId === currentSelected) ? null : currentSelected,
     );
-    addMiss(`${expiredGuests[0].customer.name} left before the last dish.`);
-  }, [activeGuests, addMiss, gameStatus, now]);
+    playSound("wrong");
+    resetCombo(`${expiredGuests[0].customer.name} left before the last dish.`);
+  }, [activeGuests, gameStatus, now, playSound, resetCombo]);
 
   useEffect(() => {
-    if (selectedGuestId && activeGuests.some((guest) => guest.instanceId === selectedGuestId)) {
+    if (selectedGuestId && activeGuests.some((guest) => guest.instanceId === selectedGuestId && guest.phase !== "leaving")) {
       return;
     }
 
-    setSelectedGuestId(activeGuests[0]?.instanceId ?? null);
+    setSelectedGuestId(null);
   }, [activeGuests, selectedGuestId]);
+
+  useEffect(() => {
+    const leavingGuests = activeGuests.filter(
+      (guest) => guest.phase === "leaving" && guest.leavingAt && now - guest.leavingAt > LEAVING_GUEST_VISIBLE_MS,
+    );
+
+    if (leavingGuests.length === 0) {
+      return;
+    }
+
+    setActiveGuests((currentGuests) =>
+      currentGuests.filter(
+        (guest) =>
+          !leavingGuests.some((leavingGuest) => leavingGuest.instanceId === guest.instanceId),
+      ),
+    );
+  }, [activeGuests, now]);
+
+  useEffect(() => {
+    resetGame();
+  }, [resetGame]);
 
   useEffect(() => {
     return () => {
@@ -1887,99 +1861,30 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
         <div className="sceneBackdrop__image" />
       </div>
 
-      <div className="playerSprite" aria-hidden="true">
-        <img src={playerChefUrl} alt="" draggable="false" />
-      </div>
-
-      <GameRail activeGame="kitchen" badgeLabel="English orders" badgeValue="2D arcade" onGameChange={onGameChange} />
-
       <main className="mainSurface">
-        <header className="topBar">
-          <div>
-            <p className="eyebrow">Game portal</p>
-            <h1>Conveyor Kitchen</h1>
-          </div>
-
-          <div className="topActions">
-            <button className="primaryButton" type="button" onClick={toggleGameStatus}>
-              {gameStatus === "playing" ? <Pause size={18} /> : <Play size={18} />}
-              <span>
-                {gameStatus === "ready"
-                  ? "Start Shift"
-                  : gameStatus === "playing"
-                    ? "Pause"
-                    : gameStatus === "paused"
-                      ? "Resume"
-                      : "New Shift"}
-              </span>
-            </button>
-            <button className="iconButton" type="button" onClick={resetGame} aria-label="Reset shift">
-              <RotateCcw size={18} />
-            </button>
-          </div>
-        </header>
-
-        <section className="scoreStrip" aria-label="Shift stats">
+        <section className="gameHud" aria-label="Dinner service stats">
           <StatPill icon={<Star size={17} />} label="Score" value={score} />
-          <StatPill icon={<BadgeCheck size={17} />} label="Orders" value={`${served}/${TARGET_SERVES}`} />
-          <StatPill icon={<Flame size={17} />} label="Streak" value={streak} />
-          <StatPill icon={<X size={17} />} label="Lives" value={livesLeft} />
+          <StatPill icon={<Check size={17} />} label="Orders" value={`${served}/${TARGET_SERVES}`} />
           <StatPill icon={<Gauge size={17} />} label="Level" value={difficulty.level} />
         </section>
 
         {gameStatus === "ended" && (
           <section className={cx("resultBanner", isShiftWon ? "resultBanner--win" : "resultBanner--lost")}>
-            <strong>{isShiftWon ? "Shift complete" : "Kitchen closed"}</strong>
-            <span>{isShiftWon ? "All target orders were served." : "Too many guests left unhappy."}</span>
+            <strong>{isShiftWon ? "Dinner service complete" : "Service closed"}</strong>
+            <span>{isShiftWon ? "All target orders were served." : "The dining room has stopped seating guests."}</span>
           </section>
         )}
 
         <section className="gameGrid">
-          <section className="guestColumn">
-            <div className="sectionHeader">
-              <div>
-                <p className="eyebrow">Guest orders</p>
-                <h2>Active Guests</h2>
-              </div>
-              <span>
-                {activeGuests.length}/{difficulty.maxGuests}
-              </span>
-            </div>
-
-            <div className="guestStack">
-              {activeGuests.map((guest) => (
-                <GuestCard
-                  guest={guest}
-                  key={guest.instanceId}
-                  now={now}
-                  selected={selectedGuest?.instanceId === guest.instanceId}
-                  onListen={() => listenToGuest(guest)}
-                  onSelect={() => setSelectedGuestId(guest.instanceId)}
-                />
-              ))}
-
-              {activeGuests.length === 0 && (
-                <div className="emptyGuests">
-                  <ChefHat size={24} />
-                  <span>{gameStatus === "ready" ? "Shift not started." : "Waiting for guests."}</span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="beltColumn">
-            <ConveyorBelt beltFoods={beltFoods} now={now} profile={difficulty} onSelectFood={handleFoodClick} />
-
-            <div className={cx("feedbackBar", `feedbackBar--${feedback.kind}`)} role="status">
-              {feedback.text}
-            </div>
-          </section>
-
-          <EnginePanel
-            activeGuestCount={activeGuests.length}
-            levelProgress={levelProgress}
+          <RestaurantStage
+            beltFoods={beltFoods}
+            gameStatus={gameStatus}
+            guests={activeGuests}
+            now={now}
             profile={difficulty}
-            streak={streak}
+            selectedGuest={selectedGuest}
+            onSelectFood={handleFoodClick}
+            onSelectGuest={handleGuestSelect}
           />
         </section>
       </main>
@@ -1987,25 +1892,82 @@ function ConveyorKitchenGame({ onGameChange }: GameScreenProps) {
   );
 }
 
+function GamePortal() {
+  return (
+    <main className="portalShell">
+      <div className="portalBackdrop" aria-hidden="true" />
+      <section className="portalDashboard" aria-label="Game selection">
+        <div className="portalHeader">
+          <div className="portalMark">
+            <ChefHat size={30} />
+          </div>
+          <div>
+            <p className="eyebrow">Game portal</p>
+            <h1>Amsoft Games</h1>
+          </div>
+        </div>
+
+        <div className="portalGames">
+          <a className="gameTile" href={GAME_PATH}>
+            <span className="gameTile__thumb">
+              <img src={gameKitchenBgUrl} alt="" draggable="false" />
+              <span className="gameTile__sprites" aria-hidden="true">
+                <img src={playerChefUrl} alt="" draggable="false" />
+                <img src={customerMaiUrl} alt="" draggable="false" />
+                <FoodArt id="fish" />
+              </span>
+            </span>
+            <span className="gameTile__body">
+              <span className="gameTile__title">{GAME_TITLE}</span>
+              <span className="gameTile__meta">Restaurant simulator for English food orders</span>
+              <span className="gameTile__cta">
+                <Play size={18} />
+                Play
+              </span>
+            </span>
+          </a>
+
+          <a className="gameTile gameTile--city" href={TINY_CITY_PATH}>
+            <span className="gameTile__thumb gameTile__thumb--city">
+              <span className="gameTile__cityPreview" aria-hidden="true">
+                <span className="cityPreviewRoad cityPreviewRoad--one" />
+                <span className="cityPreviewRoad cityPreviewRoad--two" />
+                <span className="cityPreviewRiver" />
+                <span className="cityPreviewStop cityPreviewStop--bakery">Bakery</span>
+                <span className="cityPreviewStop cityPreviewStop--school">School</span>
+                <span className="cityPreviewStop cityPreviewStop--house">Red House</span>
+                <span className="cityPreviewBike">
+                  <Bike size={34} />
+                </span>
+              </span>
+            </span>
+            <span className="gameTile__body">
+              <span className="gameTile__title">{TINY_CITY_TITLE}</span>
+              <span className="gameTile__meta">Delivery simulator for prepositions, directions, and quantities</span>
+              <span className="gameTile__cta">
+                <Play size={18} />
+                Play
+              </span>
+            </span>
+          </a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function App() {
-  const [activeGame, setActiveGame] = useState<GameId>(getInitialGameFromPath);
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
 
-  const handleGameChange = useCallback((game: GameId) => {
-    setActiveGame(game);
-    window.history.pushState({}, "", getGamePath(game));
-  }, []);
-
-  useEffect(() => {
-    const handlePopState = () => setActiveGame(getInitialGameFromPath());
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  if (activeGame === "city") {
-    return <TinyCityDeliveryGame onGameChange={handleGameChange} />;
+  if (path === GAME_PATH) {
+    return <RestaurantGame />;
   }
 
-  return <ConveyorKitchenGame onGameChange={handleGameChange} />;
+  if (path === TINY_CITY_PATH) {
+    return <TinyCityDeliveryGame />;
+  }
+
+  return <GamePortal />;
 }
 
 export default App;
