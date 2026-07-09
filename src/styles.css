@@ -716,6 +716,398 @@ h2 {
   border-radius: 6px;
 }
 
+.sceneBackdrop__image--city {
+  filter: saturate(0.92) brightness(0.76) hue-rotate(18deg);
+}
+
+.cityGameGrid {
+  grid-template-columns: minmax(300px, 0.7fr) minmax(560px, 1.35fr) minmax(250px, 0.56fr);
+}
+
+.cityMissionColumn,
+.cityMapPanel,
+.cityWordPanel {
+  min-width: 0;
+}
+
+.deliveryTicket {
+  display: grid;
+  gap: 13px;
+  padding: 14px;
+  background: rgba(255, 253, 248, 0.96);
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.28), 0 18px 28px rgba(23, 49, 45, 0.2);
+}
+
+.deliveryTicket__cargo {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.deliveryTicket__cargo strong,
+.deliveryTicket__cargo span {
+  display: block;
+}
+
+.deliveryTicket__cargo strong {
+  color: var(--ink);
+  font-size: 1.06rem;
+}
+
+.deliveryTicket__cargo span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 820;
+}
+
+.cityCargoArt {
+  position: relative;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  color: #17312d;
+  background: #fff7d8;
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 6px 0 rgba(23, 49, 45, 0.26);
+}
+
+.cityCargoArt .foodArt {
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+}
+
+.cityCargoArt > strong {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  display: grid;
+  min-width: 25px;
+  height: 25px;
+  place-items: center;
+  color: #fff7d8;
+  font-size: 0.82rem;
+  background: #ce5143;
+  border: 2px solid #17312d;
+  border-radius: 999px;
+}
+
+.cityOrderPhrase {
+  min-height: 86px;
+  background: #eef8fb;
+  border-color: rgba(45, 111, 168, 0.26);
+}
+
+.deliverySteps {
+  display: grid;
+  gap: 8px;
+}
+
+.deliverySteps span {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  min-height: 36px;
+  gap: 8px;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 850;
+  background: #ffffff;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+}
+
+.deliverySteps .deliveryStep--done {
+  color: #0e573a;
+  background: #e5f6ed;
+  border-color: rgba(22, 116, 81, 0.28);
+}
+
+.cityMapPanel {
+  background: rgba(255, 253, 248, 0.96);
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.28), 0 18px 28px rgba(23, 49, 45, 0.2);
+  overflow: hidden;
+}
+
+.cityMap {
+  position: relative;
+  min-height: 642px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.26) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(180deg, #dff0c9 0%, #c8e6b7 52%, #b8ddaa 100%);
+  background-size: 76px 76px, 76px 76px, auto;
+}
+
+.cityMap::before,
+.cityMap::after {
+  position: absolute;
+  z-index: 1;
+  content: "";
+  pointer-events: none;
+}
+
+.cityMap::before {
+  inset: 10px;
+  border: 3px solid rgba(23, 49, 45, 0.16);
+  border-radius: 8px;
+}
+
+.cityMap::after {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 28%;
+  background: rgba(216, 171, 90, 0.14);
+}
+
+.cityRiver {
+  position: absolute;
+  top: -10%;
+  left: 66%;
+  z-index: 1;
+  width: 86px;
+  height: 122%;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0 16px, transparent 16px 36px),
+    linear-gradient(180deg, #75c8df, #3d91bd);
+  border-right: 3px solid rgba(23, 49, 45, 0.22);
+  border-left: 3px solid rgba(23, 49, 45, 0.22);
+  box-shadow: inset 12px 0 0 rgba(255, 255, 255, 0.14), inset -10px 0 0 rgba(23, 49, 45, 0.1);
+  transform: rotate(5deg);
+}
+
+.cityRiver--lower {
+  top: 52%;
+  left: 63%;
+  height: 64%;
+  transform: rotate(-18deg);
+}
+
+.cityRoad {
+  position: absolute;
+  z-index: 2;
+  height: 18px;
+  background: #d7a95d;
+  border: 3px solid rgba(23, 49, 45, 0.72);
+  border-radius: 999px;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.22), 0 6px 0 rgba(23, 49, 45, 0.12);
+  transform-origin: left center;
+}
+
+.cityRoad--used {
+  background: #f1b83f;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.32), 0 0 0 5px rgba(241, 184, 63, 0.18);
+}
+
+.routeDot {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 4;
+  width: 14px;
+  height: 14px;
+  background: #fff7d8;
+  border: 3px solid #17312d;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 rgba(23, 49, 45, 0.24);
+  transform: translate(-50%, -50%);
+}
+
+.cityLocation {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 5;
+  display: grid;
+  width: clamp(76px, 7.4vw, 102px);
+  min-height: 70px;
+  place-items: center;
+  gap: 4px;
+  padding: 8px;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.28), 0 14px 22px rgba(23, 49, 45, 0.16);
+  transform: translate(-50%, -50%);
+  transition:
+    transform 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.cityLocation:hover {
+  transform: translate(-50%, calc(-50% - 2px));
+}
+
+.cityLocation:active {
+  transform: translate(-50%, calc(-50% + 1px)) scale(0.98);
+}
+
+.cityLocation__icon {
+  display: grid;
+  width: 34px;
+  height: 30px;
+  place-items: center;
+  color: #fff7d8;
+  background: #17312d;
+  border-radius: 8px;
+}
+
+.cityLocation strong {
+  max-width: 82px;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.cityLocation--shop {
+  background: #fff3c6;
+}
+
+.cityLocation--house {
+  background: #ffe5dc;
+}
+
+.cityLocation--school {
+  background: #e4f0ff;
+}
+
+.cityLocation--park {
+  background: #e2f6d8;
+}
+
+.cityLocation--bridge {
+  color: #fff7d8;
+  background: #5c7182;
+}
+
+.cityLocation--library,
+.cityLocation--post {
+  background: #edf8f2;
+}
+
+.cityLocation--current {
+  border-color: #f1b83f;
+  box-shadow: 0 8px 0 rgba(155, 106, 31, 0.72), 0 0 0 6px rgba(241, 184, 63, 0.22);
+}
+
+.cityLocation--pickup {
+  animation: cityPulse 1.25s ease-in-out infinite;
+}
+
+.cityLocation--dropoff {
+  border-color: #2d6fa8;
+}
+
+.cityLocation--required {
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.28), 0 0 0 6px rgba(45, 111, 168, 0.18);
+}
+
+.cityLocation--delivered {
+  animation: deliveryPop 520ms ease both;
+}
+
+.cityCourier {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 9;
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  color: #17312d;
+  background: #f1b83f;
+  border: 3px solid #17312d;
+  border-radius: 999px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.3), 0 16px 24px rgba(23, 49, 45, 0.18);
+  transform: translate(-50%, -112%);
+  transition:
+    left 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    top 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: courierBob 880ms steps(2, end) infinite;
+}
+
+.cityCourier--loaded {
+  background: #fff7d8;
+}
+
+.cityCourier .lucide-package {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  color: #ce5143;
+  background: #fffdf8;
+  border: 2px solid #17312d;
+  border-radius: 5px;
+}
+
+.cityWordBadge {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 8;
+  max-width: 178px;
+  padding: 7px 9px;
+  color: #17312d;
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1.12;
+  text-align: center;
+  background: #fffdf8;
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 6px 0 rgba(23, 49, 45, 0.28);
+  transform: translate(-50%, -118%);
+  pointer-events: none;
+}
+
+.cityWordBadge--bridge {
+  color: #fff7d8;
+  background: #2d6fa8;
+  transform: translate(-50%, 50%);
+}
+
+.cityWordPanel {
+  align-content: start;
+}
+
+.wordChipGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wordChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  color: #17312d;
+  font-size: 0.82rem;
+  font-weight: 900;
+  background: #fff7d8;
+  border: 2px solid #17312d;
+  border-radius: 8px;
+}
+
+.cityFacts strong {
+  overflow-wrap: anywhere;
+}
+
 .customerSprite {
   --skin: #c88b67;
   --hair: #493126;
@@ -1133,16 +1525,54 @@ h2 {
   }
 }
 
+@keyframes cityPulse {
+  0%,
+  100% {
+    box-shadow: 0 8px 0 rgba(23, 49, 45, 0.28), 0 0 0 0 rgba(241, 184, 63, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 8px 0 rgba(23, 49, 45, 0.28), 0 0 0 8px rgba(241, 184, 63, 0.2);
+  }
+}
+
+@keyframes deliveryPop {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  45% {
+    transform: translate(-50%, -50%) scale(1.1) rotate(-2deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes courierBob {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+
+  50% {
+    margin-top: -5px;
+  }
+}
+
 @media (max-width: 1360px) {
   .appShell {
     min-height: 100vh;
   }
 
-  .gameGrid {
+  .gameGrid,
+  .cityGameGrid {
     grid-template-columns: minmax(300px, 0.85fr) minmax(480px, 1.35fr);
   }
 
-  .enginePanel {
+  .enginePanel,
+  .cityWordPanel {
     grid-column: 1 / -1;
   }
 
@@ -1192,6 +1622,14 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .cityGameGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cityMap {
+    min-height: 600px;
+  }
+
   .engineGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1219,6 +1657,36 @@ h2 {
   .scoreStrip,
   .engineGrid {
     grid-template-columns: 1fr;
+  }
+
+  .cityMap {
+    min-height: 530px;
+  }
+
+  .cityLocation {
+    width: 68px;
+    min-height: 62px;
+    padding: 6px;
+  }
+
+  .cityLocation__icon {
+    width: 28px;
+    height: 26px;
+  }
+
+  .cityLocation strong {
+    font-size: 0.66rem;
+  }
+
+  .cityCourier {
+    width: 46px;
+    height: 46px;
+    transform: translate(-50%, -120%);
+  }
+
+  .cityWordBadge {
+    max-width: 132px;
+    font-size: 0.66rem;
   }
 
   .conveyorBelt {
