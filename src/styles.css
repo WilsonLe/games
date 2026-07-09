@@ -1,6 +1,6 @@
 :root {
   color: #172f2b;
-  background: #eef4f2;
+  background: #172f2b;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -17,21 +17,30 @@
   --red: #ce5143;
   --coral: #f07d5f;
   --steel: #5c7182;
-  --shadow: 0 18px 42px rgba(19, 49, 45, 0.13);
+  --panel-shadow: 0 12px 0 rgba(23, 49, 45, 0.28), 0 22px 38px rgba(23, 49, 45, 0.25);
+  --game-cursor: url("./assets/game-cursor.svg") 7 6, auto;
 }
 
 * {
   box-sizing: border-box;
+  cursor: var(--game-cursor);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
+  background: #172f2b;
 }
 
 button {
   font: inherit;
+}
+
+button,
+[role="button"] {
+  cursor: var(--game-cursor);
 }
 
 #root {
@@ -39,24 +48,76 @@ button {
 }
 
 .appShell {
-  display: grid;
-  grid-template-columns: 272px minmax(0, 1fr);
+  position: relative;
+  display: block;
   min-height: 100vh;
-  background:
-    linear-gradient(90deg, rgba(22, 116, 81, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(45, 111, 168, 0.07) 1px, transparent 1px),
-    #eef4f2;
-  background-size: 32px 32px;
+  overflow: hidden;
+  color: var(--ink);
+  isolation: isolate;
+  background: #172f2b;
+}
+
+.sceneBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+  background: #172f2b;
+}
+
+.sceneBackdrop__image {
+  position: absolute;
+  inset: -3vh -3vw;
+  background-image: url("./assets/game-kitchen-bg.png");
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: scale(1.04);
+  transform-origin: center bottom;
+  animation: kitchenScenePan 12s ease-in-out infinite alternate;
+}
+
+.playerSprite {
+  position: fixed;
+  bottom: clamp(18px, 4vh, 46px);
+  left: clamp(12px, 2.8vw, 44px);
+  z-index: 4;
+  width: clamp(92px, 11vw, 168px);
+  pointer-events: none;
+  filter: drop-shadow(0 14px 0 rgba(23, 49, 45, 0.18)) drop-shadow(0 22px 18px rgba(23, 49, 45, 0.34));
+  transform-origin: center bottom;
+  animation: playerIdleBob 920ms steps(2, end) infinite;
+}
+
+.playerSprite img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.appShell--playing .playerSprite {
+  animation-duration: 680ms;
 }
 
 .portalRail {
+  position: relative;
+  z-index: 3;
   display: flex;
-  flex-direction: column;
-  gap: 28px;
-  padding: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+  width: min(1180px, calc(100% - 32px));
+  gap: 14px;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin: 14px auto 0;
   color: #f8fbf8;
-  background: #103c34;
-  border-right: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(16, 60, 52, 0.9);
+  border: 3px solid #f1b83f;
+  border-radius: 8px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.46), 0 18px 28px rgba(23, 49, 45, 0.24);
 }
 
 .brandLockup,
@@ -113,19 +174,19 @@ button {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 8px;
-  cursor: pointer;
+  cursor: var(--game-cursor);
 }
 
 .gameNavItem--active {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(241, 184, 63, 0.18);
+  border-color: rgba(241, 184, 63, 0.62);
 }
 
 .learnerBadge {
   justify-content: space-between;
   gap: 12px;
   padding: 14px;
-  margin-top: auto;
+  margin-top: 0;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
@@ -137,9 +198,11 @@ button {
 }
 
 .mainSurface {
+  position: relative;
+  z-index: 2;
   width: 100%;
-  max-width: 1540px;
-  padding: 28px;
+  max-width: 1430px;
+  padding: 18px 24px 32px;
   margin: 0 auto;
 }
 
@@ -148,6 +211,12 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+  padding: 14px 16px;
+  color: #fff7d8;
+  background: rgba(23, 49, 45, 0.88);
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: var(--panel-shadow);
 }
 
 .eyebrow {
@@ -167,7 +236,9 @@ h2 {
 }
 
 h1 {
+  color: #fff7d8;
   font-size: 2rem;
+  text-shadow: 0 3px 0 #17312d;
 }
 
 h2 {
@@ -188,10 +259,10 @@ h2 {
   gap: 8px;
   min-height: 40px;
   color: var(--ink);
-  background: #ffffff;
-  border: 1px solid var(--line);
+  background: #fff7d8;
+  border: 3px solid #17312d;
   border-radius: 8px;
-  cursor: pointer;
+  cursor: var(--game-cursor);
   transition:
     transform 150ms ease,
     border-color 150ms ease,
@@ -201,10 +272,11 @@ h2 {
 
 .primaryButton {
   padding: 0 16px;
-  color: #ffffff;
+  color: #17312d;
   font-weight: 850;
-  background: var(--green);
-  border-color: var(--green);
+  background: #f1b83f;
+  border-color: #17312d;
+  box-shadow: 0 6px 0 #9b6a1f;
 }
 
 .iconButton {
@@ -237,7 +309,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(5, minmax(130px, 1fr));
   gap: 12px;
-  margin: 24px 0;
+  margin: 18px 0;
 }
 
 .statPill {
@@ -247,9 +319,10 @@ h2 {
   min-height: 52px;
   gap: 9px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid var(--line);
+  background: rgba(255, 253, 248, 0.94);
+  border: 3px solid #17312d;
   border-radius: 8px;
+  box-shadow: 0 6px 0 rgba(23, 49, 45, 0.34);
 }
 
 .statPill span {
@@ -294,6 +367,11 @@ h2 {
   grid-template-columns: minmax(310px, 0.78fr) minmax(520px, 1.45fr) minmax(250px, 0.62fr);
   gap: 18px;
   align-items: start;
+  padding: 14px;
+  background: rgba(255, 247, 216, 0.24);
+  border: 3px solid rgba(23, 49, 45, 0.74);
+  border-radius: 8px;
+  box-shadow: 0 12px 0 rgba(23, 49, 45, 0.24), 0 26px 42px rgba(23, 49, 45, 0.24);
 }
 
 .guestColumn,
@@ -329,10 +407,10 @@ h2 {
 .conveyorPanel,
 .enginePanel,
 .feedbackBar {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: rgba(255, 253, 248, 0.96);
+  border: 3px solid #17312d;
   border-radius: 8px;
-  box-shadow: 0 10px 26px rgba(19, 49, 45, 0.07);
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.28), 0 18px 28px rgba(23, 49, 45, 0.2);
 }
 
 .guestCard {
@@ -340,7 +418,7 @@ h2 {
   gap: 12px;
   min-height: 212px;
   padding: 14px;
-  cursor: pointer;
+  cursor: var(--game-cursor);
   transition:
     transform 150ms ease,
     border-color 150ms ease,
@@ -350,9 +428,9 @@ h2 {
 }
 
 .guestCard--selected {
-  background: #ffffff;
-  border-color: rgba(45, 111, 168, 0.68);
-  box-shadow: 0 0 0 3px rgba(45, 111, 168, 0.12), var(--shadow);
+  background: #fff7d8;
+  border-color: #f1b83f;
+  box-shadow: 0 8px 0 rgba(155, 106, 31, 0.72), 0 18px 30px rgba(23, 49, 45, 0.22);
 }
 
 .guestCard__top {
@@ -383,7 +461,7 @@ h2 {
   font-weight: 800;
   line-height: 1.35;
   background: #edf8f2;
-  border: 1px solid rgba(22, 116, 81, 0.12);
+  border: 2px solid rgba(22, 116, 81, 0.26);
   border-radius: 8px;
   overflow-wrap: anywhere;
 }
@@ -404,7 +482,7 @@ h2 {
   font-size: 0.83rem;
   font-weight: 850;
   background: #ffffff;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: 8px;
 }
 
@@ -436,7 +514,7 @@ h2 {
 .guestTimer span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--green), var(--yellow), var(--red));
+  background: var(--yellow);
   border-radius: inherit;
   transition: width 180ms linear;
 }
@@ -472,12 +550,8 @@ h2 {
   position: relative;
   min-height: 482px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(232, 239, 235, 0.65)),
-    linear-gradient(90deg, rgba(23, 49, 45, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(23, 49, 45, 0.06) 1px, transparent 1px);
-  background-size: auto, 30px 30px, 30px 30px;
-  border: 1px solid rgba(23, 49, 45, 0.08);
+  background: rgba(238, 246, 239, 0.9);
+  border: 3px solid #17312d;
   border-radius: 8px;
 }
 
@@ -534,10 +608,10 @@ h2 {
   padding: 8px;
   color: var(--ink);
   background: #fffdf8;
-  border: 2px solid rgba(23, 49, 45, 0.12);
+  border: 3px solid rgba(23, 49, 45, 0.76);
   border-radius: 8px;
   box-shadow: 0 14px 24px rgba(23, 49, 45, 0.16);
-  cursor: pointer;
+  cursor: var(--game-cursor);
   transform: translateX(-50%);
   transition:
     transform 120ms ease,
@@ -613,7 +687,7 @@ h2 {
   gap: 3px;
   padding: 11px;
   background: #ffffff;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: 8px;
 }
 
@@ -1038,9 +1112,30 @@ h2 {
   }
 }
 
+@keyframes kitchenScenePan {
+  from {
+    transform: translate3d(-8px, 0, 0) scale(1.04);
+  }
+
+  to {
+    transform: translate3d(8px, -6px, 0) scale(1.055);
+  }
+}
+
+@keyframes playerIdleBob {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+
+  50% {
+    transform: translateY(-10px) scaleX(0.985);
+  }
+}
+
 @media (max-width: 1360px) {
   .appShell {
-    grid-template-columns: 228px minmax(0, 1fr);
+    min-height: 100vh;
   }
 
   .gameGrid {
@@ -1058,11 +1153,17 @@ h2 {
 
 @media (max-width: 980px) {
   .appShell {
-    grid-template-columns: 1fr;
+    min-height: 100vh;
+  }
+
+  .playerSprite {
+    width: clamp(82px, 20vw, 132px);
+    bottom: 16px;
+    left: 10px;
   }
 
   .portalRail {
-    display: grid;
+    display: flex;
     grid-template-columns: 1fr;
     gap: 14px;
     padding: 16px;
@@ -1097,6 +1198,24 @@ h2 {
 }
 
 @media (max-width: 560px) {
+  .sceneBackdrop__image {
+    inset: -2vh -42vw;
+    background-position: center bottom;
+  }
+
+  .portalRail,
+  .mainSurface {
+    width: calc(100% - 20px);
+  }
+
+  .mainSurface {
+    padding: 12px 0 22px;
+  }
+
+  .topBar {
+    padding: 12px;
+  }
+
   .scoreStrip,
   .engineGrid {
     grid-template-columns: 1fr;

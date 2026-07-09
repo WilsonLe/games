@@ -30,6 +30,7 @@ import foodRiceUrl from "./assets/sprites/food-rice.png";
 import foodSaladUrl from "./assets/sprites/food-salad.png";
 import foodSoupUrl from "./assets/sprites/food-soup.png";
 import foodTeaUrl from "./assets/sprites/food-tea.png";
+import playerChefUrl from "./assets/player-chef.png";
 
 type FoodId = "rice" | "fish" | "chicken" | "egg" | "noodles" | "soup" | "salad" | "tea" | "bread";
 
@@ -991,7 +992,15 @@ function App() {
   }, []);
 
   return (
-    <div className="appShell">
+    <div className={cx("appShell", gameStatus === "playing" && "appShell--playing")}>
+      <div className="sceneBackdrop" aria-hidden="true">
+        <div className="sceneBackdrop__image" />
+      </div>
+
+      <div className="playerSprite" aria-hidden="true">
+        <img src={playerChefUrl} alt="" draggable="false" />
+      </div>
+
       <aside className="portalRail" aria-label="Game portal">
         <div className="brandLockup">
           <span className="brandMark">
