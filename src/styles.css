@@ -19,6 +19,13 @@
   --steel: #5c7182;
   --panel-shadow: 0 12px 0 rgba(23, 49, 45, 0.28), 0 22px 38px rgba(23, 49, 45, 0.25);
   --game-cursor: url("./assets/game-cursor.svg") 7 6, auto;
+  --viewport-height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --viewport-height: 100dvh;
+  }
 }
 
 * {
@@ -26,12 +33,18 @@
   cursor: var(--game-cursor);
 }
 
+html {
+  min-height: 100%;
+  background: #172f2b;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: var(--viewport-height);
   overflow-x: hidden;
   background: #172f2b;
+  touch-action: manipulation;
 }
 
 button {
@@ -44,13 +57,14 @@ button,
 }
 
 #root {
-  min-height: 100vh;
+  min-height: var(--viewport-height);
 }
 
 .portalShell {
   position: relative;
-  min-height: 100vh;
-  overflow: hidden;
+  min-height: var(--viewport-height);
+  overflow-x: hidden;
+  overflow-y: auto;
   isolation: isolate;
   color: #fff7d8;
   background: #172f2b;
@@ -1989,7 +2003,7 @@ h2 {
 
 /* Top-down restaurant game stage */
 .appShell {
-  height: 100vh;
+  height: var(--viewport-height);
   overflow: hidden;
 }
 
@@ -2000,7 +2014,7 @@ h2 {
 .mainSurface {
   width: 100vw;
   max-width: none;
-  height: 100vh;
+  height: var(--viewport-height);
   padding: 0;
   margin: 0;
 }
@@ -2035,7 +2049,7 @@ h2 {
 .gameGrid {
   display: block;
   width: 100vw;
-  height: 100vh;
+  height: var(--viewport-height);
   padding: 0;
   margin: 0;
   background: transparent;
@@ -2047,8 +2061,8 @@ h2 {
 .restaurantStage {
   position: relative;
   width: 100vw;
-  height: 100vh;
-  min-height: 620px;
+  height: var(--viewport-height);
+  min-height: min(620px, var(--viewport-height));
   overflow: hidden;
   background: #cc8f58;
   border: 0;
@@ -2912,7 +2926,7 @@ h2 {
   .gameGrid,
   .restaurantStage {
     width: 100vw;
-    height: 100vh;
+    height: var(--viewport-height);
   }
 
   .mainSurface {
@@ -2951,6 +2965,69 @@ h2 {
 }
 
 @media (max-width: 560px) {
+  .portalShell {
+    min-height: var(--viewport-height);
+  }
+
+  .portalBackdrop {
+    inset: -2vh -56vw;
+    background-position: 56% bottom;
+  }
+
+  .portalShell::after {
+    background: rgba(12, 30, 28, 0.36);
+  }
+
+  .portalDashboard {
+    width: calc(100% - 18px);
+    min-height: var(--viewport-height);
+    align-content: start;
+    gap: 12px;
+    padding: 9px 0 14px;
+  }
+
+  .portalHeader {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .portalMark {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .portalHeader h1 {
+    font-size: 1.45rem;
+  }
+
+  .gameTile {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .gameTile__thumb {
+    min-height: clamp(178px, 42vh, 260px);
+  }
+
+  .gameTile__thumb > img {
+    min-height: clamp(178px, 42vh, 260px);
+  }
+
+  .gameTile__sprites {
+    right: 14px;
+    bottom: 10px;
+    left: 14px;
+  }
+
+  .gameTile__title {
+    font-size: 2rem;
+  }
+
+  .gameTile__meta {
+    font-size: 0.95rem;
+  }
+
   .mainSurface,
   .portalRail {
     width: 100vw;
@@ -2969,96 +3046,279 @@ h2 {
 
   .gameHud .statPill {
     grid-template-columns: 18px 1fr;
+    align-content: center;
     min-height: 44px;
     gap: 5px;
-    padding: 8px;
+    padding: 7px;
+  }
+
+  .gameHud .statPill svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .gameHud .statPill span {
+    overflow: hidden;
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .gameHud .statPill strong {
     grid-column: 1 / -1;
     font-size: 0.92rem;
+    line-height: 1;
+  }
+
+  .restaurantStage {
+    min-height: var(--viewport-height);
   }
 
   .restaurantStage::before {
     inset: 64px 8px 8px;
+    border-width: 4px;
+    border-radius: 10px;
   }
 
   .restaurantStage::after {
     top: 64px;
     right: 8px;
     left: 8px;
-    height: 86px;
+    height: 76px;
+    border-bottom-width: 4px;
   }
 
   .restaurantDoor {
-    bottom: 24px;
+    bottom: 18px;
     left: 8px;
-    width: 72px;
-    height: 104px;
+    width: 64px;
+    height: 94px;
+    padding-right: 12px;
   }
 
   .kitchenStation {
-    top: 74px;
-    right: 14px;
-    left: 86px;
-    height: 128px;
+    top: 72px;
+    right: 12px;
+    left: 78px;
+    height: 112px;
+    border-width: 4px;
+    border-radius: 10px;
+  }
+
+  .stoveBank {
+    top: 12px;
+    left: 12px;
+    gap: 7px;
   }
 
   .stoveBank span {
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
+    border-width: 4px;
+    box-shadow: inset 0 0 0 5px #516776, 0 6px 0 rgba(23, 49, 45, 0.16);
+  }
+
+  .prepCounter {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    height: 46px;
+    border-width: 3px;
+  }
+
+  .prepCounter span {
+    left: 10px;
+    font-size: 0.66rem;
   }
 
   .dishRail {
-    right: 14px;
-    bottom: 18px;
-    left: 82px;
-    height: 44px;
+    right: 9px;
+    bottom: 12px;
+    left: 72px;
+    height: 36px;
+    border-width: 2px;
+  }
+
+  .dishRail__label {
+    top: -36px;
+    right: 2px;
+    font-size: 0.66rem;
   }
 
   .dishRail .beltFood {
-    width: 62px;
-    height: 64px;
+    width: 54px;
+    height: 56px;
+    padding: 4px;
+    border-width: 2px;
   }
 
   .dishRail .beltFood .foodArt {
-    width: 30px;
-    height: 30px;
-    flex-basis: 30px;
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .dishRail .beltFood strong {
+    max-width: 44px;
+    font-size: 0.58rem;
   }
 
   .guestTable {
-    width: 122px;
+    top: var(--seat-y-mobile, var(--seat-y));
+    left: var(--seat-x-mobile, var(--seat-x));
+    width: clamp(96px, 30vw, 112px);
+    min-height: 132px;
   }
 
   .dinerTable {
-    width: 86px;
-    height: 86px;
+    width: clamp(74px, 23vw, 84px);
+    height: clamp(74px, 23vw, 84px);
+    border-width: 4px;
   }
 
   .dinerChair {
-    width: 30px;
-    height: 26px;
+    width: 26px;
+    height: 22px;
+    border-width: 3px;
+    border-radius: 8px;
+  }
+
+  .dinerChair--top {
+    top: 13px;
+  }
+
+  .dinerChair--right {
+    right: 12px;
+  }
+
+  .dinerChair--bottom {
+    bottom: 13px;
+  }
+
+  .dinerChair--left {
+    left: 12px;
   }
 
   .guestTable .customerSprite {
-    width: 54px;
-    height: 78px;
+    top: 19px;
+    width: 48px;
+    height: 70px;
   }
 
   .customerSprite__head {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
+    border-width: 2px;
   }
 
   .customerSprite__body {
-    top: 31px;
-    width: 30px;
-    height: 36px;
+    top: 28px;
+    width: 27px;
+    height: 33px;
+    border-width: 2px;
+  }
+
+  .customerSprite__arms {
+    top: 35px;
+    width: 48px;
+    height: 22px;
+    border-right-width: 8px;
+    border-left-width: 8px;
+  }
+
+  .customerSprite__legs {
+    bottom: 7px;
+    width: 28px;
+    height: 22px;
+    border-right-width: 9px;
+    border-left-width: 9px;
+  }
+
+  .guestTable__name {
+    bottom: 13px;
+    min-width: 58px;
+    padding: 3px 6px;
+    font-size: 0.68rem;
   }
 
   .guestSpeech {
-    bottom: 118px;
-    width: 172px;
+    bottom: 104px;
+    width: min(158px, 42vw);
+    gap: 4px;
+    padding: 6px 7px;
+    transform: translateX(var(--bubble-shift-mobile, var(--bubble-shift, -50%)));
+  }
+
+  .guestSpeech strong {
+    font-size: 0.66rem;
+    line-height: 1.12;
+  }
+
+  .guestSpeech small {
+    font-size: 0.6rem;
+  }
+
+  .guestSpeech__foods {
+    gap: 3px;
+  }
+
+  .guestSpeech__foods .foodChip {
+    min-height: 23px;
+    gap: 3px;
+    padding: 2px 5px 2px 2px;
+    font-size: 0.58rem;
+  }
+
+  .guestSpeech__foods .foodChip .foodArt {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+
+  .guestTable .guestTimer {
+    right: 24px;
+    bottom: 10px;
+    left: 24px;
+    height: 6px;
+  }
+
+  .playerSprite {
+    top: var(--player-y-mobile, var(--player-y));
+    left: var(--player-x-mobile, var(--player-x));
+    width: clamp(56px, 18vw, 72px);
+  }
+}
+
+@media (max-width: 380px) {
+  .guestSpeech {
+    width: 146px;
+  }
+
+  .guestSpeech strong {
+    font-size: 0.62rem;
+  }
+
+  .guestSpeech__foods .foodChip {
+    font-size: 0.54rem;
+  }
+}
+
+@media (max-width: 560px) and (max-height: 620px) {
+  .kitchenStation {
+    top: 66px;
+    height: 104px;
+  }
+
+  .restaurantStage::after {
+    top: 60px;
+    height: 68px;
+  }
+
+  .restaurantStage::before {
+    inset: 60px 8px 8px;
+  }
+
+  .guestSpeech {
+    bottom: 98px;
   }
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import {
   BadgeCheck,
   Bike,
@@ -215,6 +215,10 @@ const TARGET_CITY_DELIVERIES = 10;
 const MAX_CITY_MISTAKES = 5;
 const CITY_STREAK_BONUS = 12;
 
+function normalizePath(path: string) {
+  return path.replace(/\/+$/, "") || "/";
+}
+
 const ORDER_TEMPLATES: Array<(items: string) => string> = [
   (items) => `Could I please have ${items}?`,
   (items) => `I'd like ${items}, please.`,
@@ -251,12 +255,78 @@ const HAPPY_GUEST_LINES = [
 ];
 
 const SEAT_LAYOUT = [
-  { x: "23%", y: "58%", waiterX: "30%", waiterY: "66%", bubbleShift: "-34%" },
-  { x: "49%", y: "56%", waiterX: "54%", waiterY: "65%", bubbleShift: "-50%" },
-  { x: "74%", y: "58%", waiterX: "68%", waiterY: "66%", bubbleShift: "-66%" },
-  { x: "28%", y: "80%", waiterX: "34%", waiterY: "86%", bubbleShift: "-36%" },
-  { x: "55%", y: "82%", waiterX: "50%", waiterY: "87%", bubbleShift: "-50%" },
-  { x: "78%", y: "79%", waiterX: "72%", waiterY: "85%", bubbleShift: "-66%" },
+  {
+    x: "23%",
+    y: "58%",
+    waiterX: "30%",
+    waiterY: "66%",
+    bubbleShift: "-34%",
+    mobileX: "30%",
+    mobileY: "48%",
+    mobileWaiterX: "42%",
+    mobileWaiterY: "55%",
+    mobileBubbleShift: "-36%",
+  },
+  {
+    x: "49%",
+    y: "56%",
+    waiterX: "54%",
+    waiterY: "65%",
+    bubbleShift: "-50%",
+    mobileX: "70%",
+    mobileY: "48%",
+    mobileWaiterX: "58%",
+    mobileWaiterY: "55%",
+    mobileBubbleShift: "-64%",
+  },
+  {
+    x: "74%",
+    y: "58%",
+    waiterX: "68%",
+    waiterY: "66%",
+    bubbleShift: "-66%",
+    mobileX: "30%",
+    mobileY: "66%",
+    mobileWaiterX: "42%",
+    mobileWaiterY: "70%",
+    mobileBubbleShift: "-36%",
+  },
+  {
+    x: "28%",
+    y: "80%",
+    waiterX: "34%",
+    waiterY: "86%",
+    bubbleShift: "-36%",
+    mobileX: "70%",
+    mobileY: "66%",
+    mobileWaiterX: "58%",
+    mobileWaiterY: "70%",
+    mobileBubbleShift: "-64%",
+  },
+  {
+    x: "55%",
+    y: "82%",
+    waiterX: "50%",
+    waiterY: "87%",
+    bubbleShift: "-50%",
+    mobileX: "30%",
+    mobileY: "84%",
+    mobileWaiterX: "42%",
+    mobileWaiterY: "86%",
+    mobileBubbleShift: "-36%",
+  },
+  {
+    x: "78%",
+    y: "79%",
+    waiterX: "72%",
+    waiterY: "85%",
+    bubbleShift: "-66%",
+    mobileX: "70%",
+    mobileY: "84%",
+    mobileWaiterX: "58%",
+    mobileWaiterY: "86%",
+    mobileBubbleShift: "-64%",
+  },
 ];
 
 const foodById = new Map(FOODS.map((food) => [food.id, food]));
@@ -694,7 +764,10 @@ function GuestTable({
   const tableStyle = {
     "--seat-x": seat.x,
     "--seat-y": seat.y,
+    "--seat-x-mobile": seat.mobileX,
+    "--seat-y-mobile": seat.mobileY,
     "--bubble-shift": seat.bubbleShift,
+    "--bubble-shift-mobile": seat.mobileBubbleShift,
   } as CSSProperties;
   const showOrder = guest.heardOrder || selected;
 
@@ -830,6 +903,8 @@ function RestaurantStage({
   const playerStyle = {
     "--player-x": selectedSeat?.waiterX ?? "12%",
     "--player-y": selectedSeat?.waiterY ?? "78%",
+    "--player-x-mobile": selectedSeat?.mobileWaiterX ?? "50%",
+    "--player-y-mobile": selectedSeat?.mobileWaiterY ?? "82%",
   } as CSSProperties;
 
   return (
@@ -1892,7 +1967,19 @@ function RestaurantGame() {
   );
 }
 
-function GamePortal() {
+function GamePortal({ onPlay }: { onPlay: (path: string) => void }) {
+  const handleGameLinkClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>, path: string) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+
+      event.preventDefault();
+      onPlay(path);
+    },
+    [onPlay],
+  );
+
   return (
     <main className="portalShell">
       <div className="portalBackdrop" aria-hidden="true" />
@@ -1903,12 +1990,12 @@ function GamePortal() {
           </div>
           <div>
             <p className="eyebrow">Game portal</p>
-            <h1>Amsoft Games</h1>
+            <h1>Table Talk Games</h1>
           </div>
         </div>
 
         <div className="portalGames">
-          <a className="gameTile" href={GAME_PATH}>
+          <a className="gameTile" href={GAME_PATH} onClick={(event) => handleGameLinkClick(event, GAME_PATH)}>
             <span className="gameTile__thumb">
               <img src={gameKitchenBgUrl} alt="" draggable="false" />
               <span className="gameTile__sprites" aria-hidden="true">
@@ -1927,7 +2014,7 @@ function GamePortal() {
             </span>
           </a>
 
-          <a className="gameTile gameTile--city" href={TINY_CITY_PATH}>
+          <a className="gameTile gameTile--city" href={TINY_CITY_PATH} onClick={(event) => handleGameLinkClick(event, TINY_CITY_PATH)}>
             <span className="gameTile__thumb gameTile__thumb--city">
               <span className="gameTile__cityPreview" aria-hidden="true">
                 <span className="cityPreviewRoad cityPreviewRoad--one" />
@@ -1957,7 +2044,24 @@ function GamePortal() {
 }
 
 function App() {
-  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+
+  useEffect(() => {
+    const handlePopState = () => setPath(normalizePath(window.location.pathname));
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigateToGame = useCallback((nextPath: string) => {
+    const normalizedNextPath = normalizePath(nextPath);
+
+    if (normalizePath(window.location.pathname) !== normalizedNextPath) {
+      window.history.pushState(null, "", normalizedNextPath);
+    }
+
+    setPath(normalizedNextPath);
+  }, []);
 
   if (path === GAME_PATH) {
     return <RestaurantGame />;
@@ -1967,7 +2071,7 @@ function App() {
     return <TinyCityDeliveryGame />;
   }
 
-  return <GamePortal />;
+  return <GamePortal onPlay={navigateToGame} />;
 }
 
 export default App;
