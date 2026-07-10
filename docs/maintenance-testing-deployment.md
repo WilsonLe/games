@@ -37,7 +37,7 @@ references: []
 
 | Symbol | Effect |
 | --- | --- |
-| `TARGET_SERVES`, `ORDERS_PER_LEVEL` | Completion target and level progression. |
+| `DINER_LEVELS`, `TARGET_SERVES` | Per-level order targets, difficulty curve, and derived completion target. |
 | `HAPPY_GUEST_COMBO_BONUS` | Consecutive completed-guest bonus. |
 | `FIRST_DISH_DELAY_MS` | First ordered dish timing. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement pacing. |

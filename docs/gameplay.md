@@ -77,8 +77,11 @@ table may receive it.
 - Ordered dishes animate onto the pass over the guest's last-dish timing window.
 - Missed ordered dishes animate off and recycle while the owning guest still needs them.
 - Decoys animate off when their pass lifetime ends.
-- Every 4 completed orders advances a level, up to level 6.
-- Higher levels allow more guests, eventually increase order size from 2 to 3, and adjust pacing.
+- Level 1 is a two-order introduction. Later levels require 3, 4, 4, 5, and 6 completed orders,
+  preserving the six-level, 24-order shift.
+- Level 1 serves one guest at a time with one-item orders. Higher levels gradually allow up to four
+  concurrent guests, increase orders to two and then three items, speed up the pass and arrivals,
+  add decoys more often, and reduce the extra patience buffer.
 
 ## Diner Score And Completion
 

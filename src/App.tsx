@@ -79,6 +79,10 @@ type DifficultyProfile = {
   patienceBufferMs: number;
 };
 
+type DinerLevelProfile = Omit<DifficultyProfile, "dishGapMs"> & {
+  ordersToAdvance: number;
+};
+
 type ActiveGuest = {
   instanceId: string;
   customer: CustomerProfile;
@@ -231,11 +235,80 @@ const customerSpriteRowById: Record<CustomerProfile["id"], string> = {
   sam: "100%",
 };
 
-const TARGET_SERVES = 24;
-const ORDERS_PER_LEVEL = 4;
-const MAX_LEVEL = Math.ceil(TARGET_SERVES / ORDERS_PER_LEVEL);
+const FIRST_DISH_DELAY_MS = 1_800;
+
+const DINER_LEVELS: DinerLevelProfile[] = [
+  {
+    level: 1,
+    ordersToAdvance: 2,
+    maxGuests: 1,
+    orderSize: 1,
+    timeToLastDishMs: FIRST_DISH_DELAY_MS,
+    guestIntervalMs: 6_600,
+    beltTravelMs: 14_000,
+    decoyIntervalMs: 5_200,
+    patienceBufferMs: 14_000,
+  },
+  {
+    level: 2,
+    ordersToAdvance: 3,
+    maxGuests: 2,
+    orderSize: 2,
+    timeToLastDishMs: 7_000,
+    guestIntervalMs: 6_000,
+    beltTravelMs: 13_300,
+    decoyIntervalMs: 4_600,
+    patienceBufferMs: 13_500,
+  },
+  {
+    level: 3,
+    ordersToAdvance: 4,
+    maxGuests: 2,
+    orderSize: 2,
+    timeToLastDishMs: 8_500,
+    guestIntervalMs: 5_400,
+    beltTravelMs: 12_600,
+    decoyIntervalMs: 4_100,
+    patienceBufferMs: 13_000,
+  },
+  {
+    level: 4,
+    ordersToAdvance: 4,
+    maxGuests: 3,
+    orderSize: 3,
+    timeToLastDishMs: 10_000,
+    guestIntervalMs: 4_800,
+    beltTravelMs: 11_900,
+    decoyIntervalMs: 3_600,
+    patienceBufferMs: 12_500,
+  },
+  {
+    level: 5,
+    ordersToAdvance: 5,
+    maxGuests: 3,
+    orderSize: 3,
+    timeToLastDishMs: 11_500,
+    guestIntervalMs: 4_200,
+    beltTravelMs: 11_200,
+    decoyIntervalMs: 3_100,
+    patienceBufferMs: 12_000,
+  },
+  {
+    level: 6,
+    ordersToAdvance: 6,
+    maxGuests: 4,
+    orderSize: 3,
+    timeToLastDishMs: 13_000,
+    guestIntervalMs: 3_600,
+    beltTravelMs: 10_500,
+    decoyIntervalMs: 2_600,
+    patienceBufferMs: 11_500,
+  },
+];
+
+const TARGET_SERVES = DINER_LEVELS.reduce((total, profile) => total + profile.ordersToAdvance, 0);
+const MAX_LEVEL = DINER_LEVELS.length;
 const HAPPY_GUEST_COMBO_BONUS = 15;
-const FIRST_DISH_DELAY_MS = 1800;
 const NEXT_GUEST_AFTER_COMPLETE_MS = 3_000;
 const CHARACTER_STEP_MS = 360;
 const LEAVING_GUEST_LINGER_MS = 350;
@@ -651,24 +724,25 @@ function getNextCityMission(index: number) {
 }
 
 function levelForServed(served: number) {
-  return clamp(Math.floor(served / ORDERS_PER_LEVEL) + 1, 1, MAX_LEVEL);
+  let completionThreshold = 0;
+
+  for (const profile of DINER_LEVELS) {
+    completionThreshold += profile.ordersToAdvance;
+
+    if (served < completionThreshold) {
+      return profile.level;
+    }
+  }
+
+  return MAX_LEVEL;
 }
 
 function difficultyForLevel(level: number): DifficultyProfile {
-  const maxGuests = clamp(2 + Math.floor((level - 1) / 2), 2, 6);
-  const orderSize = clamp(2 + Math.floor((level - 1) / 3), 2, 4);
-  const timeToLastDishMs = 7_200 + (level - 1) * 2_250;
+  const profile = DINER_LEVELS[clamp(level, 1, MAX_LEVEL) - 1];
 
   return {
-    level,
-    maxGuests,
-    orderSize,
-    timeToLastDishMs,
-    dishGapMs: Math.round(timeToLastDishMs / Math.max(1, orderSize - 1)),
-    guestIntervalMs: clamp(5_600 - (level - 1) * 360, 2_500, 5_600),
-    beltTravelMs: clamp(12_500 - (level - 1) * 260, 8_800, 12_500),
-    decoyIntervalMs: clamp(3_900 - (level - 1) * 140, 2_200, 3_900),
-    patienceBufferMs: 12_000 + (level - 1) * 1_200,
+    ...profile,
+    dishGapMs: Math.round(profile.timeToLastDishMs / Math.max(1, profile.orderSize - 1)),
   };
 }
 
