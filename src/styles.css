@@ -2381,7 +2381,7 @@ h2 {
 
 .characterActor {
   position: absolute;
-  top: calc(var(--dining-top) + var(--actor-row) * var(--tile-height));
+  top: calc(var(--dining-top) + var(--actor-row) * var(--tile-height) + var(--actor-seat-lift, 0px));
   left: calc(var(--dining-inset) + var(--actor-col) * var(--tile-width));
   width: 0;
   height: 0;
@@ -3308,6 +3308,10 @@ h2 {
   .guestTable {
     width: clamp(94px, 27vw, 108px);
     min-height: 116px;
+  }
+
+  .characterActor--seated {
+    --actor-seat-lift: calc(-0.35 * var(--tile-height));
   }
 
   .dinerTable {

@@ -369,12 +369,13 @@ const DINER_FLOOR_COLUMNS = 10;
 const DINER_FLOOR_ROWS = 5;
 const DINER_DOOR_TILE: TilePoint = { col: 0, row: DINER_FLOOR_ROWS - 1 };
 const DINER_AISLE_ROW = DINER_FLOOR_ROWS - 1;
+const CUSTOMER_SEAT_ROW_OFFSET = 1;
 
 const SEAT_LAYOUT: SeatLayout[] = [
-  { table: { col: 2, row: 1 }, customer: { col: 2, row: 1 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 1 }, customer: { col: 7, row: 1 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 3 }, customer: { col: 7, row: 3 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 1 }, customer: { col: 2, row: 1 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 1 }, customer: { col: 7, row: 1 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 3 }, customer: { col: 7, row: 3 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
 ];
 
 const DINER_FLOOR_TILES: TilePoint[] = Array.from(
