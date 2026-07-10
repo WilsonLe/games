@@ -84,11 +84,11 @@ Hop does not render them.
 
 | Layer/class | Position | z-index | Role |
 | --- | --- | ---: | --- |
-| `.floorTiles` / `.floorTile` | absolute stage/tile positions | 0 | Opaque 10 × 5 floor-tile board aligned to actor coordinates. |
+| `.floorTiles` / `.floorTile` | responsive grid below kitchen | 0 | Opaque 10 × 5 dining-floor grid aligned to actor coordinates. |
 | stage frame/wall pseudo-elements | absolute | 1–2 | Room boundary and kitchen wall. |
 | `.kitchenStation` | absolute top | 4 | Kitchen-art backdrop, burners, cabinets, and dish rail. |
 | `.restaurantDoor` | tile-positioned | 8 | Guest entry/exit. |
-| `.guestTable` | tile-positioned | 11 / 18 selected | Interactive table and order UI. |
+| `.guestTable` | tile-positioned | 11 / 18 selected | One of four persistent tables; guest UI appears only while occupied. |
 | `.characterActor--customer` | tile-positioned | `14 + row` | Guest art rendered by the shared actor. |
 | `.characterActor--waiter` | tile-positioned | `16 + row` | Waiter art rendered at the same height and tile cadence. |
 | `.gameHud` | fixed | 30 | Portal button and three stats. |
@@ -101,17 +101,19 @@ at `480ms` while a route is active; west mirrors east. Stopped actors use the fr
 
 ## Dish Wish Tile System
 
-`restaurantStage` defines `--tile-size`, `--tile-origin-x`, and `--tile-origin-y`. The stage renders
-50 opaque `floorTile` elements for columns 0–9 and rows 3–7. Actors and tables use the same coordinate
-formula:
+`restaurantStage` defines the dining inset/top and derives `--tile-width` and `--tile-height` from the
+remaining viewport below the kitchen. The stage renders 50 opaque `floorTile` elements as a 10 × 5
+CSS grid. Logical coordinates use columns 0–9 and rows 0–4; actors, the door, and four persistent
+tables use the corresponding responsive cell centers:
 
 ```css
-calc(var(--tile-origin-x) + var(--column) * var(--tile-size))
-calc(var(--tile-origin-y) + var(--row) * var(--tile-size))
+calc(var(--dining-inset) + var(--column-center) * var(--tile-width))
+calc(var(--dining-top) + var(--row-center) * var(--tile-height))
 ```
 
-Below `560px`, tile size/origin, kitchen dimensions, table/sprite size, and speech bubble offsets are
-reduced independently. Check all six seats after changing these variables.
+`--tile-size` is retained only to scale character art from the smaller responsive cell dimension. Below
+`560px`, the dining inset/top, kitchen dimensions, table/sprite size, and speech bubble offsets are
+reduced independently. Check all four tables after changing these variables.
 
 ## Drop Hop Layout
 
