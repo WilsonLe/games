@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-10",
+  "issue": 19,
+  "runId": "2026-07-10-table-talk-walk-cycles",
+  "styleHandle": "table-talk-diner-current-character-cartoon",
+  "tool": "Hunter internal generate_image",
+  "provider": "openai-codex",
+  "model": "gpt-5.5",
+  "sourceStyle": "Current Dish Wish full-body gameplay sprites",
+  "generation": {
+    "sourceSize": "1536x1024",
+    "nativeTransparencySupported": false,
+    "backgroundRemoval": "Uniform chroma background removed during normalization",
+    "postProcessing": "Frames normalized to equal height and stable bottom-center anchors; disconnected artifacts under 40 pixels removed"
+  },
+  "layout": {
+    "columns": 4,
+    "rows": 4,
+    "cellWidth": 384,
+    "cellHeight": 256,
+    "characterHeight": 220,
+    "bottomPadding": 16,
+    "rowOrder": ["south-walk", "north-walk", "east-walk", "front-idle"],
+    "walkFrameOrder": ["left-contact", "passing", "right-contact", "opposite-passing"],
+    "idleFrame": { "column": 0, "row": 3 },
+    "westBehavior": "Mirror east in CSS",
+    "loopDurationMs": 480
+  },
+  "files": [
+    {
+      "characterId": "waiter",
+      "file": "waiter-walk-sheet.png",
+      "sha256": "287d8244526e6194dc44637876a90551c5c204f72d030c2c8af695471aafa830"
+    },
+    {
+      "characterId": "mai",
+      "displayName": "Mia",
+      "file": "customer-mai-walk-sheet.png",
+      "sha256": "de26963db62be4e3d870e199575ccdfe94d5cf3bdcf0c9d3ce05b442a08cdc63"
+    },
+    {
+      "characterId": "leo",
+      "displayName": "Leo",
+      "file": "customer-leo-walk-sheet.png",
+      "sha256": "698c90ef8711974c8aa40fef9e23fd177da8fd5cb9552863a8aa557c83cab9e2"
+    },
+    {
+      "characterId": "nora",
+      "displayName": "Nora",
+      "file": "customer-nora-walk-sheet.png",
+      "sha256": "cf0dc9b1f4b48545331dc63552d76c05800ba3f00af2d7619d298d51805446af"
+    },
+    {
+      "characterId": "ben",
+      "displayName": "Ben",
+      "file": "customer-ben-walk-sheet.png",
+      "sha256": "8d61c159848a90b462d4a0ecaf45de0cc26cfa0fdceca7640d16b7d00003fc86"
+    },
+    {
+      "characterId": "ivy",
+      "displayName": "Ivy",
+      "file": "customer-ivy-walk-sheet.png",
+      "sha256": "0c1f3bc50b6ca73d45cd64f54612d1cc4f3e947e1a71c614386b499c9cc9d6b9"
+    },
+    {
+      "characterId": "sam",
+      "displayName": "Sam",
+      "file": "customer-sam-walk-sheet.png",
+      "sha256": "2762c8d40f70c35d34829b53e9e41d34597c6dce6b353ffde508aa97e3d0c0c3"
+    }
+  ]
+}

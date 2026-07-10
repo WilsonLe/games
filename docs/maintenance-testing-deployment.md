@@ -28,10 +28,12 @@ references: []
 
 ### Add A Diner Customer
 
-1. Add/regenerate the row in `sprites/generated/customer-fullbody-sheet.png`.
-2. Update `CustomerProfile`, `CUSTOMERS`, and `customerSpriteRowById`.
+1. Add a 4 × 4 directional sheet at
+   `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` using the shared cell size and row order.
+2. Update `CustomerProfile`, `CUSTOMERS`, the sheet import, and `customerWalkSheetById`.
 3. Add a still image only if the portal or another component imports it.
-4. Verify all movement states and update `docs/assets.md`.
+4. Update `src/assets/sprites/generated/walk/manifest.json` and `docs/assets.md`.
+5. Verify idle, south, north, east, mirrored-west, reduced-motion, and responsive rendering states.
 
 ### Tune Diner Difficulty
 
@@ -96,6 +98,8 @@ Run `npm run dev`, then inspect the console throughout.
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1. |
 | Guest selection | After seating, waiter steps across whole tiles, then order text/TTS appears and patience rises. |
+| Character walk cycles | Waiter and all six customers loop four distinct frames in south, north, east, and mirrored-west movement; they return to front idle without flicker or size jitter. |
+| Reduced motion | With reduced motion enabled, gait/step/shadow loops freeze while required whole-tile route updates continue. |
 | Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
 | Drop before order | Dish remains and status asks player to take the order. |
 | Drop outside | Dish remains and status explains where to serve it. |

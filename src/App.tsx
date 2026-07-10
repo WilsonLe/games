@@ -26,8 +26,13 @@ import {
   X,
 } from "lucide-react";
 import customerMaiUrl from "./assets/sprites/customer-mai.png";
-import customerFullbodySheetUrl from "./assets/sprites/generated/customer-fullbody-sheet.png";
-import waiterFullbodySheetUrl from "./assets/sprites/generated/waiter-fullbody-sheet.png";
+import customerBenWalkSheetUrl from "./assets/sprites/generated/walk/customer-ben-walk-sheet.png";
+import customerIvyWalkSheetUrl from "./assets/sprites/generated/walk/customer-ivy-walk-sheet.png";
+import customerLeoWalkSheetUrl from "./assets/sprites/generated/walk/customer-leo-walk-sheet.png";
+import customerMaiWalkSheetUrl from "./assets/sprites/generated/walk/customer-mai-walk-sheet.png";
+import customerNoraWalkSheetUrl from "./assets/sprites/generated/walk/customer-nora-walk-sheet.png";
+import customerSamWalkSheetUrl from "./assets/sprites/generated/walk/customer-sam-walk-sheet.png";
+import waiterWalkSheetUrl from "./assets/sprites/generated/walk/waiter-walk-sheet.png";
 import foodBreadUrl from "./assets/sprites/food-bread.png";
 import foodChickenUrl from "./assets/sprites/food-chicken.png";
 import foodEggUrl from "./assets/sprites/food-egg.png";
@@ -227,13 +232,13 @@ const CUSTOMERS: CustomerProfile[] = [
   { id: "sam", name: "Sam" },
 ];
 
-const customerSpriteRowById: Record<CustomerProfile["id"], string> = {
-  mai: "0%",
-  leo: "20%",
-  nora: "40%",
-  ben: "60%",
-  ivy: "80%",
-  sam: "100%",
+const customerWalkSheetById: Record<CustomerProfile["id"], string> = {
+  mai: customerMaiWalkSheetUrl,
+  leo: customerLeoWalkSheetUrl,
+  nora: customerNoraWalkSheetUrl,
+  ben: customerBenWalkSheetUrl,
+  ivy: customerIvyWalkSheetUrl,
+  sam: customerSamWalkSheetUrl,
 };
 
 const FIRST_DISH_DELAY_MS = 1_800;
@@ -931,8 +936,7 @@ function CharacterActor({
     zIndex: Math.round((isCustomer ? 14 : 16) + visual.row),
   } as CSSProperties;
   const spriteStyle = {
-    "--sprite-y": customer ? customerSpriteRowById[customer.id] : "0%",
-    backgroundImage: `url(${customer ? customerFullbodySheetUrl : waiterFullbodySheetUrl})`,
+    backgroundImage: `url(${customer ? customerWalkSheetById[customer.id] : waiterWalkSheetUrl})`,
   } as CSSProperties;
 
   return (
