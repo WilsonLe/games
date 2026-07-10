@@ -11,10 +11,10 @@ references: []
 - Four sparse tables are rendered before service and remain after guests leave; incoming guests are
   assigned to an available table.
 - Customers travel smoothly along their tile routes when entering and leaving.
-- Selecting a seated customer's table reveals and speaks the order immediately. Selecting another
-  customer replaces unfinished speech, while every previously revealed order remains visible and
-  serviceable.
-- Correct dishes advance the checklist, animate off the pass, and add patience. Incorrect dishes stay
+- Selecting a seated customer's table reveals and speaks the order immediately. Requested dish names
+  are underlined inline; the bubble does not show reference dish images. Selecting another customer
+  replaces unfinished speech, while every previously revealed order remains visible and serviceable.
+- Correct dishes update the inline served state, animate off the pass, and add patience. Incorrect dishes stay
   available and reduce only that guest's patience; expiration resets the combo.
 - Completing all requested food sends the guest out, awards points, and advances order/level progress.
 - The target is 24 orders; there is no diner loss state.
@@ -45,7 +45,8 @@ references: []
 
 Initial guest/second spawn, all four tables visible before and after occupancy, responsive floor
 coverage, linear guest route travel, all direction frames/mirroring and `180ms` frame cadence,
-immediate order reveal and speech switching, persistent revealed orders, correct-dish patience
-increases, dish entry/bob/exit, correct/partial/complete service, decoy match, drop outside, unheard
+immediate order reveal and speech switching, underlined dish names without order images, persistent
+revealed orders, correct-dish patience increases, dish entry/bob/exit, correct/partial/complete
+service, decoy match, drop outside, unheard
 guest, non-consuming incorrect-dish patience loss, expiration, recycling, keyboard service, win,
 New Shift, portal return, desktop, and mobile.

@@ -912,6 +912,18 @@ h2 {
   line-height: 1.2;
 }
 
+.guestSpeech__dish {
+  text-decoration: underline;
+  text-decoration-color: #d88416;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.guestSpeech__dish--served {
+  color: #167451;
+  text-decoration-color: #167451;
+}
+
 .guestSpeech small {
   position: relative;
   z-index: 1;
@@ -2458,26 +2470,6 @@ h2 {
   transform: translateX(var(--bubble-shift, -50%));
 }
 
-.guestSpeech__foods {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.guestSpeech__foods .foodChip {
-  min-height: 28px;
-  padding: 3px 7px 3px 3px;
-  font-size: 0.72rem;
-}
-
-.guestSpeech__foods .foodChip .foodArt {
-  width: 22px;
-  height: 22px;
-  flex-basis: 22px;
-}
-
 .guestTable--unheard .guestSpeech {
   width: 128px;
 }
@@ -3404,23 +3396,6 @@ h2 {
     font-size: 0.6rem;
   }
 
-  .guestSpeech__foods {
-    gap: 3px;
-  }
-
-  .guestSpeech__foods .foodChip {
-    min-height: 23px;
-    gap: 3px;
-    padding: 2px 5px 2px 2px;
-    font-size: 0.58rem;
-  }
-
-  .guestSpeech__foods .foodChip .foodArt {
-    width: 18px;
-    height: 18px;
-    flex-basis: 18px;
-  }
-
   .guestTable .guestTimer {
     right: 24px;
     bottom: 3px;
@@ -3449,10 +3424,6 @@ h2 {
 
   .guestSpeech strong {
     font-size: 0.62rem;
-  }
-
-  .guestSpeech__foods .foodChip {
-    font-size: 0.54rem;
   }
 }
 

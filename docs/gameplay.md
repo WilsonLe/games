@@ -42,7 +42,7 @@ Tables with an entering guest ignore pointer input. Empty tables are visible but
 Once seated:
 
 1. Select anywhere in the customer's table area.
-2. The written order and food chips appear immediately, and speech synthesis attempts the order phrase.
+2. The written order appears immediately with each requested dish name underlined, and speech synthesis attempts the order phrase. The order bubble does not show dish images, so the player must read the dish name and choose the matching kitchen-pass dish.
 3. Selecting another seated customer immediately cancels unfinished speech, switches the visual
    selection, and speaks that customer's order even when the previous order is incomplete.
 4. Previously revealed orders remain visible and serviceable; selection does not lock service to one
@@ -64,7 +64,7 @@ asks the player to select the customer first.
 
 | Situation | Outcome |
 | --- | --- |
-| Guest still needs the dish | Dish animates off the pass, checklist updates, patience rises slightly, score increases, and correct feedback plays. |
+| Guest still needs the dish | Dish animates off the pass, its underlined name changes to the served color, patience rises slightly, score increases, and correct feedback plays. |
 | Dish completes the order | Guest leaves, completed orders and combo increase, owned leftovers animate off, and completion feedback plays. |
 | Guest does not need the dish | Dish remains available, wrong feedback plays, and that guest loses 2.5–5 seconds of patience based on level; score and combo do not change. |
 | Guest has not given the order | Dish remains, and the game asks the player to select the customer and hear the order. |
