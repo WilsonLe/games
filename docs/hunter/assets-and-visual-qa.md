@@ -28,8 +28,8 @@ Check all three screens:
 | Screen | Desktop | 980px | 560px | 320–380px / short height |
 | --- | --- | --- | --- | --- |
 | Portal | Two cards, art, scroll | Cards stack | Compact previews | No clipped cards/header |
-| Diner | Six-seat field, kitchen, HUD | Scaled stage | Compact HUD/tables | Status and controls remain reachable |
-| Tiny City | Three-column layout | One column | Compact map/stats | Document scroll and labels remain usable |
+| Dish Wish | Six-seat field, kitchen, HUD | Scaled stage | Compact HUD/tables | Status and controls remain reachable |
+| Drop Hop | Three-column layout | One column | Compact map/stats | Document scroll and labels remain usable |
 
 Also verify:
 

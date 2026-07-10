@@ -22,7 +22,7 @@ references: []
 
 | Symbol | Why it matters |
 | --- | --- |
-| `GAME_PATH`, `TINY_CITY_PATH`, `normalizePath`, `App` | Client-side path selection, history updates, document titles, and portal fallback. |
+| `DISH_WISH_PATH`, `DROP_HOP_PATH`, `canonicalizePath`, `App` | Client-side path selection, legacy aliases, history updates, document titles, and portal fallback. |
 | `GamePortal` | Root two-game chooser and preview cards. |
 | `FOODS`, `foodArtById` | Diner food inventory and image mapping. |
 | `CUSTOMERS`, `customerSpriteRowById` | Guest inventory and generated sheet rows. |
@@ -31,15 +31,17 @@ references: []
 | `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Discrete diner tile routes and directional actor state. |
 | `makeGuest`, `makeDecoyFood`, `chooseSpawnLane` | Diner guest and dish generation. |
 | `handleGuestSelect`, `revealGuestOrder`, `handleFoodDrop` | Diner order-taking and serving decisions. |
-| `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS` | Tiny City map, road graph, and lesson content. |
-| `TinyCityDeliveryGame`, `handleCityLocationClick`, `completeCityMission` | Tiny City state, movement, scoring, and completion. |
+| `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS` | Drop Hop map, road graph, and lesson content. |
+| `DropHopGame`, `handleCityLocationClick`, `completeCityMission` | Drop Hop state, movement, scoring, and completion. |
 | `getCityRoadKey`, `CityMap` | Exact traversed-edge highlighting and map rendering. |
 
 ## Product Shape
 
-- `/` is the two-game mini-game portal.
-- `/games/table-talk-diner` launches Table Talk Diner.
-- `/games/tiny-city-delivery` launches Tiny City Delivery.
+- `/` is the two-game Lingo Game portal.
+- `/games/dish-wish` launches Dish Wish.
+- `/games/drop-hop` launches Drop Hop.
+- The old `/games/table-talk-diner` and `/games/tiny-city-delivery` paths remain aliases that replace
+  themselves with the corresponding canonical route.
 - In-app navigation uses the History API without a router package.
 - Unknown paths render the portal without replacing the address.
 - Both games have a portal-return control.
@@ -68,7 +70,7 @@ provider-specific deployment configuration.
 | Diner and city share generic class names | Diner full-viewport overrides must stay under `.appShell:not(.appShell--city)` when they touch `.mainSurface`, `.gameGrid`, `.resultBanner`, or `.sceneBackdrop`. |
 | `targetGuestId` is dish lifecycle metadata | The table receiving a drop decides service; a decoy can satisfy a matching request. `leavingAt` retains dishes only for their exit animation. |
 | `selectFoods` requires enough unique foods | Never allow `orderSize > FOODS.length`. |
-| Diner has no mid-shift pause | Tiny City has ready/play/pause/end controls; Diner starts automatically and only offers a new shift after completion. |
+| Diner has no mid-shift pause | Drop Hop has ready/play/pause/end controls; the diner starts automatically and only offers a new shift after completion. |
 | Audio is browser-dependent | Speech and Web Audio may be absent or gesture-gated. |
 | Diner selection is movement-gated | Entering tables ignore pointer input; after selection, the order is revealed only once the waiter arrives and the guest is seated. |
 | Road highlighting is edge-based | Keep consecutive-path logic; checking only whether both stops appear in the path produces false highlights. |

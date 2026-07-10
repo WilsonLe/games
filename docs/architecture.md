@@ -18,21 +18,24 @@ references: []
 
 ## Portal And Routing
 
-`App` stores a normalized copy of `window.location.pathname`. `normalizePath` removes trailing
-slashes while preserving `/`.
+`App` stores a canonical copy of `window.location.pathname`. `normalizePath` removes trailing
+slashes while preserving `/`, and `canonicalizePath` maps legacy game paths to their current routes.
 
 | Symbol | Role |
 | --- | --- |
-| `GAME_PATH` | `/games/table-talk-diner`. |
-| `TINY_CITY_PATH` | `/games/tiny-city-delivery`. |
+| `DISH_WISH_PATH` | Canonical `/games/dish-wish` path. |
+| `DROP_HOP_PATH` | Canonical `/games/drop-hop` path. |
+| `LEGACY_DISH_WISH_PATH` | `/games/table-talk-diner` compatibility alias. |
+| `LEGACY_DROP_HOP_PATH` | `/games/tiny-city-delivery` compatibility alias. |
 | `GamePortal` | Root chooser with two real anchors and image/CSS previews. |
 | `navigateToGame` | Calls `history.pushState` when needed and updates route state. |
-| `popstate` effect | Keeps rendered content aligned with browser back/forward. |
+| `popstate` effect | Keeps rendered content aligned with browser back/forward and canonicalizes aliases with `replaceState`. |
 | title effect | Sets a route-specific `document.title`. |
 
 Ordinary card clicks use in-app navigation. Modified clicks and non-primary clicks preserve anchor
-semantics. Unknown paths fall back to the portal without rewriting the URL. Static hosts must route
-direct `/games/...` requests to `index.html`.
+semantics. Legacy paths render the matching game immediately and replace their URL with the
+canonical path. Unknown paths fall back to the portal without rewriting the URL. Static hosts must
+route direct requests for canonical and legacy `/games/...` paths to `index.html`.
 
 ## Shared Types And Helpers
 
@@ -48,7 +51,7 @@ direct `/games/...` requests to `index.html`.
 
 Each game owns its own `AudioContext` ref and `playSound` callback.
 
-# Table Talk Diner
+# Dish Wish
 
 ## Core Data Types
 
@@ -171,7 +174,7 @@ The time bonus is calculated before the correct-dish patience extension. Wrong-t
 the dish off and reset the combo. Expired guests leave, animate owned dishes off, and reset the
 combo. There is no miss count or diner loss state.
 
-# Tiny City Delivery
+# Drop Hop
 
 ## Data Model
 
@@ -185,7 +188,7 @@ combo. There is no miss count or diner loss state.
 
 ## State
 
-`TinyCityDeliveryGame` owns status, mission index, current location, cargo state, full path, score,
+`DropHopGame` owns status, mission index, current location, cargo state, full path, score,
 delivery count, streak, mistakes, last-delivered location, feedback, and its audio context.
 
 ## Status Flow
@@ -199,7 +202,7 @@ flowchart LR
   Ended -->|New Route / reset| Playing
 ```
 
-Pause only blocks movement; Tiny City has no countdown timer. Clicking the map while paused or ended
+Pause only blocks movement; Drop Hop has no countdown timer. Clicking the map while paused or ended
 returns status-specific guidance.
 
 ## Movement And Completion

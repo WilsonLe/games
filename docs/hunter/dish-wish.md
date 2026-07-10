@@ -1,9 +1,9 @@
 ---
-description: "Table Talk Diner gameplay model, state flow, implementation risks, and verification notes."
+description: "Dish Wish gameplay model, state flow, implementation risks, and verification notes."
 references: []
 ---
 
-# Table Talk Diner
+# Dish Wish
 
 ## Gameplay Model
 

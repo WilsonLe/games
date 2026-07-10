@@ -1,9 +1,9 @@
 ---
-description: "Tiny City Delivery map data, route state, gameplay rules, implementation risks, and verification notes."
+description: "Drop Hop map data, route state, gameplay rules, implementation risks, and verification notes."
 references: []
 ---
 
-# Tiny City Delivery
+# Drop Hop
 
 ## Gameplay Model
 
@@ -20,7 +20,7 @@ references: []
 - Movement graph: `CITY_ROADS`, `cityNeighbors`.
 - Lesson content: `CITY_ITEMS`, `CITY_MISSIONS`.
 - Edge highlighting: `getCityRoadKey` and the consecutive `path` pairs in `CityMap`.
-- State, pause/reset, movement, scoring, and completion: `TinyCityDeliveryGame`.
+- State, pause/reset, movement, scoring, and completion: `DropHopGame`.
 - Layout: `.cityGameGrid`, `.cityMap`, location/road/courier styles.
 
 ## Risks

@@ -1,11 +1,11 @@
 ---
-description: "Project-wide Hunter root for the Table Talk Games React/Vite mini-game portal."
+description: "Project-wide Hunter root for the Lingo Game React/Vite mini-game portal."
 references:
   - "README.md"
   - "docs/README.md"
 ---
 
-# Table Talk Games Hunter Root
+# Lingo Game Hunter Root
 
 This file is the startup entry point for future coding sessions in this repository.
 
@@ -37,9 +37,9 @@ This file is the startup entry point for future coding sessions in this reposito
 
 - The root route, `/`, is a usable two-game mini-game portal, not a marketing landing page and not a
   direct launch into either game.
-- The shipped games are Table Talk Diner and Tiny City Delivery.
-- Table Talk Diner is a food-serving arcade game for practical English orders.
-- Tiny City Delivery is a map-routing game for English prepositions, place words, and quantities.
+- The shipped games are Dish Wish and Drop Hop.
+- Dish Wish is a food-serving arcade game for practical English orders.
+- Drop Hop is a map-routing game for English prepositions, place words, and quantities.
 - Both game routes must provide a clear way back to the portal.
 - The app is client-only and asset-rich: imported art, a custom cursor, Web Audio feedback, and
   browser speech synthesis are part of the product experience.
