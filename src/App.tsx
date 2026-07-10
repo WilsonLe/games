@@ -209,6 +209,7 @@ const MAX_LEVEL = Math.ceil(TARGET_SERVES / ORDERS_PER_LEVEL);
 const HAPPY_GUEST_COMBO_BONUS = 15;
 const FIRST_DISH_DELAY_MS = 1800;
 const NEXT_GUEST_AFTER_COMPLETE_MS = 3_000;
+const GUEST_ENTER_MS = 1_450;
 const LEAVING_GUEST_VISIBLE_MS = 2_200;
 const ORDER_LANES = 2;
 const GAME_TITLE = "Table Talk Diner";
@@ -262,11 +263,15 @@ const SEAT_LAYOUT = [
   {
     x: "23%",
     y: "58%",
+    entryX: "-18vw",
+    entryY: "27vh",
     waiterX: "30%",
     waiterY: "66%",
     bubbleShift: "-34%",
     mobileX: "30%",
     mobileY: "48%",
+    mobileEntryX: "-20vw",
+    mobileEntryY: "38vh",
     mobileWaiterX: "42%",
     mobileWaiterY: "55%",
     mobileBubbleShift: "-36%",
@@ -274,11 +279,15 @@ const SEAT_LAYOUT = [
   {
     x: "49%",
     y: "56%",
+    entryX: "-42vw",
+    entryY: "29vh",
     waiterX: "54%",
     waiterY: "65%",
     bubbleShift: "-50%",
     mobileX: "70%",
     mobileY: "48%",
+    mobileEntryX: "-60vw",
+    mobileEntryY: "38vh",
     mobileWaiterX: "58%",
     mobileWaiterY: "55%",
     mobileBubbleShift: "-64%",
@@ -286,11 +295,15 @@ const SEAT_LAYOUT = [
   {
     x: "74%",
     y: "58%",
+    entryX: "-67vw",
+    entryY: "27vh",
     waiterX: "68%",
     waiterY: "66%",
     bubbleShift: "-66%",
     mobileX: "30%",
     mobileY: "66%",
+    mobileEntryX: "-20vw",
+    mobileEntryY: "20vh",
     mobileWaiterX: "42%",
     mobileWaiterY: "70%",
     mobileBubbleShift: "-36%",
@@ -298,11 +311,15 @@ const SEAT_LAYOUT = [
   {
     x: "28%",
     y: "80%",
+    entryX: "-23vw",
+    entryY: "6vh",
     waiterX: "34%",
     waiterY: "86%",
     bubbleShift: "-36%",
     mobileX: "70%",
     mobileY: "66%",
+    mobileEntryX: "-60vw",
+    mobileEntryY: "20vh",
     mobileWaiterX: "58%",
     mobileWaiterY: "70%",
     mobileBubbleShift: "-64%",
@@ -310,11 +327,15 @@ const SEAT_LAYOUT = [
   {
     x: "55%",
     y: "82%",
+    entryX: "-50vw",
+    entryY: "4vh",
     waiterX: "50%",
     waiterY: "87%",
     bubbleShift: "-50%",
     mobileX: "30%",
     mobileY: "84%",
+    mobileEntryX: "-20vw",
+    mobileEntryY: "2vh",
     mobileWaiterX: "42%",
     mobileWaiterY: "86%",
     mobileBubbleShift: "-36%",
@@ -322,11 +343,15 @@ const SEAT_LAYOUT = [
   {
     x: "78%",
     y: "79%",
+    entryX: "-72vw",
+    entryY: "7vh",
     waiterX: "72%",
     waiterY: "85%",
     bubbleShift: "-66%",
     mobileX: "70%",
     mobileY: "84%",
+    mobileEntryX: "-60vw",
+    mobileEntryY: "2vh",
     mobileWaiterX: "58%",
     mobileWaiterY: "86%",
     mobileBubbleShift: "-64%",
@@ -825,8 +850,12 @@ function GuestTable({
   const tableStyle = {
     "--seat-x": seat.x,
     "--seat-y": seat.y,
+    "--guest-enter-x": seat.entryX,
+    "--guest-enter-y": seat.entryY,
     "--seat-x-mobile": seat.mobileX,
     "--seat-y-mobile": seat.mobileY,
+    "--guest-enter-x-mobile": seat.mobileEntryX,
+    "--guest-enter-y-mobile": seat.mobileEntryY,
     "--bubble-shift": seat.bubbleShift,
     "--bubble-shift-mobile": seat.mobileBubbleShift,
   } as CSSProperties;
@@ -970,6 +999,7 @@ function RestaurantStage({
   beltFoods,
   profile,
   draggingDish,
+  playerWalking,
   onSelectGuest,
   onFoodDragEnd,
   onFoodDragOver,
@@ -985,6 +1015,7 @@ function RestaurantStage({
   beltFoods: BeltFood[];
   profile: DifficultyProfile;
   draggingDish: DraggingDish | null;
+  playerWalking: boolean;
   onSelectGuest: (guest: ActiveGuest) => void;
   onFoodDragEnd: (food: BeltFood) => void;
   onFoodDragOver: (event: DragEvent<HTMLButtonElement>) => void;
@@ -1058,7 +1089,7 @@ function RestaurantStage({
         </div>
       )}
 
-      <PlayerSprite walking={Boolean(selectedGuest)} style={playerStyle} />
+      <PlayerSprite walking={playerWalking} style={playerStyle} />
     </section>
   );
 }
@@ -1643,6 +1674,7 @@ function RestaurantGame() {
   const [served, setServed] = useState(0);
   const [combo, setCombo] = useState(0);
   const [draggingDish, setDraggingDish] = useState<DraggingDish | null>(null);
+  const [playerWalking, setPlayerWalking] = useState(false);
   const [, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a guest to take an order.",
@@ -1655,6 +1687,7 @@ function RestaurantGame() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const draggingDishRef = useRef<DraggingDish | null>(null);
   const consumedDishIdsRef = useRef<Set<string>>(new Set());
+  const previousPlayerTargetRef = useRef("home");
 
   const level = levelForServed(served);
   const difficulty = useMemo(() => difficultyForLevel(level), [level]);
@@ -1713,17 +1746,16 @@ function RestaurantGame() {
     const startTime = Date.now();
     const profile = difficultyForLevel(1);
     const firstGuest = makeGuest(0, startTime, profile);
-    const secondGuest = makeGuest(1, startTime + 900, profile);
 
-    guestSequenceRef.current = 2;
+    guestSequenceRef.current = 1;
     foodSequenceRef.current = 0;
-    nextGuestAtRef.current = startTime + profile.guestIntervalMs;
+    nextGuestAtRef.current = startTime + 900;
     nextDecoyAtRef.current = startTime + 2_000;
 
     setNow(startTime);
-    setActiveGuests([firstGuest.guest, secondGuest.guest]);
+    setActiveGuests([firstGuest.guest]);
     setSelectedGuestId(null);
-    setScheduledFoods([...firstGuest.scheduledFoods, ...secondGuest.scheduledFoods]);
+    setScheduledFoods([...firstGuest.scheduledFoods]);
     setBeltFoods([]);
     setScore(0);
     setServed(0);
@@ -1731,6 +1763,8 @@ function RestaurantGame() {
     draggingDishRef.current = null;
     consumedDishIdsRef.current.clear();
     setDraggingDish(null);
+    setPlayerWalking(false);
+    previousPlayerTargetRef.current = "home";
     setFeedback({ kind: "neutral", text: "Tap a guest, listen to the order, then serve dishes from the kitchen pass." });
     setGameStatus("playing");
   }, []);
@@ -2018,6 +2052,36 @@ function RestaurantGame() {
       return;
     }
 
+    if (!activeGuests.some((guest) => guest.phase === "entering" && now - guest.createdAt >= GUEST_ENTER_MS)) {
+      return;
+    }
+
+    setActiveGuests((currentGuests) =>
+      currentGuests.map((guest) =>
+        guest.phase === "entering" && now - guest.createdAt >= GUEST_ENTER_MS ? { ...guest, phase: "seated" } : guest,
+      ),
+    );
+  }, [activeGuests, gameStatus, now]);
+
+  useEffect(() => {
+    const nextTarget = selectedGuest?.instanceId ?? "home";
+
+    if (previousPlayerTargetRef.current === nextTarget) {
+      return undefined;
+    }
+
+    previousPlayerTargetRef.current = nextTarget;
+    setPlayerWalking(true);
+
+    const stopWalking = window.setTimeout(() => setPlayerWalking(false), 650);
+    return () => window.clearTimeout(stopWalking);
+  }, [selectedGuest?.instanceId]);
+
+  useEffect(() => {
+    if (gameStatus !== "playing") {
+      return;
+    }
+
     if (activeGuestCount < difficulty.maxGuests && now >= nextGuestAtRef.current && served < TARGET_SERVES) {
       addGuest(now, difficulty);
       nextGuestAtRef.current = now + difficulty.guestIntervalMs;
@@ -2234,6 +2298,7 @@ function RestaurantGame() {
             now={now}
             profile={difficulty}
             draggingDish={draggingDish}
+            playerWalking={playerWalking}
             selectedGuest={selectedGuest}
             onFoodDragEnd={handleFoodDragEnd}
             onFoodDragOver={handleFoodDragOver}

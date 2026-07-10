@@ -1,0 +1,12 @@
+{
+  "task": "Table Talk Diner polish playtest",
+  "status": "completed",
+  "requirements": [
+    "Play the current game in-browser and use rendered evidence, not assumptions.",
+    "Fix customer and waiter sprite frame order so walking does not look backwards.",
+    "Add visible movement for customers from the door to the table before seating.",
+    "Ensure dish cards and dish images are fully visible and not covered by the counter or overlapping.",
+    "Verify the polished game is playable on desktop and mobile."
+  ],
+  "current_step": "Implemented and verified. Build passes; desktop and mobile browser checks show visible, non-overlapping dish cards; full-body sheet sprites only; front-facing idle frames; side-facing walking frames; stationary tables; and drag serving works from a fresh order."
+}
