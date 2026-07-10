@@ -1955,7 +1955,7 @@ h2 {
   border: 0;
   isolation: isolate;
   --tile-size: clamp(30px, min(7.2vw, 9.4vh), 72px);
-  --tile-origin-x: clamp(56px, 10vw, 132px);
+  --tile-origin-x: max(clamp(56px, 10vw, 132px), calc((100vw - 9 * var(--tile-size)) / 2));
   --tile-origin-y: clamp(178px, 25vh, 220px);
 }
 
@@ -1964,20 +1964,27 @@ h2 {
   inset: 0;
   z-index: 0;
   background:
-    linear-gradient(90deg, rgba(117, 73, 43, 0.24) 2px, transparent 2px),
-    linear-gradient(0deg, rgba(117, 73, 43, 0.22) 2px, transparent 2px),
-    linear-gradient(135deg, rgba(255, 247, 216, 0.18) 0 25%, transparent 25% 100%),
-    #d79c61;
-  background-position:
-    var(--tile-origin-x) var(--tile-origin-y),
-    var(--tile-origin-x) var(--tile-origin-y),
-    var(--tile-origin-x) var(--tile-origin-y),
-    0 0;
-  background-size:
-    var(--tile-size) var(--tile-size),
-    var(--tile-size) var(--tile-size),
-    calc(var(--tile-size) * 2) calc(var(--tile-size) * 2),
-    auto;
+    linear-gradient(180deg, rgba(255, 247, 216, 0.08), rgba(74, 43, 37, 0.16)),
+    #b87548;
+}
+
+.floorTile {
+  position: absolute;
+  top: calc(var(--tile-origin-y) + var(--tile-row) * var(--tile-size));
+  left: calc(var(--tile-origin-x) + var(--tile-col) * var(--tile-size));
+  width: var(--tile-size);
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 247, 216, 0.2) 0 8%, transparent 9%),
+    linear-gradient(145deg, rgba(255, 247, 216, 0.18), transparent 42%),
+    #e3a564;
+  border: 2px solid #a76642;
+  box-shadow: inset 0 -5px 0 rgba(117, 73, 43, 0.12);
+  transform: translate(-50%, -50%);
+}
+
+.floorTile:nth-child(even) {
+  background-color: #d99458;
 }
 
 .restaurantStage::before {
@@ -2063,25 +2070,6 @@ h2 {
   background: #f1b83f;
 }
 
-.walkTileLayer {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.walkTile {
-  position: absolute;
-  top: calc(var(--tile-origin-y) + var(--tile-row) * var(--tile-size));
-  left: calc(var(--tile-origin-x) + var(--tile-col) * var(--tile-size));
-  width: calc(var(--tile-size) - 6px);
-  aspect-ratio: 1;
-  background: rgba(255, 247, 216, 0.22);
-  border: 2px solid rgba(117, 73, 43, 0.25);
-  border-radius: 6px;
-  box-shadow: inset 0 -6px 0 rgba(117, 73, 43, 0.1);
-  transform: translate(-50%, -50%);
-}
 
 .kitchenStation {
   position: absolute;
@@ -2091,12 +2079,13 @@ h2 {
   z-index: 4;
   height: clamp(148px, 17vh, 172px);
   background:
-    linear-gradient(180deg, #fff7d8 0 48%, #f2c87a 48% 52%, #fff3c7 52% 100%);
+    linear-gradient(90deg, rgba(255, 247, 216, 0.08), rgba(23, 49, 45, 0.04)),
+    url("./assets/game-kitchen-bg.png") center 38% / cover;
   border: 5px solid #17312d;
   border-radius: 12px;
   box-shadow:
     0 10px 0 rgba(23, 49, 45, 0.26),
-    inset 0 -14px 0 rgba(217, 143, 69, 0.18);
+    inset 0 -14px 0 rgba(23, 49, 45, 0.12);
 }
 
 .kitchenStation::before {
@@ -2149,37 +2138,51 @@ h2 {
   right: 20px;
   bottom: 18px;
   left: 20px;
+  display: grid;
   height: 54px;
-  background: #d98f45;
+  grid-template-columns: repeat(3, 1fr);
+  overflow: hidden;
+  background: #24716a;
   border: 4px solid #17312d;
-  border-radius: 10px;
-  box-shadow: inset 0 -10px 0 rgba(23, 49, 45, 0.16);
+  border-radius: 8px;
+  box-shadow: inset 0 -10px 0 rgba(23, 49, 45, 0.2);
 }
 
 .prepCounter span {
+  position: relative;
+  border-right: 3px solid #17312d;
+}
+
+.prepCounter span:last-child {
+  border-right: 0;
+}
+
+.prepCounter span::after {
   position: absolute;
-  top: 50%;
-  left: 18px;
-  color: #fff7d8;
-  font-size: 0.8rem;
-  font-weight: 950;
-  text-transform: uppercase;
-  transform: translateY(-50%);
+  top: 10px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  background: #f1b83f;
+  border: 2px solid #17312d;
+  border-radius: 50%;
+  content: "";
 }
 
 .dishRail {
   position: absolute;
   right: 26px;
-  bottom: 12px;
+  bottom: 10px;
   left: clamp(126px, 16vw, 180px);
   z-index: 4;
-  height: 80px;
+  box-sizing: border-box;
+  height: 96px;
   padding: 0 10px;
-  background: rgba(255, 253, 248, 0.46);
-  border: 3px solid rgba(23, 49, 45, 0.52);
+  background: rgba(255, 253, 248, 0.76);
+  border: 3px solid rgba(23, 49, 45, 0.68);
   border-radius: 10px;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 
@@ -2199,10 +2202,11 @@ h2 {
 .dishRail__items {
   display: flex;
   align-items: center;
+  box-sizing: border-box;
   min-width: 100%;
   height: 100%;
   gap: 12px;
-  padding-right: 10px;
+  padding: 9px 10px 9px 0;
 }
 
 .dishRail .beltFood {
@@ -2218,7 +2222,19 @@ h2 {
   overflow: visible;
   transform: translateY(var(--dish-lift, 0));
   touch-action: none;
-  animation: dishCardEnter 220ms ease both, dishCardBob 1.8s ease-in-out infinite;
+  animation: dishCardEnter 280ms cubic-bezier(0.22, 0.9, 0.28, 1.15) both;
+}
+
+.dishRail .beltFood--leaving {
+  pointer-events: none;
+  animation: dishCardExit 360ms ease-in both;
+}
+
+.beltFood__dish {
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  animation: dishCardBob 1.2s ease-in-out infinite;
 }
 
 .dishRail .beltFood--lane0 {
@@ -2380,56 +2396,64 @@ h2 {
   transform: translateY(-50%) rotate(90deg);
 }
 
-.customerActor {
+.characterActor {
   position: absolute;
   top: calc(var(--tile-origin-y) + var(--actor-row) * var(--tile-size));
   left: calc(var(--tile-origin-x) + var(--actor-col) * var(--tile-size));
   width: 0;
   height: 0;
   pointer-events: none;
-  transition:
-    left 90ms linear,
-    top 90ms linear;
 }
 
-.customerActor .customerSprite {
+.characterSprite {
   position: absolute;
-  display: block;
   bottom: 0;
   left: 0;
   z-index: 6;
-  width: clamp(112px, 11.6vw, 156px);
-  aspect-ratio: 2 / 1;
+  display: block;
+  height: calc(var(--tile-size) * 1.6);
   overflow: visible;
   background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  transform: translate(-50%, 4%);
+  transform: translate(-50%, 8%);
+  transform-origin: center bottom;
 }
 
-.customerSprite__shadow {
+.characterActor--customer .characterSprite {
+  width: calc(var(--tile-size) * 3.2);
+}
+
+.characterActor--waiter .characterSprite {
+  width: calc(var(--tile-size) * 1.2);
+}
+
+.characterSprite__shadow {
   position: absolute;
   bottom: 1px;
   left: 50%;
-  width: 52px;
-  height: 14px;
-  background: rgba(23, 49, 45, 0.22);
+  width: calc(var(--tile-size) * 0.68);
+  height: calc(var(--tile-size) * 0.18);
+  background: rgba(23, 49, 45, 0.24);
   border-radius: 50%;
   transform: translateX(-50%);
 }
 
-.customerSprite__sheet {
+.characterSprite__sheet {
   position: absolute;
   inset: 0;
   background-repeat: no-repeat;
-  background-position: 0 var(--sprite-y, 0%);
-  background-size: 400% 600%;
   filter: drop-shadow(0 7px 5px rgba(23, 49, 45, 0.22));
   transform-origin: center bottom;
 }
 
-.customerSprite--active {
+.characterActor--customer .characterSprite__sheet {
+  background-size: 400% 600%;
+}
+
+.characterActor--waiter .characterSprite__sheet {
+  background-size: 400% 100%;
+}
+
+.characterActor--active:not(.characterActor--walking) .characterSprite {
   animation: guestCustomerBob 1.1s ease-in-out infinite;
 }
 
@@ -2488,94 +2512,39 @@ h2 {
   z-index: 5;
 }
 
-.playerSprite {
-  top: calc(var(--tile-origin-y) + var(--actor-row) * var(--tile-size));
-  bottom: auto;
-  left: calc(var(--tile-origin-x) + var(--actor-col) * var(--tile-size));
-  width: clamp(88px, 8.4vw, 140px);
-  aspect-ratio: 3 / 4;
-  transform: translate(-50%, -88%);
-  animation: none;
-  transition:
-    left 90ms linear,
-    top 90ms linear;
-}
-
-.playerSprite__shadow {
-  position: absolute;
-  right: 18%;
-  bottom: 1%;
-  left: 18%;
-  height: 12%;
-  background: rgba(23, 49, 45, 0.24);
-  border-radius: 50%;
-}
-
-.playerSprite__sheet {
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-position: 0 0;
-  background-size: 400% 100%;
-  filter: drop-shadow(0 14px 0 rgba(23, 49, 45, 0.14)) drop-shadow(0 18px 14px rgba(23, 49, 45, 0.24));
-}
-
-.customerSprite--south .customerSprite__sheet {
+.characterActor--south .characterSprite__sheet {
   background-position: 0 var(--sprite-y, 0%);
 }
 
-.customerSprite--north .customerSprite__sheet {
+.characterActor--north .characterSprite__sheet {
   background-position: 66.6667% var(--sprite-y, 0%);
 }
 
-.customerSprite--east .customerSprite__sheet {
-  background-position: 100% var(--sprite-y, 0%);
+.characterActor--east .characterSprite__sheet {
+  background-position: 33.3333% var(--sprite-y, 0%);
 }
 
-.customerSprite--west .customerSprite__sheet {
-  background-position: 100% var(--sprite-y, 0%);
+.characterActor--west .characterSprite__sheet {
+  background-position: 33.3333% var(--sprite-y, 0%);
   transform: scaleX(-1);
 }
 
-.customerActor--walking .customerSprite {
-  animation: customerTileStep 520ms ease-in-out infinite;
+.characterActor--walking .characterSprite {
+  animation: characterTileStep 360ms ease-in-out infinite;
 }
 
-.customerActor--walking .customerSprite__shadow {
-  animation: dinerShadowStep 520ms ease-in-out infinite;
+.characterActor--walking .characterSprite__shadow {
+  animation: dinerShadowStep 360ms ease-in-out infinite;
 }
 
-.customerActor--walking .customerSprite__sheet {
-  animation: none;
+.characterActor--walking.characterActor--south .characterSprite__sheet,
+.characterActor--walking.characterActor--north .characterSprite__sheet {
+  animation: characterWalkVertical 360ms steps(1, end) infinite;
 }
 
-.playerSprite--south .playerSprite__sheet {
-  background-position: 0 0;
-}
-
-.playerSprite--north .playerSprite__sheet {
-  background-position: 66.6667% 0;
-}
-
-.playerSprite--east .playerSprite__sheet {
-  background-position: 100% 0;
-}
-
-.playerSprite--west .playerSprite__sheet {
-  background-position: 100% 0;
-  transform: scaleX(-1);
-}
-
-.playerSprite--walking {
-  animation: playerTileStep 560ms ease-in-out infinite;
-}
-
-.playerSprite--walking .playerSprite__shadow {
-  animation: dinerShadowStep 560ms ease-in-out infinite;
-}
-
-.playerSprite--walking .playerSprite__sheet {
-  animation: none;
+.characterActor--walking.characterActor--east .characterSprite__sheet,
+.characterActor--walking.characterActor--west .characterSprite__sheet {
+  animation: characterWalkSide 360ms steps(1, end) infinite;
 }
 
 @keyframes beltRoll {
@@ -2615,23 +2584,35 @@ h2 {
 @keyframes dishCardEnter {
   from {
     opacity: 0;
-    transform: translateY(calc(var(--dish-lift, 0px) + 8px)) scale(0.88);
+    transform: translate(-34px, calc(var(--dish-lift, 0px) + 5px)) scale(0.86);
   }
 
   to {
     opacity: 1;
-    transform: translateY(var(--dish-lift, 0px)) scale(1);
+    transform: translate(0, var(--dish-lift, 0px)) scale(1);
+  }
+}
+
+@keyframes dishCardExit {
+  from {
+    opacity: 1;
+    transform: translate(0, var(--dish-lift, 0px)) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(40px, calc(var(--dish-lift, 0px) - 7px)) scale(0.82);
   }
 }
 
 @keyframes dishCardBob {
   0%,
   100% {
-    transform: translateY(var(--dish-lift, 0px));
+    transform: translateY(2px);
   }
 
   50% {
-    transform: translateY(calc(var(--dish-lift, 0px) - 3px));
+    transform: translateY(-3px);
   }
 }
 
@@ -2687,25 +2668,38 @@ h2 {
   }
 }
 
-@keyframes customerTileStep {
+@keyframes characterTileStep {
   0%,
   100% {
-    transform: translate(-50%, 4%);
+    transform: translate(-50%, 8%);
   }
 
   50% {
-    transform: translate(-50%, calc(4% - 6px));
+    transform: translate(-50%, 1%);
   }
 }
 
-@keyframes playerTileStep {
+@keyframes characterWalkVertical {
   0%,
-  100% {
-    transform: translate(-50%, -88%);
+  49.999% {
+    background-position: 0 var(--sprite-y, 0%);
   }
 
-  50% {
-    transform: translate(-50%, calc(-88% - 7px));
+  50%,
+  100% {
+    background-position: 66.6667% var(--sprite-y, 0%);
+  }
+}
+
+@keyframes characterWalkSide {
+  0%,
+  49.999% {
+    background-position: 33.3333% var(--sprite-y, 0%);
+  }
+
+  50%,
+  100% {
+    background-position: 100% var(--sprite-y, 0%);
   }
 }
 
@@ -2725,11 +2719,11 @@ h2 {
 @keyframes guestCustomerBob {
   0%,
   100% {
-    transform: translate(-50%, 4%);
+    transform: translate(-50%, 8%);
   }
 
   50% {
-    transform: translate(-50%, calc(4% - 4px));
+    transform: translate(-50%, 3%);
   }
 }
 
@@ -3322,16 +3316,11 @@ h2 {
     border-width: 3px;
   }
 
-  .prepCounter span {
-    left: 10px;
-    font-size: 0.66rem;
-  }
-
   .dishRail {
     right: 9px;
-    bottom: 8px;
+    bottom: 6px;
     left: 68px;
-    height: 64px;
+    height: 78px;
     border-width: 2px;
     border-radius: 8px;
     padding: 0 5px;
@@ -3339,6 +3328,7 @@ h2 {
 
   .dishRail__items {
     gap: 6px;
+    padding: 8px 6px 8px 0;
   }
 
   .dishRail__label {
@@ -3350,7 +3340,7 @@ h2 {
   .dishRail .beltFood {
     flex-basis: 60px;
     width: 60px;
-    height: 62px;
+    height: 58px;
     padding: 4px;
     border-width: 2px;
     transform: translateY(var(--dish-lift, 0));
@@ -3409,15 +3399,6 @@ h2 {
     left: 12px;
   }
 
-  .customerActor .customerSprite {
-    width: 104px;
-    height: auto;
-  }
-
-  .customerSprite__shadow {
-    width: 34px;
-    height: 10px;
-  }
 
   .guestTable__name {
     bottom: 13px;
@@ -3465,10 +3446,6 @@ h2 {
     bottom: 10px;
     left: 24px;
     height: 6px;
-  }
-
-  .playerSprite {
-    width: clamp(60px, 18vw, 78px);
   }
 
   .dragDishPreview {

@@ -26,8 +26,8 @@ has no lives or loss condition.
 | --- | --- |
 | HUD | Portal button, score, completed orders, and level. |
 | Status toast | Visible neutral/good/bad gameplay feedback with `role="status"`. |
-| Restaurant stage | Floor tiles, door, guest tables, customer actors, and waiter. |
-| Kitchen station | Dishes available for service and a visual pass-lifetime indicator. |
+| Restaurant stage | A 10 × 5 tiled floor, door, guest tables, and shared tile-based character actors. |
+| Kitchen station | Stove/counter art, dishes available for service, and a visual pass-lifetime indicator. |
 | Result banner | Completion message and `New Shift` button after 24 orders. |
 
 ## Starting And Taking Orders
@@ -38,10 +38,11 @@ about 900ms after reset while the level-1 two-guest limit has room.
 Entering tables ignore pointer input. Once seated:
 
 1. Select a guest table.
-2. The waiter follows the tile route to that table.
+2. The waiter steps through whole floor tiles to that table, using the same sprite actor model as guests.
 3. After the waiter arrives, the guest's written order and food chips appear.
-4. Speech synthesis attempts a greeting followed by the order phrase.
-5. Selecting the table again repeats the waiter/order flow.
+4. Speech synthesis attempts a greeting followed by the order phrase, and the greeting adds a small
+   amount of patience.
+5. Selecting the table again repeats the waiter/order flow and greeting interaction.
 
 Before an order is heard, its bubble shows `...`. Dropping a dish there keeps the dish available and
 asks the player to take the order first.
@@ -59,11 +60,11 @@ asks the player to take the order first.
 
 | Situation | Outcome |
 | --- | --- |
-| Guest still needs the dish | Dish is removed, checklist updates, score increases, and correct feedback plays. |
-| Dish completes the order | Guest leaves, completed orders and combo increase, owned leftovers are removed, and completion feedback plays. |
-| Guest does not need the dish | Dish is removed, wrong feedback plays, and combo resets. |
+| Guest still needs the dish | Dish animates off the pass, checklist updates, patience rises slightly, score increases, and correct feedback plays. |
+| Dish completes the order | Guest leaves, completed orders and combo increase, owned leftovers animate off, and completion feedback plays. |
+| Guest does not need the dish | Dish animates off, wrong feedback plays, and combo resets. |
 | Guest has not given the order | Dish remains, and the game asks the player to take the order. |
-| Guest expires | Guest leaves, owned scheduled/visible food is removed, and combo resets. |
+| Guest expires | Guest leaves, owned scheduled food is removed, visible dishes animate off, and combo resets. |
 
 A decoy can satisfy an order when its food matches. `targetGuestId` governs dish lifecycle, not which
 table may receive it.
@@ -71,10 +72,11 @@ table may receive it.
 ## Diner Timing And Progress
 
 - Patience starts at guest creation, including entry time.
+- Greeting/order reveal adds 1.5 seconds; each correct dish adds 2 seconds.
 - The table renders an accessible progress bar, not a numeric seconds label.
-- Ordered dishes appear over the guest's last-dish timing window.
-- Missed ordered dishes recycle while the owning guest still needs them.
-- Decoys disappear when their pass lifetime ends.
+- Ordered dishes animate onto the pass over the guest's last-dish timing window.
+- Missed ordered dishes animate off and recycle while the owning guest still needs them.
+- Decoys animate off when their pass lifetime ends.
 - Every 4 completed orders advances a level, up to level 6.
 - Higher levels allow more guests, eventually increase order size from 2 to 3, and adjust pacing.
 

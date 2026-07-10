@@ -15,13 +15,13 @@ from CSS scene styles, and the cursor URL is declared in `src/styles.css`.
 
 | File | Dimensions | Used by | Notes |
 | --- | ---: | --- | --- |
-| `src/assets/game-kitchen-bg.png` | `1672 x 941` | `.sceneBackdrop__image` in `src/styles.css`; `gameKitchenBgUrl` in `GamePortal` | Generated kitchen background for scene styles and the portal preview tile. |
+| `src/assets/game-kitchen-bg.png` | `1672 x 941` | `.sceneBackdrop__image` and `.kitchenStation` in `src/styles.css`; `gameKitchenBgUrl` in `GamePortal` | Generated kitchen background for the scene, in-stage cooking area, and portal preview tile. |
 | `src/assets/player-chef.png` | `1024 x 1536` | `playerChefUrl` in `GamePortal` | Portal preview chef image. |
 | `src/assets/player-chef-source.png` | `1024 x 1536` | Not imported by app code | Source/reference image kept in the repo. |
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
 | `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | Not imported by app code | Legacy/reference kitchen sprite sheet. |
-| `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | `customerFullbodySheetUrl` in `CustomerSprite` | Runtime 4-column × 6-row customer sheet, sliced at `400% 600%`; the wrapper preserves each cell's `2 / 1` aspect ratio. |
-| `src/assets/sprites/generated/waiter-fullbody-sheet.png` | `2172 x 724` | `waiterFullbodySheetUrl` in `PlayerSprite` | Runtime 4-column waiter sheet, sliced at `400% 100%`; west-facing art mirrors the east column. |
+| `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | `customerFullbodySheetUrl` in `CharacterActor` | Runtime 4-column × 6-row customer sheet, sliced at `400% 600%`; vertical and side frame pairs loop while walking. |
+| `src/assets/sprites/generated/waiter-fullbody-sheet.png` | `2172 x 724` | `waiterFullbodySheetUrl` in `CharacterActor` | Runtime 4-column waiter sheet using the same world-space actor height and frame loop as customers; west mirrors east. |
 
 ## Food Sprites
 

@@ -41,8 +41,10 @@ references: []
 | `HAPPY_GUEST_COMBO_BONUS` | Consecutive completed-guest bonus. |
 | `FIRST_DISH_DELAY_MS` | First ordered dish timing. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement pacing. |
-| `GUEST_STEP_MS`, `WAITER_STEP_MS` | Tile movement speed. |
-| `LEAVING_GUEST_LINGER_MS` | Post-exit cleanup. |
+| `CHARACTER_STEP_MS` | Shared guest/waiter discrete tile-step speed. |
+| `LEAVING_GUEST_LINGER_MS` | Post-exit guest cleanup. |
+| `DISH_EXIT_MS` | Serving-line exit-animation cleanup delay. |
+| `GREETING_PATIENCE_BONUS_MS`, `SERVED_DISH_PATIENCE_BONUS_MS` | Patience rewarded by positive interactions. |
 | `ORDER_LANES` | Lane selection/lift; requires matching CSS support. |
 | `difficultyForLevel` | Capacity, order size, dish timing, decoys, and patience. |
 
@@ -92,12 +94,12 @@ Run `npm run dev`, then inspect the console throughout.
 | Test | Expected |
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1. |
-| Guest selection | After seating, waiter walks to table, then order text/TTS appears. |
-| Correct dish | Dish disappears, chip updates, score rises, and visible good feedback appears. |
+| Guest selection | After seating, waiter steps across whole tiles, then order text/TTS appears and patience rises. |
+| Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
 | Drop before order | Dish remains and status asks player to take the order. |
 | Drop outside | Dish remains and status explains where to serve it. |
-| Wrong table | Dish disappears and combo resets with bad feedback. |
-| Expiration | Guest leaves and owned dishes are cleaned up. |
+| Wrong table | Dish animates off and combo resets with bad feedback. |
+| Expiration | Guest leaves and owned dishes animate off before cleanup. |
 | Keyboard service | `Enter`/`Space` serves to selected table. |
 | Win | At 24 orders, completion banner and `New Shift` appear. |
 | New Shift | All diner counters and runtime state reset. |
