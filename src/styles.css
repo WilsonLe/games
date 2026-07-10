@@ -1924,7 +1924,7 @@ h2 {
   border: 0;
   isolation: isolate;
   --dining-inset: 18px;
-  --dining-top: clamp(250px, 31vh, 290px);
+  --dining-top: clamp(278px, 36vh, 318px);
   --dining-width: calc(100vw - var(--dining-inset) - var(--dining-inset));
   --dining-height: calc(var(--viewport-height) - var(--dining-top) - var(--dining-inset));
   --tile-width: calc(var(--dining-width) / 10);
@@ -2051,10 +2051,10 @@ h2 {
 .kitchenStation {
   position: absolute;
   top: 92px;
-  right: clamp(54px, 7vw, 100px);
-  left: clamp(210px, 26vw, 330px);
+  right: clamp(32px, 4vw, 60px);
+  left: clamp(142px, 16vw, 220px);
   z-index: 4;
-  height: clamp(148px, 17vh, 172px);
+  height: clamp(168px, 20vh, 196px);
   background:
     linear-gradient(90deg, rgba(255, 247, 216, 0.08), rgba(23, 49, 45, 0.04)),
     url("./assets/game-kitchen-bg.png") center 38% / cover;
@@ -2148,23 +2148,17 @@ h2 {
 
 .dishRail {
   position: absolute;
-  right: 26px;
+  right: 20px;
   bottom: 10px;
-  left: clamp(126px, 16vw, 180px);
+  left: clamp(210px, 20vw, 250px);
   z-index: 4;
   box-sizing: border-box;
-  height: 114px;
+  height: 124px;
   padding: 0 10px;
-  background: rgba(255, 253, 248, 0.76);
+  background: rgba(255, 253, 248, 0.82);
   border: 3px solid rgba(23, 49, 45, 0.68);
   border-radius: 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-.dishRail::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .dishRail__label {
@@ -2177,13 +2171,26 @@ h2 {
 }
 
 .dishRail__items {
-  display: flex;
+  display: grid;
   align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   min-width: 100%;
   height: 100%;
-  gap: 12px;
-  padding: 6px 10px 6px 0;
+  grid-template-columns: repeat(6, minmax(76px, 96px));
+  gap: 8px;
+  padding: 6px;
+}
+
+.dishRail__slot {
+  width: 100%;
+  height: 90px;
+  background:
+    radial-gradient(circle, rgba(23, 49, 45, 0.08) 0 24px, transparent 25px),
+    rgba(255, 253, 248, 0.44);
+  border: 2px dashed rgba(23, 49, 45, 0.28);
+  border-radius: 8px;
+  box-shadow: inset 0 -5px 0 rgba(23, 49, 45, 0.05);
 }
 
 .dishRail .beltFood {
@@ -2192,8 +2199,8 @@ h2 {
   top: auto;
   bottom: auto;
   left: auto;
-  flex: 0 0 92px;
-  width: 92px;
+  width: 100%;
+  max-width: 96px;
   height: 90px;
   padding: 5px 7px 13px;
   overflow: visible;
@@ -3013,13 +3020,28 @@ h2 {
   }
 
   .kitchenStation {
-    right: 20px;
-    left: 96px;
-    height: 138px;
+    right: 16px;
+    left: 72px;
+    height: 178px;
+  }
+
+  .stoveBank {
+    display: none;
   }
 
   .dishRail {
-    left: 112px;
+    right: 12px;
+    left: 12px;
+    height: 132px;
+  }
+
+  .dishRail__items {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .dishRail .beltFood {
+    justify-self: center;
   }
 
   .guestTable {
@@ -3165,7 +3187,7 @@ h2 {
   .restaurantStage {
     min-height: var(--viewport-height);
     --dining-inset: 8px;
-    --dining-top: 190px;
+    --dining-top: 248px;
     --tile-size: clamp(28px, min(var(--tile-width), var(--tile-height)), 34px);
   }
 
@@ -3212,9 +3234,9 @@ h2 {
 
   .kitchenStation {
     top: 72px;
-    right: 12px;
-    left: 76px;
-    height: 112px;
+    right: 8px;
+    left: 8px;
+    height: 168px;
     border-width: 4px;
     border-radius: 10px;
   }
@@ -3257,31 +3279,41 @@ h2 {
   }
 
   .dishRail {
-    right: 9px;
+    right: 8px;
     bottom: 6px;
-    left: 68px;
-    height: 92px;
+    left: 8px;
+    height: 146px;
     border-width: 2px;
     border-radius: 8px;
     padding: 0 5px;
   }
 
   .dishRail__items {
-    gap: 8px;
-    padding: 5px 6px 5px 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 23px 5px 5px;
   }
 
   .dishRail__label {
-    top: -36px;
-    right: 2px;
+    top: 5px;
+    right: 8px;
     font-size: 0.66rem;
   }
 
+  .dishRail__slot {
+    height: 54px;
+    background:
+      radial-gradient(circle, rgba(23, 49, 45, 0.08) 0 15px, transparent 16px),
+      rgba(255, 253, 248, 0.44);
+  }
+
   .dishRail .beltFood {
-    flex-basis: 74px;
-    width: 74px;
-    height: 74px;
-    padding: 4px 5px 12px;
+    width: 100%;
+    max-width: none;
+    height: 54px;
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 3px 5px 8px;
     border-width: 2px;
     transform: translateY(var(--dish-lift, 0));
   }
@@ -3295,14 +3327,18 @@ h2 {
   }
 
   .dishRail .beltFood .foodArt {
-    width: 40px;
-    height: 40px;
-    flex-basis: 40px;
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
   }
 
   .dishRail .beltFood strong {
-    max-width: 64px;
-    font-size: 0.64rem;
+    max-width: 100%;
+    font-size: 0.6rem;
+  }
+
+  .dishRail .beltFood__dish {
+    display: contents;
   }
 
   .guestTable {
@@ -3418,12 +3454,12 @@ h2 {
 
 @media (max-width: 560px) and (max-height: 620px) {
   .restaurantStage {
-    --dining-top: 174px;
+    --dining-top: 226px;
   }
 
   .kitchenStation {
     top: 66px;
-    height: 104px;
+    height: 154px;
   }
 
   .restaurantStage::after {

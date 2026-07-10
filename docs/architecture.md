@@ -123,6 +123,7 @@ The diner starts automatically. It has no mid-shift pause or reset control. Comp
 | `WRONG_DISH_PATIENCE_PER_LEVEL_MS` | 500 | Additional wrong-dish patience loss for each level above 1. |
 | `SERVED_DISH_PATIENCE_BONUS_MS` | 2000 | Patience added after each correct dish. |
 | `ORDER_LANES` | 2 | Logical dish lane/lift choices. |
+| `DISH_PASS_CAPACITY` | 6 | Maximum number of visible dishes occupying the kitchen pass. |
 
 ## Difficulty
 
@@ -148,6 +149,7 @@ orders it is half that time.
   expiration, and schedules each ordered food from 1800ms through `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
+- The pass exposes six stable dish slots. Ordered dishes retry after `650ms` and decoys wait when all six slots are occupied.
 - `buildTileRoute` routes customers through the diner aisle; `getRouteVisual` linearly interpolates
   between each pair of route tiles and derives facing from the current segment.
 - The 100ms clock samples customer route progress, and a matching linear CSS transition bridges

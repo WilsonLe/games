@@ -28,7 +28,7 @@ loss condition.
 | HUD | Portal button, score, completed orders, and level. |
 | Status toast | Visible neutral/good/bad gameplay feedback with `role="status"`. |
 | Restaurant stage | A responsive 10 × 5 tiled dining floor below the kitchen, four persistent tables, a door, and tile-based customer actors. |
-| Kitchen station | Stove/counter art, dishes available for service, and a visual pass-lifetime indicator. |
+| Kitchen station | Stove/counter art, six visible dish slots available for service, and a visual pass-lifetime indicator. |
 | Result banner | Completion message and `New Shift` button after 24 orders. |
 
 ## Starting And Taking Orders
@@ -80,6 +80,7 @@ table may receive it.
 - An incorrect dish removes 2.5 seconds of patience at level 1, increasing by 0.5 seconds per level
   through a 5-second penalty at level 6. The attempted dish stays on the pass.
 - The table renders an accessible progress bar, not a numeric seconds label.
+- The kitchen pass holds up to six dishes in visible slots; new dishes wait briefly when all slots are occupied.
 - Ordered dishes animate onto the pass over the guest's last-dish timing window.
 - Missed ordered dishes animate off and recycle while the owning guest still needs them.
 - Decoys animate off when their pass lifetime ends.

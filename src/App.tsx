@@ -314,6 +314,7 @@ const WRONG_DISH_PATIENCE_BASE_MS = 2_500;
 const WRONG_DISH_PATIENCE_PER_LEVEL_MS = 500;
 const SERVED_DISH_PATIENCE_BONUS_MS = 2_000;
 const ORDER_LANES = 2;
+const DISH_PASS_CAPACITY = 6;
 const PORTAL_TITLE = "Lingo Game";
 const DISH_WISH_TITLE = "Dish Wish";
 const DISH_WISH_PATH = "/games/dish-wish";
@@ -1122,8 +1123,10 @@ function KitchenStation({
         <span />
         <span />
       </div>
-      <div className="dishRail" aria-label="Kitchen pass dishes">
-        <span className="dishRail__label">{formatTime(profile.beltTravelMs)} pass</span>
+      <div className="dishRail" aria-label={`Kitchen pass dishes, ${DISH_PASS_CAPACITY} dish capacity`}>
+        <span className="dishRail__label">
+          {beltFoods.length}/{DISH_PASS_CAPACITY} dishes · {formatTime(profile.beltTravelMs)} pass
+        </span>
         <div className="dishRail__items">
           {beltFoods.map((food) => {
             const progress = clamp((now - food.spawnedAt) / food.travelMs, 0, 1);
@@ -1160,6 +1163,9 @@ function KitchenStation({
               </button>
             );
           })}
+          {Array.from({ length: Math.max(0, DISH_PASS_CAPACITY - beltFoods.length) }, (_, index) => (
+            <span className="dishRail__slot" aria-hidden="true" key={`empty-dish-slot-${index}`} />
+          ))}
         </div>
       </div>
     </div>
@@ -2297,7 +2303,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       const decoy = makeDecoyFood(foodSequenceRef.current, now, difficulty);
       const lane = chooseSpawnLane(decoy.lane, beltFoods, now);
 
-      if (lane === null) {
+      if (beltFoods.length >= DISH_PASS_CAPACITY || lane === null) {
         nextDecoyAtRef.current = now + 650;
       } else {
         foodSequenceRef.current += 1;
@@ -2323,6 +2329,11 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     const delayedFoods: ScheduledFood[] = [];
 
     for (const food of readyFoods) {
+      if (beltFoods.length + spawnedFoods.length >= DISH_PASS_CAPACITY) {
+        delayedFoods.push({ ...food, dueAt: now + 650 });
+        continue;
+      }
+
       const lane = chooseSpawnLane(food.lane, [...beltFoods, ...spawnedFoods], now);
 
       if (lane === null) {

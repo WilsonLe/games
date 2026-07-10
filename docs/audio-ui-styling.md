@@ -86,7 +86,7 @@ Hop does not render them.
 | --- | --- | ---: | --- |
 | `.floorTiles` / `.floorTile` | responsive grid below kitchen | 0 | Opaque 10 × 5 dining-floor grid aligned to actor coordinates. |
 | stage frame/wall pseudo-elements | absolute | 1–2 | Room boundary and kitchen wall. |
-| `.kitchenStation` | absolute top | 4 | Kitchen-art backdrop, burners, cabinets, and dish rail. |
+| `.kitchenStation` | absolute top | 4 | Expanded kitchen-art backdrop, burners, cabinets, and six-slot dish rail. |
 | `.restaurantDoor` | tile-positioned | 8 | Guest entry/exit. |
 | `.guestTable` | tile-positioned | 11 / 18 selected | One of four persistent tables; guest UI appears only while occupied. |
 | `.characterActor--customer` | tile-positioned | `14 + row` | Guest art rendered by the directional actor. |
@@ -102,7 +102,7 @@ while a route is active; west mirrors east. Stopped actors use the front idle ce
 ## Dish Wish Tile System
 
 `restaurantStage` defines the dining inset/top and derives `--tile-width` and `--tile-height` from the
-remaining viewport below the kitchen. The stage renders 50 opaque `floorTile` elements as a 10 × 5
+remaining viewport below the expanded kitchen. The stage renders 50 opaque `floorTile` elements as a 10 × 5
 CSS grid. Logical coordinates use columns 0–9 and rows 0–4; actors, the door, and four persistent
 tables use the corresponding responsive cell centers:
 
@@ -155,7 +155,7 @@ updates continue.
 - Keep character actors non-interactive; tables, dishes, and map stops own input.
 - Do not let diner full-viewport rules leak into `.appShell--city`.
 - Check the portal, Dish Wish, and Drop Hop at desktop, `980px`, `560px`, and a short mobile viewport.
-- Keep dish buttons stable in size and retain keyboard service.
+- Keep all six dish slots visible without horizontal scrolling, keep dish buttons stable in size, and retain keyboard service.
 
 ## Cursor
 
