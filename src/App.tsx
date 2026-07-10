@@ -52,6 +52,20 @@ type CustomerProfile = {
 };
 
 type GuestPhase = "entering" | "seated" | "leaving";
+type WalkDirection = "north" | "south" | "east" | "west";
+
+type TilePoint = {
+  col: number;
+  row: number;
+};
+
+type SeatLayout = {
+  table: TilePoint;
+  customer: TilePoint;
+  waiter: TilePoint;
+  bubbleShift: string;
+  mobileBubbleShift: string;
+};
 
 type DifficultyProfile = {
   level: number;
@@ -103,6 +117,19 @@ type DraggingDish = {
   pointerId: number;
   x: number;
   y: number;
+};
+
+type CharacterVisual = TilePoint & {
+  direction: WalkDirection;
+  walking: boolean;
+  done: boolean;
+};
+
+type WaiterRoute = {
+  targetGuestId: string | null;
+  path: TilePoint[];
+  startedAt: number;
+  stepMs: number;
 };
 
 type Feedback = {
@@ -209,8 +236,9 @@ const MAX_LEVEL = Math.ceil(TARGET_SERVES / ORDERS_PER_LEVEL);
 const HAPPY_GUEST_COMBO_BONUS = 15;
 const FIRST_DISH_DELAY_MS = 1800;
 const NEXT_GUEST_AFTER_COMPLETE_MS = 3_000;
-const GUEST_ENTER_MS = 1_450;
-const LEAVING_GUEST_VISIBLE_MS = 2_200;
+const GUEST_STEP_MS = 260;
+const WAITER_STEP_MS = 230;
+const LEAVING_GUEST_LINGER_MS = 350;
 const ORDER_LANES = 2;
 const GAME_TITLE = "Table Talk Diner";
 const GAME_PATH = "/games/table-talk-diner";
@@ -259,120 +287,43 @@ const HAPPY_GUEST_LINES = [
   "Nice work. The meal was great.",
 ];
 
-const SEAT_LAYOUT = [
-  {
-    x: "23%",
-    y: "58%",
-    entryX: "-18vw",
-    entryY: "27vh",
-    waiterX: "30%",
-    waiterY: "66%",
-    bubbleShift: "-34%",
-    mobileX: "30%",
-    mobileY: "48%",
-    mobileEntryX: "-20vw",
-    mobileEntryY: "38vh",
-    mobileWaiterX: "42%",
-    mobileWaiterY: "55%",
-    mobileBubbleShift: "-36%",
-  },
-  {
-    x: "49%",
-    y: "56%",
-    entryX: "-42vw",
-    entryY: "29vh",
-    waiterX: "54%",
-    waiterY: "65%",
-    bubbleShift: "-50%",
-    mobileX: "70%",
-    mobileY: "48%",
-    mobileEntryX: "-60vw",
-    mobileEntryY: "38vh",
-    mobileWaiterX: "58%",
-    mobileWaiterY: "55%",
-    mobileBubbleShift: "-64%",
-  },
-  {
-    x: "74%",
-    y: "58%",
-    entryX: "-67vw",
-    entryY: "27vh",
-    waiterX: "68%",
-    waiterY: "66%",
-    bubbleShift: "-66%",
-    mobileX: "30%",
-    mobileY: "66%",
-    mobileEntryX: "-20vw",
-    mobileEntryY: "20vh",
-    mobileWaiterX: "42%",
-    mobileWaiterY: "70%",
-    mobileBubbleShift: "-36%",
-  },
-  {
-    x: "28%",
-    y: "80%",
-    entryX: "-23vw",
-    entryY: "6vh",
-    waiterX: "34%",
-    waiterY: "86%",
-    bubbleShift: "-36%",
-    mobileX: "70%",
-    mobileY: "66%",
-    mobileEntryX: "-60vw",
-    mobileEntryY: "20vh",
-    mobileWaiterX: "58%",
-    mobileWaiterY: "70%",
-    mobileBubbleShift: "-64%",
-  },
-  {
-    x: "55%",
-    y: "82%",
-    entryX: "-50vw",
-    entryY: "4vh",
-    waiterX: "50%",
-    waiterY: "87%",
-    bubbleShift: "-50%",
-    mobileX: "30%",
-    mobileY: "84%",
-    mobileEntryX: "-20vw",
-    mobileEntryY: "2vh",
-    mobileWaiterX: "42%",
-    mobileWaiterY: "86%",
-    mobileBubbleShift: "-36%",
-  },
-  {
-    x: "78%",
-    y: "79%",
-    entryX: "-72vw",
-    entryY: "7vh",
-    waiterX: "72%",
-    waiterY: "85%",
-    bubbleShift: "-66%",
-    mobileX: "70%",
-    mobileY: "84%",
-    mobileEntryX: "-60vw",
-    mobileEntryY: "2vh",
-    mobileWaiterX: "58%",
-    mobileWaiterY: "86%",
-    mobileBubbleShift: "-64%",
-  },
+const DINER_DOOR_TILE: TilePoint = { col: 0, row: 7 };
+const WAITER_HOME_TILE: TilePoint = { col: 1, row: 7 };
+const DINER_AISLE_ROW = 7;
+
+const SEAT_LAYOUT: SeatLayout[] = [
+  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 }, waiter: { col: 2, row: 4 }, bubbleShift: "-34%", mobileBubbleShift: "-30%" },
+  { table: { col: 6, row: 3 }, customer: { col: 6, row: 3 }, waiter: { col: 6, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 10, row: 3 }, customer: { col: 10, row: 3 }, waiter: { col: 10, row: 4 }, bubbleShift: "-66%", mobileBubbleShift: "-70%" },
+  { table: { col: 2, row: 6 }, customer: { col: 2, row: 6 }, waiter: { col: 2, row: 7 }, bubbleShift: "-34%", mobileBubbleShift: "-30%" },
+  { table: { col: 6, row: 6 }, customer: { col: 6, row: 6 }, waiter: { col: 6, row: 7 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 10, row: 6 }, customer: { col: 10, row: 6 }, waiter: { col: 10, row: 7 }, bubbleShift: "-66%", mobileBubbleShift: "-70%" },
 ];
 
-const WALK_TILES = [
-  { x: "9%", y: "82%" },
-  { x: "16%", y: "78%" },
-  { x: "24%", y: "74%" },
-  { x: "34%", y: "70%" },
-  { x: "45%", y: "68%" },
-  { x: "56%", y: "68%" },
-  { x: "67%", y: "70%" },
-  { x: "77%", y: "74%" },
-  { x: "28%", y: "61%" },
-  { x: "50%", y: "60%" },
-  { x: "72%", y: "61%" },
-  { x: "34%", y: "84%" },
-  { x: "55%", y: "86%" },
-  { x: "74%", y: "84%" },
+const WALK_TILES: TilePoint[] = [
+  { col: 0, row: 7 },
+  { col: 1, row: 7 },
+  { col: 2, row: 7 },
+  { col: 3, row: 7 },
+  { col: 4, row: 7 },
+  { col: 5, row: 7 },
+  { col: 6, row: 7 },
+  { col: 7, row: 7 },
+  { col: 8, row: 7 },
+  { col: 9, row: 7 },
+  { col: 10, row: 7 },
+  { col: 2, row: 6 },
+  { col: 2, row: 5 },
+  { col: 2, row: 4 },
+  { col: 2, row: 3 },
+  { col: 6, row: 6 },
+  { col: 6, row: 5 },
+  { col: 6, row: 4 },
+  { col: 6, row: 3 },
+  { col: 10, row: 6 },
+  { col: 10, row: 5 },
+  { col: 10, row: 4 },
+  { col: 10, row: 3 },
 ];
 
 const foodById = new Map(FOODS.map((food) => [food.id, food]));
@@ -548,6 +499,123 @@ function cx(...classes: Array<string | false | undefined>) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getSeatLayout(seatIndex: number) {
+  return SEAT_LAYOUT[seatIndex % SEAT_LAYOUT.length];
+}
+
+function getWalkDirection(from: TilePoint, to: TilePoint): WalkDirection {
+  if (to.col > from.col) {
+    return "east";
+  }
+
+  if (to.col < from.col) {
+    return "west";
+  }
+
+  if (to.row < from.row) {
+    return "north";
+  }
+
+  return "south";
+}
+
+function appendTileLine(path: TilePoint[], target: TilePoint) {
+  const current = path[path.length - 1];
+
+  if (!current) {
+    path.push(target);
+    return;
+  }
+
+  const colStep = Math.sign(target.col - current.col);
+  if (colStep !== 0) {
+    for (let col = current.col + colStep; colStep > 0 ? col <= target.col : col >= target.col; col += colStep) {
+      path.push({ col, row: current.row });
+    }
+  }
+
+  const afterCol = path[path.length - 1] ?? current;
+  const rowStep = Math.sign(target.row - afterCol.row);
+  if (rowStep !== 0) {
+    for (let row = afterCol.row + rowStep; rowStep > 0 ? row <= target.row : row >= target.row; row += rowStep) {
+      path.push({ col: target.col, row });
+    }
+  }
+}
+
+function buildTileRoute(start: TilePoint, end: TilePoint, aisleRow = DINER_AISLE_ROW) {
+  const path: TilePoint[] = [{ col: start.col, row: start.row }];
+
+  appendTileLine(path, { col: start.col, row: aisleRow });
+  appendTileLine(path, { col: end.col, row: aisleRow });
+  appendTileLine(path, end);
+
+  return path.filter((point, index, points) => {
+    const previous = points[index - 1];
+    return !previous || previous.col !== point.col || previous.row !== point.row;
+  });
+}
+
+function getRouteDuration(path: TilePoint[], stepMs: number) {
+  return Math.max(0, path.length - 1) * stepMs;
+}
+
+function getRouteVisual(path: TilePoint[], startedAt: number, now: number, stepMs: number): CharacterVisual {
+  const fallback = path[0] ?? WAITER_HOME_TILE;
+  const segmentCount = Math.max(0, path.length - 1);
+
+  if (segmentCount === 0) {
+    return { ...fallback, direction: "south", walking: false, done: true };
+  }
+
+  const duration = getRouteDuration(path, stepMs);
+  const elapsed = clamp(now - startedAt, 0, duration);
+  const done = elapsed >= duration;
+  const segmentIndex = done ? segmentCount - 1 : Math.floor(elapsed / stepMs);
+  const from = path[segmentIndex] ?? fallback;
+  const to = path[segmentIndex + 1] ?? from;
+  const segmentProgress = done ? 1 : (elapsed - segmentIndex * stepMs) / stepMs;
+
+  return {
+    col: from.col + (to.col - from.col) * segmentProgress,
+    row: from.row + (to.row - from.row) * segmentProgress,
+    direction: getWalkDirection(from, to),
+    walking: !done,
+    done,
+  };
+}
+
+function snapToTile(point: TilePoint): TilePoint {
+  return {
+    col: Math.round(point.col),
+    row: Math.round(point.row),
+  };
+}
+
+function getGuestPath(guest: ActiveGuest) {
+  const seat = getSeatLayout(guest.seatIndex);
+  return buildTileRoute(DINER_DOOR_TILE, seat.customer);
+}
+
+function getGuestWalkDuration(guest: ActiveGuest) {
+  return getRouteDuration(getGuestPath(guest), GUEST_STEP_MS);
+}
+
+function getGuestVisual(guest: ActiveGuest, now: number): CharacterVisual {
+  const seat = getSeatLayout(guest.seatIndex);
+
+  if (guest.phase === "entering") {
+    return getRouteVisual(getGuestPath(guest), guest.createdAt, now, GUEST_STEP_MS);
+  }
+
+  if (guest.phase === "leaving") {
+    const path = [...getGuestPath(guest)].reverse();
+    return getRouteVisual(path, guest.leavingAt ?? now, now, GUEST_STEP_MS);
+  }
+
+  return { ...seat.customer, direction: "south", walking: false, done: true };
 }
 
 function formatTime(ms: number) {
@@ -765,10 +833,12 @@ function CustomerSprite({
   customer,
   active,
   walking,
+  direction = "south",
 }: {
   customer: CustomerProfile;
   active?: boolean;
   walking?: boolean;
+  direction?: WalkDirection;
 }) {
   const spriteStyle = {
     "--sprite-y": customerSpriteRowById[customer.id],
@@ -781,6 +851,7 @@ function CustomerSprite({
         "customerSprite",
         "customerSprite--sheet",
         `customerSprite--${customer.id}`,
+        `customerSprite--${direction}`,
         active && "customerSprite--active",
         walking && "customerSprite--walking",
       )}
@@ -793,16 +864,59 @@ function CustomerSprite({
 }
 
 function PlayerSprite({
+  direction,
   walking,
   style,
 }: {
+  direction: WalkDirection;
   walking: boolean;
   style: CSSProperties;
 }) {
   return (
-    <div className={cx("playerSprite", walking && "playerSprite--walking")} style={style} aria-hidden="true">
+    <div
+      className={cx("playerSprite", `playerSprite--${direction}`, walking && "playerSprite--walking")}
+      style={style}
+      aria-hidden="true"
+    >
       <span className="playerSprite__shadow" />
       <span className="playerSprite__sheet" style={{ backgroundImage: `url(${waiterFullbodySheetUrl})` }} />
+    </div>
+  );
+}
+
+function CustomerActor({
+  guest,
+  now,
+  selected,
+}: {
+  guest: ActiveGuest;
+  now: number;
+  selected: boolean;
+}) {
+  const visual = getGuestVisual(guest, now);
+  const actorStyle = {
+    "--actor-col": visual.col,
+    "--actor-row": visual.row,
+    zIndex: Math.round(14 + visual.row),
+  } as CSSProperties;
+
+  return (
+    <div
+      className={cx(
+        "customerActor",
+        `customerActor--${guest.phase}`,
+        visual.walking && "customerActor--walking",
+      )}
+      data-direction={visual.direction}
+      style={actorStyle}
+      aria-hidden="true"
+    >
+      <CustomerSprite
+        customer={guest.customer}
+        active={selected}
+        direction={visual.direction}
+        walking={visual.walking}
+      />
     </div>
   );
 }
@@ -845,21 +959,14 @@ function GuestTable({
   onSelect: () => void;
 }) {
   const patienceRatio = clamp((guest.expiresAt - now) / (guest.expiresAt - guest.createdAt), 0, 1);
-  const remainingMs = Math.max(0, guest.expiresAt - now);
-  const seat = SEAT_LAYOUT[guest.seatIndex % SEAT_LAYOUT.length];
+  const seat = getSeatLayout(guest.seatIndex);
   const tableStyle = {
-    "--seat-x": seat.x,
-    "--seat-y": seat.y,
-    "--guest-enter-x": seat.entryX,
-    "--guest-enter-y": seat.entryY,
-    "--seat-x-mobile": seat.mobileX,
-    "--seat-y-mobile": seat.mobileY,
-    "--guest-enter-x-mobile": seat.mobileEntryX,
-    "--guest-enter-y-mobile": seat.mobileEntryY,
+    "--table-col": seat.table.col,
+    "--table-row": seat.table.row,
     "--bubble-shift": seat.bubbleShift,
     "--bubble-shift-mobile": seat.mobileBubbleShift,
   } as CSSProperties;
-  const showOrder = guest.heardOrder || selected;
+  const showOrder = guest.heardOrder;
 
   return (
     <button
@@ -887,15 +994,10 @@ function GuestTable({
       <span className="dinerChair dinerChair--bottom" aria-hidden="true" />
       <span className="dinerChair dinerChair--left" aria-hidden="true" />
       <span className="dinerTable" aria-hidden="true" />
-      <CustomerSprite
-        customer={guest.customer}
-        active={selected}
-        walking={guest.phase === "entering" || guest.phase === "leaving"}
-      />
       <span className="guestTable__name">{guest.customer.name}</span>
 
       <span className="guestSpeech">
-        <strong>{showOrder ? guest.phrase : "Tap to order"}</strong>
+        <strong>{showOrder ? guest.phrase : "..."}</strong>
         {showOrder && (
           <span className="guestSpeech__foods" aria-label={`${guest.customer.name}'s requested food`}>
             {guest.foods.map((foodId, index) => {
@@ -916,10 +1018,16 @@ function GuestTable({
             })}
           </span>
         )}
-        <small>{guest.phase === "leaving" ? "Leaving happy" : `${formatTime(remainingMs)} patience`}</small>
       </span>
 
-      <span className="guestTimer">
+      <span
+        className="guestTimer"
+        role="progressbar"
+        aria-label={`${guest.customer.name} order time remaining`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(patienceRatio * 100)}
+      >
         <span style={{ width: `${patienceRatio * 100}%` }} />
       </span>
     </button>
@@ -999,7 +1107,7 @@ function RestaurantStage({
   beltFoods,
   profile,
   draggingDish,
-  playerWalking,
+  waiterVisual,
   onSelectGuest,
   onFoodDragEnd,
   onFoodDragOver,
@@ -1015,7 +1123,7 @@ function RestaurantStage({
   beltFoods: BeltFood[];
   profile: DifficultyProfile;
   draggingDish: DraggingDish | null;
-  playerWalking: boolean;
+  waiterVisual: CharacterVisual;
   onSelectGuest: (guest: ActiveGuest) => void;
   onFoodDragEnd: (food: BeltFood) => void;
   onFoodDragOver: (event: DragEvent<HTMLButtonElement>) => void;
@@ -1024,15 +1132,10 @@ function RestaurantStage({
   onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
   onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
 }) {
-  const selectedSeat =
-    selectedGuest && selectedGuest.phase !== "leaving"
-      ? SEAT_LAYOUT[selectedGuest.seatIndex % SEAT_LAYOUT.length]
-      : null;
   const playerStyle = {
-    "--player-x": selectedSeat?.waiterX ?? "12%",
-    "--player-y": selectedSeat?.waiterY ?? "78%",
-    "--player-x-mobile": selectedSeat?.mobileWaiterX ?? "50%",
-    "--player-y-mobile": selectedSeat?.mobileWaiterY ?? "82%",
+    "--actor-col": waiterVisual.col,
+    "--actor-row": waiterVisual.row,
+    zIndex: Math.round(16 + waiterVisual.row),
   } as CSSProperties;
 
   return (
@@ -1045,8 +1148,8 @@ function RestaurantStage({
         {WALK_TILES.map((tile, index) => (
           <span
             className="walkTile"
-            key={`${tile.x}-${tile.y}-${index}`}
-            style={{ "--tile-x": tile.x, "--tile-y": tile.y } as CSSProperties}
+            key={`${tile.col}-${tile.row}-${index}`}
+            style={{ "--tile-col": tile.col, "--tile-row": tile.row } as CSSProperties}
           />
         ))}
       </div>
@@ -1075,6 +1178,15 @@ function RestaurantStage({
         />
       ))}
 
+      {guests.map((guest) => (
+        <CustomerActor
+          guest={guest}
+          key={`${guest.instanceId}-actor`}
+          now={now}
+          selected={selectedGuest?.instanceId === guest.instanceId}
+        />
+      ))}
+
       {guests.length === 0 && (
         <div className="emptyGuests">
           <ChefHat size={24} />
@@ -1089,7 +1201,7 @@ function RestaurantStage({
         </div>
       )}
 
-      <PlayerSprite walking={playerWalking} style={playerStyle} />
+      <PlayerSprite direction={waiterVisual.direction} walking={waiterVisual.walking} style={playerStyle} />
     </section>
   );
 }
@@ -1674,7 +1786,9 @@ function RestaurantGame() {
   const [served, setServed] = useState(0);
   const [combo, setCombo] = useState(0);
   const [draggingDish, setDraggingDish] = useState<DraggingDish | null>(null);
-  const [playerWalking, setPlayerWalking] = useState(false);
+  const [waiterTile, setWaiterTile] = useState<TilePoint>(WAITER_HOME_TILE);
+  const [waiterRoute, setWaiterRoute] = useState<WaiterRoute | null>(null);
+  const [pendingOrderGuestId, setPendingOrderGuestId] = useState<string | null>(null);
   const [, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a guest to take an order.",
@@ -1687,7 +1801,6 @@ function RestaurantGame() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const draggingDishRef = useRef<DraggingDish | null>(null);
   const consumedDishIdsRef = useRef<Set<string>>(new Set());
-  const previousPlayerTargetRef = useRef("home");
 
   const level = levelForServed(served);
   const difficulty = useMemo(() => difficultyForLevel(level), [level]);
@@ -1699,6 +1812,13 @@ function RestaurantGame() {
 
   const activeGuestCount = activeGuests.filter((guest) => guest.phase !== "leaving").length;
   const isShiftWon = served >= TARGET_SERVES;
+  const waiterVisual = useMemo(
+    () =>
+      waiterRoute
+        ? getRouteVisual(waiterRoute.path, waiterRoute.startedAt, now, waiterRoute.stepMs)
+        : { ...waiterTile, direction: "south" as const, walking: false, done: true },
+    [now, waiterRoute, waiterTile],
+  );
 
   const playSound = useCallback((kind: SoundKind) => {
     const AudioContextCtor = window.AudioContext ?? (window as AudioContextWindow).webkitAudioContext;
@@ -1763,8 +1883,9 @@ function RestaurantGame() {
     draggingDishRef.current = null;
     consumedDishIdsRef.current.clear();
     setDraggingDish(null);
-    setPlayerWalking(false);
-    previousPlayerTargetRef.current = "home";
+    setWaiterTile(WAITER_HOME_TILE);
+    setWaiterRoute(null);
+    setPendingOrderGuestId(null);
     setFeedback({ kind: "neutral", text: "Tap a guest, listen to the order, then serve dishes from the kitchen pass." });
     setGameStatus("playing");
   }, []);
@@ -1774,14 +1895,15 @@ function RestaurantGame() {
     setFeedback({ kind: "bad", text });
   }, []);
 
-  const handleGuestSelect = useCallback((guest: ActiveGuest) => {
+  const revealGuestOrder = useCallback((guest: ActiveGuest) => {
     if (guest.phase === "leaving") {
       return;
     }
 
     const greeting = GREETING_LINES[(guest.orderNumber + guest.level) % GREETING_LINES.length];
-    const hasAudio = speak(`${greeting} ${guest.phrase}`);
-    setSelectedGuestId(guest.instanceId);
+    const spokenOrder = `${greeting} ${guest.phrase}`;
+    const hasAudio = speak(spokenOrder);
+
     setActiveGuests((currentGuests) =>
       currentGuests.map((currentGuest) =>
         currentGuest.instanceId === guest.instanceId
@@ -1794,6 +1916,34 @@ function RestaurantGame() {
       text: hasAudio ? `${guest.customer.name}: ${guest.phrase}` : "Audio is not available in this browser.",
     });
   }, []);
+
+  const handleGuestSelect = useCallback(
+    (guest: ActiveGuest) => {
+      if (guest.phase === "leaving") {
+        return;
+      }
+
+      const requestTime = Date.now();
+      const currentWaiterVisual = waiterRoute
+        ? getRouteVisual(waiterRoute.path, waiterRoute.startedAt, requestTime, waiterRoute.stepMs)
+        : waiterVisual;
+      const startTile = snapToTile(currentWaiterVisual);
+      const targetTile = getSeatLayout(guest.seatIndex).waiter;
+      const path = buildTileRoute(startTile, targetTile);
+
+      setSelectedGuestId(guest.instanceId);
+      setPendingOrderGuestId(null);
+      setWaiterTile(startTile);
+      setWaiterRoute({
+        targetGuestId: guest.instanceId,
+        path,
+        startedAt: requestTime,
+        stepMs: WAITER_STEP_MS,
+      });
+      setFeedback({ kind: "neutral", text: `The waiter is walking to ${guest.customer.name}.` });
+    },
+    [waiterRoute, waiterVisual],
+  );
 
   const handleFoodDrop = useCallback(
     (food: BeltFood, guestId: string | null) => {
@@ -2052,30 +2202,55 @@ function RestaurantGame() {
       return;
     }
 
-    if (!activeGuests.some((guest) => guest.phase === "entering" && now - guest.createdAt >= GUEST_ENTER_MS)) {
+    if (!activeGuests.some((guest) => guest.phase === "entering" && now - guest.createdAt >= getGuestWalkDuration(guest))) {
       return;
     }
 
     setActiveGuests((currentGuests) =>
       currentGuests.map((guest) =>
-        guest.phase === "entering" && now - guest.createdAt >= GUEST_ENTER_MS ? { ...guest, phase: "seated" } : guest,
+        guest.phase === "entering" && now - guest.createdAt >= getGuestWalkDuration(guest)
+          ? { ...guest, phase: "seated" }
+          : guest,
       ),
     );
   }, [activeGuests, gameStatus, now]);
 
   useEffect(() => {
-    const nextTarget = selectedGuest?.instanceId ?? "home";
-
-    if (previousPlayerTargetRef.current === nextTarget) {
-      return undefined;
+    if (!waiterRoute) {
+      return;
     }
 
-    previousPlayerTargetRef.current = nextTarget;
-    setPlayerWalking(true);
+    const visual = getRouteVisual(waiterRoute.path, waiterRoute.startedAt, now, waiterRoute.stepMs);
 
-    const stopWalking = window.setTimeout(() => setPlayerWalking(false), 650);
-    return () => window.clearTimeout(stopWalking);
-  }, [selectedGuest?.instanceId]);
+    if (!visual.done) {
+      return;
+    }
+
+    const targetTile = waiterRoute.path[waiterRoute.path.length - 1] ?? WAITER_HOME_TILE;
+    setWaiterTile(targetTile);
+    setWaiterRoute(null);
+    setPendingOrderGuestId(waiterRoute.targetGuestId);
+  }, [now, waiterRoute]);
+
+  useEffect(() => {
+    if (!pendingOrderGuestId) {
+      return;
+    }
+
+    const targetGuest = activeGuests.find((guest) => guest.instanceId === pendingOrderGuestId);
+
+    if (!targetGuest || targetGuest.phase === "leaving") {
+      setPendingOrderGuestId(null);
+      return;
+    }
+
+    if (targetGuest.phase === "entering") {
+      return;
+    }
+
+    revealGuestOrder(targetGuest);
+    setPendingOrderGuestId(null);
+  }, [activeGuests, pendingOrderGuestId, revealGuestOrder]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -2244,7 +2419,10 @@ function RestaurantGame() {
 
   useEffect(() => {
     const leavingGuests = activeGuests.filter(
-      (guest) => guest.phase === "leaving" && guest.leavingAt && now - guest.leavingAt > LEAVING_GUEST_VISIBLE_MS,
+      (guest) =>
+        guest.phase === "leaving" &&
+        guest.leavingAt &&
+        now - guest.leavingAt > getGuestWalkDuration(guest) + LEAVING_GUEST_LINGER_MS,
     );
 
     if (leavingGuests.length === 0) {
@@ -2298,8 +2476,8 @@ function RestaurantGame() {
             now={now}
             profile={difficulty}
             draggingDish={draggingDish}
-            playerWalking={playerWalking}
             selectedGuest={selectedGuest}
+            waiterVisual={waiterVisual}
             onFoodDragEnd={handleFoodDragEnd}
             onFoodDragOver={handleFoodDragOver}
             onFoodDrop={handleGuestFoodDrop}
