@@ -101,19 +101,22 @@ while a route is active; west mirrors east. Stopped actors use the front idle ce
 
 ## Dish Wish Tile System
 
-`restaurantStage` defines the dining inset/top and derives `--tile-width` and `--tile-height` from the
-remaining viewport below the expanded kitchen. The stage renders 50 opaque `floorTile` elements as a 10 × 5
-CSS grid. Logical coordinates use columns 0–9 and rows 0–4; actors, the door, and four persistent
-tables use the corresponding responsive cell centers:
+`restaurantStage` defines the dining inset/top and fits the floor into the remaining viewport below the
+expanded kitchen while keeping `--tile-width` and `--tile-height` equal. The stage renders 50 opaque
+`floorTile` elements as a 10 × 5 CSS grid on wider screens. Logical coordinates use columns 0–9 and
+rows 0–4; actors, the door, and four persistent tables use the corresponding responsive cell centers:
 
 ```css
-calc(var(--dining-inset) + var(--column-center) * var(--tile-width))
+calc(var(--dining-left) + var(--column-center) * var(--tile-width))
 calc(var(--dining-top) + var(--row-center) * var(--tile-height))
 ```
 
-`--tile-size` is retained only to scale character art from the smaller responsive cell dimension. Below
-`560px`, the dining inset/top, kitchen dimensions, table/sprite size, and speech bubble offsets are
-reduced independently. Check all four tables after changing these variables.
+Below `560px`, the floor transposes to a 5 × 10 portrait grid so square tiles remain large enough for
+touch targets. The visual formulas swap logical row and column axes for the door, tables, and actors;
+the gameplay coordinates and routes do not change. `--tile-size` scales character art from the square
+cell dimension, while the dining inset/top, kitchen dimensions, table/sprite size, and speech bubble
+offsets are reduced independently. Check all four tables and route movement after changing these
+variables.
 
 ## Drop Hop Layout
 
