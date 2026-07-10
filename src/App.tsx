@@ -32,7 +32,6 @@ import customerLeoWalkSheetUrl from "./assets/sprites/generated/walk/customer-le
 import customerMaiWalkSheetUrl from "./assets/sprites/generated/walk/customer-mai-walk-sheet.png";
 import customerNoraWalkSheetUrl from "./assets/sprites/generated/walk/customer-nora-walk-sheet.png";
 import customerSamWalkSheetUrl from "./assets/sprites/generated/walk/customer-sam-walk-sheet.png";
-import waiterWalkSheetUrl from "./assets/sprites/generated/walk/waiter-walk-sheet.png";
 import foodBreadUrl from "./assets/sprites/food-bread.png";
 import foodChickenUrl from "./assets/sprites/food-chicken.png";
 import foodEggUrl from "./assets/sprites/food-egg.png";
@@ -68,7 +67,6 @@ type TilePoint = {
 type SeatLayout = {
   table: TilePoint;
   customer: TilePoint;
-  waiter: TilePoint;
   bubbleShift: string;
   mobileBubbleShift: string;
 };
@@ -98,7 +96,6 @@ type ActiveGuest = {
   servedFoods: FoodId[];
   createdAt: number;
   expiresAt: number;
-  level: number;
   seatIndex: number;
   heardOrder: boolean;
   phase: GuestPhase;
@@ -134,13 +131,6 @@ type CharacterVisual = TilePoint & {
   direction: WalkDirection;
   walking: boolean;
   done: boolean;
-};
-
-type WaiterRoute = {
-  targetGuestId: string | null;
-  path: TilePoint[];
-  startedAt: number;
-  stepMs: number;
 };
 
 type Feedback = {
@@ -320,7 +310,8 @@ const DINER_CLOCK_MS = 100;
 const CHARACTER_STEP_MS = 360;
 const LEAVING_GUEST_LINGER_MS = 350;
 const DISH_EXIT_MS = 360;
-const GREETING_PATIENCE_BONUS_MS = 1_500;
+const WRONG_DISH_PATIENCE_BASE_MS = 2_500;
+const WRONG_DISH_PATIENCE_PER_LEVEL_MS = 500;
 const SERVED_DISH_PATIENCE_BONUS_MS = 2_000;
 const ORDER_LANES = 2;
 const PORTAL_TITLE = "Lingo Game";
@@ -365,19 +356,6 @@ const ORDER_TEMPLATES: Array<(items: string) => string> = [
   (items) => `Could you serve ${items}, please?`,
 ];
 
-const GREETING_LINES = [
-  "Welcome in. What would you like for dinner?",
-  "Hi there. How can I help you today?",
-  "Good evening. What can I get started for you?",
-  "Hello. What are you having tonight?",
-  "Thanks for coming in. What do you need?",
-  "Welcome to the diner. What sounds good?",
-  "Hi. Are you ready to order?",
-  "Nice to see you. What would you like?",
-  "Good to have you here. What can I bring you?",
-  "Hello. What are you in the mood for?",
-];
-
 const HAPPY_GUEST_LINES = [
   "That was perfect. Thank you.",
   "Great service. I am happy.",
@@ -390,14 +368,13 @@ const HAPPY_GUEST_LINES = [
 const DINER_FLOOR_COLUMNS = 10;
 const DINER_FLOOR_ROWS = 5;
 const DINER_DOOR_TILE: TilePoint = { col: 0, row: DINER_FLOOR_ROWS - 1 };
-const WAITER_HOME_TILE: TilePoint = { col: 1, row: DINER_FLOOR_ROWS - 1 };
 const DINER_AISLE_ROW = DINER_FLOOR_ROWS - 1;
 
 const SEAT_LAYOUT: SeatLayout[] = [
-  { table: { col: 2, row: 1 }, customer: { col: 2, row: 1 }, waiter: { col: 2, row: 2 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 1 }, customer: { col: 7, row: 1 }, waiter: { col: 7, row: 2 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 }, waiter: { col: 2, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 3 }, customer: { col: 7, row: 3 }, waiter: { col: 7, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 1 }, customer: { col: 2, row: 1 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 1 }, customer: { col: 7, row: 1 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 3 }, customer: { col: 7, row: 3 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
 ];
 
 const DINER_FLOOR_TILES: TilePoint[] = Array.from(
@@ -659,7 +636,7 @@ function getRouteDuration(path: TilePoint[], stepMs: number) {
 }
 
 function getRouteVisual(path: TilePoint[], startedAt: number, now: number, stepMs: number): CharacterVisual {
-  const fallback = path[0] ?? WAITER_HOME_TILE;
+  const fallback = path[0] ?? DINER_DOOR_TILE;
   const segmentCount = Math.max(0, path.length - 1);
 
   if (segmentCount === 0) {
@@ -682,13 +659,6 @@ function getRouteVisual(path: TilePoint[], startedAt: number, now: number, stepM
     direction: getWalkDirection(segmentStart, segmentEnd),
     walking: !done,
     done,
-  };
-}
-
-function snapToTile(point: TilePoint): TilePoint {
-  return {
-    col: Math.round(point.col),
-    row: Math.round(point.row),
   };
 }
 
@@ -822,7 +792,6 @@ function makeGuest(sequence: number, now: number, profile: DifficultyProfile, se
     servedFoods: [],
     createdAt: now,
     expiresAt,
-    level: profile.level,
     seatIndex,
     heardOrder: false,
     phase: "entering",
@@ -939,26 +908,25 @@ function CharacterActor({
   phase,
 }: {
   visual: CharacterVisual;
-  customer?: CustomerProfile;
+  customer: CustomerProfile;
   active?: boolean;
   phase?: GuestPhase;
 }) {
-  const isCustomer = Boolean(customer);
   const actorStyle = {
     "--actor-col": visual.col + 0.5,
     "--actor-row": visual.row + 0.5,
     "--actor-position-transition-ms": `${DINER_CLOCK_MS}ms`,
-    zIndex: Math.round((isCustomer ? 14 : 16) + visual.row),
+    zIndex: Math.round(14 + visual.row),
   } as CSSProperties;
   const spriteStyle = {
-    backgroundImage: `url(${customer ? customerWalkSheetById[customer.id] : waiterWalkSheetUrl})`,
+    backgroundImage: `url(${customerWalkSheetById[customer.id]})`,
   } as CSSProperties;
 
   return (
     <div
       className={cx(
         "characterActor",
-        isCustomer ? "characterActor--customer" : "characterActor--waiter",
+        "characterActor--customer",
         phase && `characterActor--${phase}`,
         `characterActor--${visual.direction}`,
         visual.walking && "characterActor--walking",
@@ -1069,7 +1037,7 @@ function GuestTable({
         guest
           ? guest.heardOrder
             ? `${guest.customer.name} ordered ${formatList(guest.foods)}`
-            : `Ask ${guest.customer.name} for an order`
+            : `Hear ${guest.customer.name}'s order`
           : `Empty table ${seatIndex + 1}`
       }
     >
@@ -1206,7 +1174,6 @@ function RestaurantStage({
   beltFoods,
   profile,
   draggingDish,
-  waiterVisual,
   onSelectGuest,
   onFoodDragEnd,
   onFoodDragOver,
@@ -1222,7 +1189,6 @@ function RestaurantStage({
   beltFoods: BeltFood[];
   profile: DifficultyProfile;
   draggingDish: DraggingDish | null;
-  waiterVisual: CharacterVisual;
   onSelectGuest: (guest: ActiveGuest) => void;
   onFoodDragEnd: (food: BeltFood) => void;
   onFoodDragOver: (event: DragEvent<HTMLButtonElement>) => void;
@@ -1266,7 +1232,7 @@ function RestaurantStage({
             now={now}
             dropActive={Boolean(draggingDish && guestCanReceiveInput)}
             dropReady={Boolean(draggingDish && guestCanReceiveInput && guest.heardOrder && needsFood(guest, draggingDish.food.foodId))}
-            selected={selectedGuest?.instanceId === guest?.instanceId}
+            selected={Boolean(guest && selectedGuest?.instanceId === guest.instanceId)}
             onFoodDragOver={onFoodDragOver}
             onFoodDrop={onFoodDrop}
             onSelect={() => guest && onSelectGuest(guest)}
@@ -1296,8 +1262,6 @@ function RestaurantStage({
           <strong>{foodById.get(draggingDish.food.foodId)?.name ?? draggingDish.food.foodId}</strong>
         </div>
       )}
-
-      <CharacterActor visual={waiterVisual} />
     </section>
   );
 }
@@ -1893,12 +1857,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const [served, setServed] = useState(0);
   const [combo, setCombo] = useState(0);
   const [draggingDish, setDraggingDish] = useState<DraggingDish | null>(null);
-  const [waiterTile, setWaiterTile] = useState<TilePoint>(WAITER_HOME_TILE);
-  const [waiterRoute, setWaiterRoute] = useState<WaiterRoute | null>(null);
-  const [pendingOrderGuestId, setPendingOrderGuestId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback>({
     kind: "neutral",
-    text: "Guests are arriving. Tap a guest to take an order.",
+    text: "Guests are arriving. Tap a seated guest to hear an order.",
   });
 
   const guestSequenceRef = useRef(0);
@@ -1919,13 +1880,6 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
 
   const activeGuestCount = activeGuests.filter((guest) => guest.phase !== "leaving").length;
   const isShiftWon = served >= TARGET_SERVES;
-  const waiterVisual = useMemo(
-    () =>
-      waiterRoute
-        ? getRouteVisual(waiterRoute.path, waiterRoute.startedAt, now, waiterRoute.stepMs)
-        : { ...waiterTile, direction: "south" as const, walking: false, done: true },
-    [now, waiterRoute, waiterTile],
-  );
 
   const playSound = useCallback((kind: SoundKind) => {
     const AudioContextCtor = window.AudioContext ?? (window as AudioContextWindow).webkitAudioContext;
@@ -1990,10 +1944,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     draggingDishRef.current = null;
     consumedDishIdsRef.current.clear();
     setDraggingDish(null);
-    setWaiterTile(WAITER_HOME_TILE);
-    setWaiterRoute(null);
-    setPendingOrderGuestId(null);
-    setFeedback({ kind: "neutral", text: "Tap a guest, listen to the order, then serve dishes from the kitchen pass." });
+    setFeedback({ kind: "neutral", text: "Tap a seated guest, listen to the order, then serve dishes from the kitchen pass." });
     setGameStatus("playing");
   }, []);
 
@@ -2003,23 +1954,16 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   }, []);
 
   const revealGuestOrder = useCallback((guest: ActiveGuest) => {
-    if (guest.phase === "leaving") {
+    if (guest.phase !== "seated") {
       return;
     }
 
-    const greeting = GREETING_LINES[(guest.orderNumber + guest.level) % GREETING_LINES.length];
-    const spokenOrder = `${greeting} ${guest.phrase}`;
-    const hasAudio = speak(spokenOrder);
+    const hasAudio = speak(guest.phrase);
 
     setActiveGuests((currentGuests) =>
       currentGuests.map((currentGuest) =>
         currentGuest.instanceId === guest.instanceId
-          ? {
-              ...currentGuest,
-              expiresAt: currentGuest.expiresAt + GREETING_PATIENCE_BONUS_MS,
-              heardOrder: true,
-              phase: "seated",
-            }
+          ? { ...currentGuest, heardOrder: true }
           : currentGuest,
       ),
     );
@@ -2031,30 +1975,14 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
 
   const handleGuestSelect = useCallback(
     (guest: ActiveGuest) => {
-      if (guest.phase === "leaving") {
+      if (guest.phase !== "seated") {
         return;
       }
 
-      const requestTime = Date.now();
-      const currentWaiterVisual = waiterRoute
-        ? getRouteVisual(waiterRoute.path, waiterRoute.startedAt, requestTime, waiterRoute.stepMs)
-        : waiterVisual;
-      const startTile = snapToTile(currentWaiterVisual);
-      const targetTile = getSeatLayout(guest.seatIndex).waiter;
-      const path = buildTileRoute(startTile, targetTile);
-
       setSelectedGuestId(guest.instanceId);
-      setPendingOrderGuestId(null);
-      setWaiterTile(startTile);
-      setWaiterRoute({
-        targetGuestId: guest.instanceId,
-        path,
-        startedAt: requestTime,
-        stepMs: CHARACTER_STEP_MS,
-      });
-      setFeedback({ kind: "neutral", text: `The waiter is walking to ${guest.customer.name}.` });
+      revealGuestOrder(guest);
     },
-    [waiterRoute, waiterVisual],
+    [revealGuestOrder],
   );
 
   const handleFoodDrop = useCallback(
@@ -2072,11 +2000,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         return;
       }
 
-      setSelectedGuestId(droppedGuest.instanceId);
-
       if (!droppedGuest.heardOrder) {
-        setFeedback({ kind: "neutral", text: `Ask ${droppedGuest.customer.name} for an order before serving.` });
-        speak(`Ask ${droppedGuest.customer.name} for an order first.`, 1.02);
+        setFeedback({ kind: "neutral", text: `Select ${droppedGuest.customer.name} to hear the order before serving.` });
+        speak(`Select ${droppedGuest.customer.name} to hear the order first.`, 1.02);
         return;
       }
 
@@ -2085,6 +2011,27 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       }
 
       const interactionAt = Date.now();
+
+      if (!needsFood(droppedGuest, food.foodId)) {
+        const patiencePenaltyMs =
+          WRONG_DISH_PATIENCE_BASE_MS + (difficulty.level - 1) * WRONG_DISH_PATIENCE_PER_LEVEL_MS;
+        const patiencePenaltySeconds = patiencePenaltyMs / 1000;
+        setActiveGuests((currentGuests) =>
+          currentGuests.map((currentGuest) =>
+            currentGuest.instanceId === droppedGuest.instanceId
+              ? { ...currentGuest, expiresAt: Math.max(interactionAt, currentGuest.expiresAt - patiencePenaltyMs) }
+              : currentGuest,
+          ),
+        );
+        playSound("wrong");
+        speak(`${droppedGuest.customer.name} did not order ${foodName}.`, 1.02);
+        setFeedback({
+          kind: "bad",
+          text: `${droppedGuest.customer.name} did not order ${foodName} and lost ${patiencePenaltySeconds} seconds of patience.`,
+        });
+        return;
+      }
+
       consumedDishIdsRef.current.add(food.id);
       setBeltFoods((currentFoods) =>
         currentFoods.map((currentFood) =>
@@ -2094,14 +2041,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         ),
       );
 
-      if (!needsFood(droppedGuest, food.foodId)) {
-        playSound("wrong");
-        speak(`${droppedGuest.customer.name} did not order ${foodName}.`, 1.02);
-        resetCombo(`Wrong table: ${droppedGuest.customer.name} did not order ${foodName}.`);
-        return;
-      }
-
-      const secondsLeft = Math.ceil((droppedGuest.expiresAt - Date.now()) / 1000);
+      const secondsLeft = Math.ceil((droppedGuest.expiresAt - interactionAt) / 1000);
       const timeBonus = Math.max(0, secondsLeft);
       const levelBonus = difficulty.level * 5;
       const nextMatchingGuest: ActiveGuest = {
@@ -2169,7 +2109,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         speak(`Served ${foodName}.`, 1.04);
       }
     },
-    [activeGuests, combo, difficulty.level, gameStatus, playSound, resetCombo, served],
+    [activeGuests, combo, difficulty.level, gameStatus, playSound, served],
   );
 
   const handleFoodKeyDown = useCallback(
@@ -2338,43 +2278,6 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       ),
     );
   }, [activeGuests, gameStatus, now]);
-
-  useEffect(() => {
-    if (!waiterRoute) {
-      return;
-    }
-
-    const visual = getRouteVisual(waiterRoute.path, waiterRoute.startedAt, now, waiterRoute.stepMs);
-
-    if (!visual.done) {
-      return;
-    }
-
-    const targetTile = waiterRoute.path[waiterRoute.path.length - 1] ?? WAITER_HOME_TILE;
-    setWaiterTile(targetTile);
-    setWaiterRoute(null);
-    setPendingOrderGuestId(waiterRoute.targetGuestId);
-  }, [now, waiterRoute]);
-
-  useEffect(() => {
-    if (!pendingOrderGuestId) {
-      return;
-    }
-
-    const targetGuest = activeGuests.find((guest) => guest.instanceId === pendingOrderGuestId);
-
-    if (!targetGuest || targetGuest.phase === "leaving") {
-      setPendingOrderGuestId(null);
-      return;
-    }
-
-    if (targetGuest.phase === "entering") {
-      return;
-    }
-
-    revealGuestOrder(targetGuest);
-    setPendingOrderGuestId(null);
-  }, [activeGuests, pendingOrderGuestId, revealGuestOrder]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -2645,7 +2548,6 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
             profile={difficulty}
             draggingDish={draggingDish}
             selectedGuest={selectedGuest}
-            waiterVisual={waiterVisual}
             onFoodDragEnd={handleFoodDragEnd}
             onFoodDragOver={handleFoodDragOver}
             onFoodDrop={handleGuestFoodDrop}

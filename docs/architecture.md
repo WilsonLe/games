@@ -59,14 +59,13 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | --- | --- |
 | `FoodId`, `Food` | Supported food IDs and labels. |
 | `CustomerProfile` | Guest IDs and names. |
-| `TilePoint`, `WalkDirection`, `CharacterVisual` | Route tiles plus interpolated actor positions, facing, walking, and route-completion state. |
-| `SeatLayout` | Table, customer, waiter, and speech-bubble positions. |
+| `TilePoint`, `WalkDirection`, `CharacterVisual` | Route tiles plus interpolated customer positions, facing, walking, and route-completion state. |
+| `SeatLayout` | Table, customer, and speech-bubble positions. |
 | `DifficultyProfile` | Per-level capacity and timing values. |
 | `ActiveGuest` | Guest order, service, timing, seat, hearing, and movement state. |
 | `ScheduledFood` | Ordered food waiting for its spawn time. |
 | `BeltFood` | Visible dish and lifecycle metadata. |
 | `DraggingDish` | Current custom/native drag preview data. |
-| `WaiterRoute` | Waiter path and timing. |
 
 ## Components
 
@@ -75,7 +74,7 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `RestaurantGame` | Diner state and effects owner. |
 | `RestaurantStage` | Full-viewport kitchen and responsive dining floor, persistent tables, actors, and drag preview. |
 | `GuestTable` | Persistent table renderer with optional guest interaction, speech bubble, food checklist, and patience progressbar. |
-| `CharacterActor` | Shared tile-positioned sprite renderer for guests and the waiter. |
+| `CharacterActor` | Tile-positioned directional sprite renderer for guests. |
 | `CustomerActor` | Guest wrapper that derives a visual route state for `CharacterActor`. |
 | `KitchenStation` | Animated dish rail and keyboard/pointer/native-drag controls. |
 
@@ -89,7 +88,6 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `scheduledFoods`, `beltFoods` | Future and visible dishes. |
 | `score`, `served`, `combo` | Progress and scoring. |
 | `draggingDish` / `draggingDishRef` | Rendered drag preview and event-safe current drag. |
-| `waiterTile`, `waiterRoute`, `pendingOrderGuestId` | Waiter movement and deferred order reveal. |
 | `feedback` | Visible diner status toast. |
 | sequence/timer refs | Unique IDs and next guest/decoy times. |
 | `consumedDishIdsRef` | Duplicate-drop protection. |
@@ -117,11 +115,12 @@ The diner starts automatically. It has no mid-shift pause or reset control. Comp
 | `HAPPY_GUEST_COMBO_BONUS` | 15 | Bonus multiplier step for consecutive completed guests. |
 | `FIRST_DISH_DELAY_MS` | 1800 | Earliest ordered-dish spawn. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | 3000 | Replacement delay when the next spawn is already due. |
-| `DINER_CLOCK_MS` | 100 | Gameplay and route-render sampling interval. |
-| `CHARACTER_STEP_MS` | 360 | Shared guest/waiter route time per tile, with linearly interpolated rendering between tiles. |
+| `DINER_CLOCK_MS` | 100 | Gameplay and customer-route render sampling interval. |
+| `CHARACTER_STEP_MS` | 360 | Guest route time per tile, with linearly interpolated rendering between tiles. |
 | `LEAVING_GUEST_LINGER_MS` | 350 | Removal delay after a reverse exit route. |
 | `DISH_EXIT_MS` | 360 | Time retained for a dish's serving-line exit animation. |
-| `GREETING_PATIENCE_BONUS_MS` | 1500 | Patience added after the waiter greets/reveals an order. |
+| `WRONG_DISH_PATIENCE_BASE_MS` | 2500 | Level-1 patience removed by an incorrect dish. |
+| `WRONG_DISH_PATIENCE_PER_LEVEL_MS` | 500 | Additional wrong-dish patience loss for each level above 1. |
 | `SERVED_DISH_PATIENCE_BONUS_MS` | 2000 | Patience added after each correct dish. |
 | `ORDER_LANES` | 2 | Logical dish lane/lift choices. |
 
@@ -149,16 +148,19 @@ orders it is half that time.
   expiration, and schedules each ordered food from 1800ms through `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
-- `buildTileRoute` routes actors through the diner aisle; `getRouteVisual` linearly interpolates
+- `buildTileRoute` routes customers through the diner aisle; `getRouteVisual` linearly interpolates
   between each pair of route tiles and derives facing from the current segment.
-- The 100ms clock samples guest/waiter route progress, and a matching linear CSS transition bridges
+- The 100ms clock samples customer route progress, and a matching linear CSS transition bridges
   samples smoothly. The same clock drives route completion, spawning, dish recycling, expiration,
   and leaving-guest removal.
 - Ordered food recycles if its owning guest still needs it; decoys animate off at the end of the pass.
 - Removed dishes stay in `beltFoods` with `leavingAt` through `DISH_EXIT_MS`, then a timeout removes
   them after the serving-line exit animation.
-- `revealGuestOrder` adds 1500ms of patience, and each correct dish adds 2000ms before the updated
-  guest is committed.
+- `revealGuestOrder` immediately reveals and speaks a seated guest's order without changing patience.
+  Because `speak` cancels the current utterance, selecting another customer switches speech
+  immediately while earlier revealed orders remain visible.
+- Each correct dish adds 2000ms before the updated guest is committed. An incorrect dish remains
+  available and removes 2500–5000ms of that guest's patience according to level.
 
 `targetGuestId` controls scheduled/visible dish cleanup and recycling. It is not a serving lock: the
 drop target table and `needsFood` decide whether a dish is correct.
@@ -174,9 +176,10 @@ comboBonus = completed order ? max(0, nextCombo - 1) * 15 : 0
 earned = 35 + timeBonus + levelBonus + comboBonus
 ```
 
-The time bonus is calculated before the correct-dish patience extension. Wrong-table drops animate
-the dish off and reset the combo. Expired guests leave, animate owned dishes off, and reset the
-combo. There is no miss count or diner loss state.
+The time bonus is calculated before the correct-dish patience extension. Incorrect dishes stay on
+the pass and reduce only the receiving guest's patience; score and combo are unchanged. Expired
+guests leave, animate owned dishes off, and reset the combo. There is no miss count or diner loss
+state.
 
 # Drop Hop
 

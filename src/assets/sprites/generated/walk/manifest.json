@@ -29,11 +29,6 @@
   },
   "files": [
     {
-      "characterId": "waiter",
-      "file": "waiter-walk-sheet.png",
-      "sha256": "287d8244526e6194dc44637876a90551c5c204f72d030c2c8af695471aafa830"
-    },
-    {
       "characterId": "mai",
       "displayName": "Mia",
       "file": "customer-mai-walk-sheet.png",

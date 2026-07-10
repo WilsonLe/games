@@ -21,10 +21,8 @@ from CSS scene styles, and the cursor URL is declared in `src/styles.css`.
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
 | `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | Not imported by app code | Legacy/reference kitchen sprite sheet. |
 | `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` | `1536 x 1024` each | `customerWalkSheetById` in `CharacterActor` | Six runtime 4-column × 4-row sheets. Rows contain south, north, east, and front-idle art; four walk frames loop at `720ms` (`180ms` per frame), and west mirrors east. |
-| `src/assets/sprites/generated/walk/waiter-walk-sheet.png` | `1536 x 1024` | `waiterWalkSheetUrl` in `CharacterActor` | Runtime waiter sheet with the same layout, scale, foot anchor, and frame loop as customers. |
 | `src/assets/sprites/generated/walk/manifest.json` | JSON | Maintainer metadata | Generation model, layout, frame order, post-processing, character mapping, and SHA-256 hashes for the runtime sheets. |
 | `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | Not imported by app code | Legacy/reference 4-column × 6-row customer sheet retained for visual history. |
-| `src/assets/sprites/generated/waiter-fullbody-sheet.png` | `2172 x 724` | Not imported by app code | Legacy/reference four-column waiter sheet retained for visual history. |
 
 ## Food Sprites
 
@@ -73,7 +71,6 @@ Individual `src/assets/sprites/customer-*.png` files remain in the repo. The por
 | --- | --- |
 | Food sprite | `src/assets/sprites/food-{food-id}.png` |
 | Customer walk sheet | `src/assets/sprites/generated/walk/customer-{customer-id}-walk-sheet.png` |
-| Waiter walk sheet | `src/assets/sprites/generated/walk/waiter-walk-sheet.png` |
 | Walk-sheet metadata | `src/assets/sprites/generated/walk/manifest.json` |
 | Legacy customer sprite | `src/assets/sprites/customer-{customer-id}.png` |
 | Background | `src/assets/game-kitchen-bg.png` |
@@ -114,7 +111,7 @@ If the filename stays the same, no import changes are needed. Still check:
 | Asset | Check |
 | --- | --- |
 | Food sprites | They crop well inside fixed food-art wrappers. |
-| Customer/waiter sheets | Every file is `1536 x 1024`; 4 × 4 slicing, row order, transparent idle cells, scale, foot anchors, west mirroring, and animation keyframes remain aligned. |
+| Customer sheets | Every file is `1536 x 1024`; 4 × 4 slicing, row order, transparent idle cells, scale, foot anchors, west mirroring, and animation keyframes remain aligned. |
 | Portal chef sprite | Transparent background works in the portal preview. |
 | Kitchen background | `background-size: cover` and mobile inset still frame the useful part. |
 | Cursor | Hotspot in `--game-cursor` still feels accurate. |
