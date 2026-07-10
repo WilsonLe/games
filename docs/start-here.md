@@ -20,10 +20,13 @@ Use this when opening the repo with no prior thread context.
 | `FOODS`, `FoodId`, `foodArtById` | Food inventory and sprite mapping. |
 | `CUSTOMERS`, `CustomerProfile`, `customerSpriteRowById` | Guest inventory and generated sprite-sheet row mapping. |
 | `TARGET_SERVES`, `ORDERS_PER_LEVEL`, `HAPPY_GUEST_COMBO_BONUS` | Main Table Talk Diner balancing constants. |
+| `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `WALK_TILES` | Tile-grid positions for the diner door, waiter, guest tables, and walk markers. |
 | `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS`, `TARGET_CITY_DELIVERIES` | Tiny City Delivery map, route, mission, and target data. |
 | `difficultyForLevel` | Level scaling and timer math. |
+| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Tile-route interpolation and direction selection for guests and waiter. |
 | `selectFoods`, `makeGuest`, `makeDecoyFood` | Deterministic order and dish generation. |
 | `RestaurantGame`, `TinyCityDeliveryGame`, `GamePortal`, `App` | Route-level game selection and top-level render paths. |
+| `handleGuestSelect`, `revealGuestOrder` | Waiter-to-table order flow and speech trigger. |
 | `handleFoodDrop` | Drag/drop serve resolution, scoring, combo completion, and wrong-table handling. |
 
 4. Open `src/styles.css` for layout and visual behavior.
@@ -63,7 +66,8 @@ backend, persistence, multiplayer, automated tests, or CI configuration in the r
 | `selectFoods` assumes enough unique foods | Do not let `orderSize` exceed `FOODS.length`; the loop looks for unique food IDs. |
 | Diner has no pause UI | Pause/resume timestamp shifting exists for Tiny City, not the current diner route. |
 | Audio depends on browser APIs | Speech and Web Audio may be unavailable or gesture-gated. |
-| CSS owns most visual behavior | The background pan, waiter/customer sprite motion, dish wobble, table arrival, cursor, and breakpoints are CSS-heavy. |
+| Guest selection is movement-gated | Tapping a guest selects them immediately, but `revealGuestOrder` waits for the waiter route to finish and for the guest to be seated. |
+| CSS owns most visual behavior | Tile placement variables, waiter/customer sprite frames, dish wobble, cursor, and breakpoints are CSS-heavy. |
 
 ## Best First Verification
 

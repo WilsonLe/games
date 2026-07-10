@@ -42,7 +42,9 @@ Start with these symbols in `src/App.tsx`:
 | `HAPPY_GUEST_COMBO_BONUS` | Points added by consecutive happy-guest completions. |
 | `FIRST_DISH_DELAY_MS` | Earliest ordered dish spawn delay. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement guest pacing after order completion. |
-| `LEAVING_GUEST_VISIBLE_MS` | How long happy or expired guests remain visible while leaving. |
+| `GUEST_STEP_MS` | Guest tile-route segment duration for entering and leaving. |
+| `WAITER_STEP_MS` | Waiter tile-route segment duration after selecting a guest. |
+| `LEAVING_GUEST_LINGER_MS` | Extra time after a leaving guest finishes the reverse route before removal. |
 | `ORDER_LANES` | Logical kitchen-pass lane offset count for ordered/decoy timing. Check current rendering before changing it. |
 | `difficultyForLevel` | Main level scaling formula. |
 
@@ -59,6 +61,8 @@ If changing `orderSize`, keep it at or below `FOODS.length`; `selectFoods` looks
 | Dish lifetime/pass timing | `difficultyForLevel().beltTravelMs`. |
 | Dish spacing | `difficultyForLevel().timeToLastDishMs`, `dishGapMs`, and `makeGuest`. |
 | Expiration | `timeToLastDishMs + patienceBufferMs`. |
+| Guest walk duration | `getGuestWalkDuration`, derived from the seat route length and `GUEST_STEP_MS`. |
+| Waiter-to-table route duration | `buildTileRoute` plus `WAITER_STEP_MS`. |
 | Lane retry delay | Hard-coded `650ms` delays in scheduled spawn and decoy retry logic. |
 
 After timer changes, manually test guest spawning, dish spawning/recycling, expiration, and Tiny City
@@ -97,12 +101,12 @@ Run these in a browser through `npm run dev` after gameplay changes.
 | Test | Expected result |
 | --- | --- |
 | Initial load | Portal renders both game choices, preview art, and no console errors. |
-| Initial diner route | Two guests appear, no guest is selected, score is `0`, orders are `0/24`, and level is `1`. |
-| Guest table tap | Guest becomes selected, the speech bubble shows the order, and order audio attempts to play. |
+| Initial diner route | One guest begins walking in, no guest is selected, score is `0`, orders are `0/24`, and level is `1`; another guest can spawn shortly after while under the level max. |
+| Guest table tap | Guest becomes selected, the waiter walks to that guest's table, then the speech bubble shows the order and order audio attempts to play. |
 | Correct dish drag | Dish disappears, guest chip is marked served, score increases, and feedback/sound state is good. |
-| Complete order | Guest enters leaving animation, orders count increments, combo may increase, completion sound/TTS attempts to play. |
+| Complete order | Guest walks back toward the door, orders count increments, combo may increase, completion sound/TTS attempts to play. |
 | Wrong table | Dish disappears, wrong sound/TTS attempts to play, and the happy-guest combo resets internally. |
-| Guest expiration | Waiting too long marks the guest leaving, removes targeted dishes, and resets the combo internally. |
+| Guest expiration | Waiting too long sends the guest leaving toward the door, removes targeted dishes, and resets the combo internally. |
 | Win | After `24` completed orders, result banner shows `Dinner service complete`. |
 | Responsive layout | Check around desktop, `1360px`, `980px`, and `560px` widths. |
 | Console | No React errors, missing asset errors, or unhandled audio exceptions. |

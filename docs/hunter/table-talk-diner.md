@@ -17,8 +17,12 @@ references: []
 
 - Food and customer types are defined near the top of `src/App.tsx`.
 - `difficultyForLevel` controls guest pressure, order size, food timing, decoys, and patience.
+- `SEAT_LAYOUT`, `WALK_TILES`, `buildTileRoute`, and `getRouteVisual` control table placement and
+  tile-based movement for guests and the waiter.
 - `makeGuest` creates a guest plus scheduled target foods.
 - `makeDecoyFood` adds non-target food items.
+- `handleGuestSelect` starts waiter movement; `revealGuestOrder` marks an order heard after the
+  waiter route completes and the guest is seated.
 - `handleFoodDrop` is the key drag/drop serve and wrong-table decision path.
 - `RestaurantStage` handles the current table-oriented presentation.
 - The main game loop is implemented with React effects that spawn guests, spawn food, expire guests,

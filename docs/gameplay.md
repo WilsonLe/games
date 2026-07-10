@@ -29,24 +29,39 @@ current diner implementation does not track lives or end the shift from misses.
 
 | Control | Current behavior |
 | --- | --- |
-| Initial route load | `RestaurantGame` calls `resetGame`, creates two level-1 guests, and starts play. |
-| Guest table click/tap | Selects that guest, marks the order as heard, and speaks a greeting plus the order phrase. |
+| Initial route load | `RestaurantGame` calls `resetGame`, creates the first level-1 guest, and starts play. |
+| Guest table click/tap | Selects that guest, sends the waiter along a tile route to the table, then marks the order as heard and speaks a greeting plus the order phrase after the waiter arrives. |
 | Dish pointer drag | Starts a custom drag preview and asks the player to serve the dish to the correct guest. |
 | Native HTML drag/drop | Supports dragging a dish button to a guest table through browser drag events. |
 | Dish keyboard `Enter` or `Space` | Attempts to serve the dish to the currently selected guest. |
 
 ## Initial Shift
 
-`resetGame` runs on mount and creates two guests:
+`resetGame` runs on mount and creates the first guest:
 
 | Guest sequence | Spawn timestamp | Source |
 | --- | --- | --- |
 | `0` | Current start time | First active guest. |
-| `1` | Start time plus `900ms` | Second active guest. |
+| `1+` | Earliest next spawn is current start time plus `900ms`, then `difficulty.guestIntervalMs` after each later spawn. | `addGuest` through the guest-spawning effect while below `difficulty.maxGuests`. |
 
 The game resets score, completed orders, happy-guest combo, belt foods, scheduled foods, drag state,
-guest sequence, food sequence, consumed dish IDs, and feedback state. No guest is selected until the
-player clicks or taps a guest table.
+guest sequence, food sequence, consumed dish IDs, waiter tile/route state, pending order reveal, and
+feedback state. No guest is selected until the player clicks or taps a guest table.
+
+## Guest And Waiter Movement
+
+Guests and the waiter use tile coordinates from `SEAT_LAYOUT`, `DINER_DOOR_TILE`,
+`WAITER_HOME_TILE`, and `WALK_TILES`.
+
+| Movement | Current behavior |
+| --- | --- |
+| Guest entry | `getGuestVisual` follows `buildTileRoute(DINER_DOOR_TILE, seat.customer)` until `getGuestWalkDuration` completes, then the guest phase becomes `seated`. |
+| Guest leaving | Completed or expired guests reverse their entry route and are removed after their walk duration plus `LEAVING_GUEST_LINGER_MS`. |
+| Waiter route | `handleGuestSelect` snaps the current waiter visual to a tile, builds a route to `seat.waiter`, and stores it in `waiterRoute`. |
+| Order reveal | When the waiter route finishes, `pendingOrderGuestId` is set. `revealGuestOrder` runs only after the target guest is not leaving and no longer entering. |
+
+Dropping a dish before a guest has heard the order leaves the dish available and asks the player to
+take that guest's order first.
 
 ## Serving Rules
 

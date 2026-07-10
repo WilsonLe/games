@@ -1,0 +1,11 @@
+{
+  "task": "Second documentation update pass for tile-based diner waiter flow",
+  "status": "completed",
+  "requirements": [
+    "Base documentation updates on current main at b04f9e6.",
+    "Document tile-based waiter movement and any changed diner gameplay state.",
+    "Keep the Hunter graph reachable from AGENTS.md and docs/README.md.",
+    "Run docs-appropriate verification before handing work back."
+  ],
+  "current_step": "Completed. Documentation matches the current tile-based diner waiter flow; manual graph validation, JSON validation, and docs-only diff verification passed."
+}

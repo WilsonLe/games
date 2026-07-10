@@ -26,6 +26,7 @@ place names, quantities, and prepositions such as `behind`, `between`, `over`, `
 | --- | --- |
 | Goal | Complete `24` guest orders. |
 | Guest orders | Each guest asks for `2` or `3` unique foods at current max level. |
+| Guest movement | Guests and the waiter move on a shared tile grid; tapping a guest sends the waiter to that table before the order is revealed. |
 | Food service | Ordered dishes and decoy dishes appear as draggable kitchen-pass buttons. |
 | Serving | Dropping a dish on a guest table serves it only if that guest has heard the order and still needs that food. |
 | Feedback | Diner feedback is maintained in React state for speech/sound flow, but no diner feedback bar is currently rendered. |
