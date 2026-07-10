@@ -26,7 +26,7 @@ references: []
 | `GamePortal` | Root two-game chooser and preview cards. |
 | `FOODS`, `foodArtById` | Diner food inventory and image mapping. |
 | `CUSTOMERS`, `customerSpriteRowById` | Guest inventory and generated sheet rows. |
-| `TARGET_SERVES`, `ORDERS_PER_LEVEL`, `difficultyForLevel` | Diner progression and pacing. |
+| `DINER_LEVELS`, `TARGET_SERVES`, `difficultyForLevel` | Diner progression and pacing. |
 | `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `DINER_FLOOR_TILES` | Diner actor, table, and concrete floor-tile coordinates. |
 | `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Discrete diner tile routes and directional actor state. |
 | `makeGuest`, `makeDecoyFood`, `chooseSpawnLane` | Diner guest and dish generation. |

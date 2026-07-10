@@ -108,9 +108,9 @@ The diner starts automatically. It has no mid-shift pause or reset control. Comp
 
 | Constant | Value | Meaning |
 | --- | ---: | --- |
-| `TARGET_SERVES` | 24 | Completed guest orders required to win. |
-| `ORDERS_PER_LEVEL` | 4 | Completed orders per level. |
-| `MAX_LEVEL` | 6 | Derived target level count. |
+| `DINER_LEVELS` | 6 profiles | Per-level order targets, guest capacity, order size, and timing curve. |
+| `TARGET_SERVES` | 24 | Completed guest orders required to win, derived from the profile targets. |
+| `MAX_LEVEL` | 6 | Derived from the number of level profiles. |
 | `HAPPY_GUEST_COMBO_BONUS` | 15 | Bonus multiplier step for consecutive completed guests. |
 | `FIRST_DISH_DELAY_MS` | 1800 | Earliest ordered-dish spawn. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | 3000 | Replacement delay when the next spawn is already due. |
@@ -123,16 +123,18 @@ The diner starts automatically. It has no mid-shift pause or reset control. Comp
 
 ## Difficulty
 
-| Level | Max guests | Order size | Last-dish time | Guest interval | Belt life | Decoy interval | Patience buffer |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 2 | 2 | 7200ms | 5600ms | 12500ms | 3900ms | 12000ms |
-| 2 | 2 | 2 | 9450ms | 5240ms | 12240ms | 3760ms | 13200ms |
-| 3 | 3 | 2 | 11700ms | 4880ms | 11980ms | 3620ms | 14400ms |
-| 4 | 3 | 3 | 13950ms | 4520ms | 11720ms | 3480ms | 15600ms |
-| 5 | 4 | 3 | 16200ms | 4160ms | 11460ms | 3340ms | 16800ms |
-| 6 | 4 | 3 | 18450ms | 3800ms | 11200ms | 3200ms | 18000ms |
+| Level | Orders | Max guests | Order size | Last-dish time | Guest interval | Belt life | Decoy interval | Patience buffer |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 2 | 1 | 1 | 1800ms | 6600ms | 14000ms | 5200ms | 14000ms |
+| 2 | 3 | 2 | 2 | 7000ms | 6000ms | 13300ms | 4600ms | 13500ms |
+| 3 | 4 | 2 | 2 | 8500ms | 5400ms | 12600ms | 4100ms | 13000ms |
+| 4 | 4 | 3 | 3 | 10000ms | 4800ms | 11900ms | 3600ms | 12500ms |
+| 5 | 5 | 3 | 3 | 11500ms | 4200ms | 11200ms | 3100ms | 12000ms |
+| 6 | 6 | 4 | 3 | 13000ms | 3600ms | 10500ms | 2600ms | 11500ms |
 
-For two-item orders, `dishGapMs` equals last-dish time. For three-item orders it is half that time.
+For one-item orders, the only dish arrives at `FIRST_DISH_DELAY_MS`; `dishGapMs` matches that delay
+when recycling a missed dish. For two-item orders `dishGapMs` equals last-dish time; for three-item
+orders it is half that time.
 
 ## Generation And Effects
 
