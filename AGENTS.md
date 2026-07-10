@@ -20,6 +20,13 @@ This root is the startup entry point for future Codex sessions in this repo.
   durable todos under `.hunter/`.
 - If project instructions change, run Hunter graph validation before finishing.
 
+## Checkout Discipline
+
+- Keep this main repository checkout on the `main` branch.
+- Do not check out feature branches directly in this repository root.
+- For branch work, create a sibling worktree under `../.worktrees/` and do the checkout there.
+- Do not create project worktrees or temporary clones under `/private/tmp` for this repo.
+
 ## Product Context
 
 - The shipped games are Table Talk Diner and Tiny City Delivery.

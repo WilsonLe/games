@@ -28,6 +28,13 @@ references: []
 - Do not edit generated output in `dist/`; rebuild instead.
 - Treat `node_modules/` and `dist/` as local artifacts.
 
+## Checkout Discipline
+
+- The main repo checkout at `games/` must stay on `main`.
+- Do not switch the main repo checkout to feature branches.
+- For branch work, create a sibling worktree under `../.worktrees/` and check out the branch there.
+- Avoid temporary repo clones or worktrees under `/private/tmp` for this project.
+
 ## Verification
 
 - Run `npm run build` before completing code changes.
