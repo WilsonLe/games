@@ -776,6 +776,38 @@ function makeOrderPhrase(seed: number, foodNames: string[]) {
   return template(formatList(foodNames));
 }
 
+function renderOrderPhrase(guest: ActiveGuest) {
+  const orderedFoodsByName = new Map(
+    guest.foods.map((foodId) => {
+      const foodName = foodById.get(foodId)?.name ?? foodId;
+      return [foodName, foodId] as const;
+    }),
+  );
+  const foodNamePattern = [...orderedFoodsByName.keys()]
+    .map((foodName) => foodName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+
+  return guest.phrase.split(new RegExp(`(${foodNamePattern})`, "g")).map((part, index) => {
+    const foodId = orderedFoodsByName.get(part);
+
+    if (!foodId) {
+      return part;
+    }
+
+    const served = guest.servedFoods.includes(foodId);
+
+    return (
+      <span
+        className={cx("guestSpeech__dish", served && "guestSpeech__dish--served")}
+        key={`${guest.instanceId}-phrase-${foodId}-${index}`}
+        aria-label={served ? `${part}, served` : part}
+      >
+        {part}
+      </span>
+    );
+  });
+}
+
 function makeGuest(sequence: number, now: number, profile: DifficultyProfile, seatIndex: number) {
   const customer = CUSTOMERS[sequence % CUSTOMERS.length];
   const foods = selectFoods(sequence, profile.orderSize, profile.level);
@@ -1053,27 +1085,7 @@ function GuestTable({
           <span className="guestTable__name">{guest.customer.name}</span>
 
           <span className="guestSpeech">
-            <strong>{showOrder ? guest.phrase : "..."}</strong>
-            {showOrder && (
-              <span className="guestSpeech__foods" aria-label={`${guest.customer.name}'s requested food`}>
-                {guest.foods.map((foodId, index) => {
-                  const servedCount = guest.servedFoods.filter((servedFoodId) => servedFoodId === foodId).length;
-                  const requiredThroughThisChip = guest.foods
-                    .slice(0, index + 1)
-                    .filter((orderedFoodId) => orderedFoodId === foodId).length;
-                  const served = servedCount >= requiredThroughThisChip;
-                  const food = foodById.get(foodId);
-
-                  return (
-                    <span className={cx("foodChip", served && "foodChip--served")} key={`${guest.instanceId}-bubble-${foodId}-${index}`}>
-                      <FoodArt id={foodId} />
-                      <span>{food?.name ?? foodId}</span>
-                      {served && <Check size={13} />}
-                    </span>
-                  );
-                })}
-              </span>
-            )}
+            <strong>{showOrder ? renderOrderPhrase(guest) : "..."}</strong>
           </span>
 
           <span
