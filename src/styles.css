@@ -2176,7 +2176,7 @@ h2 {
   left: clamp(126px, 16vw, 180px);
   z-index: 4;
   box-sizing: border-box;
-  height: 96px;
+  height: 114px;
   padding: 0 10px;
   background: rgba(255, 253, 248, 0.76);
   border: 3px solid rgba(23, 49, 45, 0.68);
@@ -2206,7 +2206,7 @@ h2 {
   min-width: 100%;
   height: 100%;
   gap: 12px;
-  padding: 9px 10px 9px 0;
+  padding: 6px 10px 6px 0;
 }
 
 .dishRail .beltFood {
@@ -2215,10 +2215,10 @@ h2 {
   top: auto;
   bottom: auto;
   left: auto;
-  flex: 0 0 74px;
-  width: 74px;
-  height: 70px;
-  padding: 5px 5px 7px;
+  flex: 0 0 92px;
+  width: 92px;
+  height: 90px;
+  padding: 5px 7px 13px;
   overflow: visible;
   transform: translateY(var(--dish-lift, 0));
   touch-action: none;
@@ -2233,7 +2233,7 @@ h2 {
 .beltFood__dish {
   display: grid;
   place-items: center;
-  gap: 3px;
+  gap: 2px;
   animation: dishCardBob 1.2s ease-in-out infinite;
 }
 
@@ -2246,13 +2246,15 @@ h2 {
 }
 
 .dishRail .beltFood .foodArt {
-  width: 42px;
-  height: 42px;
-  flex-basis: 42px;
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
 }
 
 .dishRail .beltFood strong {
-  font-size: 0.66rem;
+  max-width: 78px;
+  font-size: 0.72rem;
+  line-height: 1.05;
 }
 
 .beltFood--dragging {
@@ -2261,10 +2263,10 @@ h2 {
 
 .beltFood__timer {
   position: absolute;
-  right: 6px;
-  bottom: 4px;
-  left: 6px;
-  height: 4px;
+  right: 8px;
+  bottom: 2px;
+  left: 8px;
+  height: 5px;
   overflow: hidden;
   background: rgba(23, 49, 45, 0.14);
   border-radius: 999px;
@@ -2284,13 +2286,13 @@ h2 {
   position: fixed;
   z-index: 60;
   display: grid;
-  width: 82px;
-  height: 78px;
+  width: 96px;
+  height: 90px;
   place-items: center;
-  gap: 3px;
+  gap: 2px;
   padding: 7px;
   color: var(--ink);
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 900;
   text-align: center;
   pointer-events: none;
@@ -2302,9 +2304,9 @@ h2 {
 }
 
 .dragDishPreview .foodArt {
-  width: 42px;
-  height: 42px;
-  flex-basis: 42px;
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
 }
 
 .guestTable {
@@ -2466,7 +2468,7 @@ h2 {
 }
 
 .guestTable__name {
-  bottom: 10px;
+  bottom: 17px;
   min-width: 72px;
 }
 
@@ -2507,7 +2509,7 @@ h2 {
 
 .guestTable .guestTimer {
   right: clamp(24px, 2.8vw, 38px);
-  bottom: 13px;
+  bottom: 3px;
   left: clamp(24px, 2.8vw, 38px);
   z-index: 5;
 }
@@ -3320,15 +3322,15 @@ h2 {
     right: 9px;
     bottom: 6px;
     left: 68px;
-    height: 78px;
+    height: 92px;
     border-width: 2px;
     border-radius: 8px;
     padding: 0 5px;
   }
 
   .dishRail__items {
-    gap: 6px;
-    padding: 8px 6px 8px 0;
+    gap: 8px;
+    padding: 5px 6px 5px 0;
   }
 
   .dishRail__label {
@@ -3338,10 +3340,10 @@ h2 {
   }
 
   .dishRail .beltFood {
-    flex-basis: 60px;
-    width: 60px;
-    height: 58px;
-    padding: 4px;
+    flex-basis: 74px;
+    width: 74px;
+    height: 74px;
+    padding: 4px 5px 12px;
     border-width: 2px;
     transform: translateY(var(--dish-lift, 0));
   }
@@ -3355,14 +3357,14 @@ h2 {
   }
 
   .dishRail .beltFood .foodArt {
-    width: 32px;
-    height: 32px;
-    flex-basis: 32px;
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
   }
 
   .dishRail .beltFood strong {
-    max-width: 50px;
-    font-size: 0.6rem;
+    max-width: 64px;
+    font-size: 0.64rem;
   }
 
   .guestTable {
@@ -3401,7 +3403,7 @@ h2 {
 
 
   .guestTable__name {
-    bottom: 13px;
+    bottom: 18px;
     min-width: 58px;
     padding: 3px 6px;
     font-size: 0.68rem;
@@ -3443,22 +3445,22 @@ h2 {
 
   .guestTable .guestTimer {
     right: 24px;
-    bottom: 10px;
+    bottom: 3px;
     left: 24px;
     height: 6px;
   }
 
   .dragDishPreview {
-    width: 64px;
-    height: 62px;
+    width: 76px;
+    height: 74px;
     padding: 5px;
-    font-size: 0.58rem;
+    font-size: 0.64rem;
   }
 
   .dragDishPreview .foodArt {
-    width: 32px;
-    height: 32px;
-    flex-basis: 32px;
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
   }
 }
 
