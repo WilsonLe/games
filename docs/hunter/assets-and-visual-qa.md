@@ -9,7 +9,7 @@ references: []
 
 - Runtime art lives under `src/assets/`.
 - Explicit imports in `src/App.tsx` cover portal previews, food sprites, and generated character sheets.
-- CSS references the kitchen background and custom cursor.
+- CSS references the kitchen background for both scene and in-stage cooking visuals, plus the custom cursor.
 - Keep descriptive lowercase kebab-case names and update `docs/assets.md` when inventory changes.
 
 ## Styling Guardrails
@@ -35,6 +35,6 @@ Also verify:
 
 - portal and game home controls;
 - kitchen, player, customer, food, and cursor assets;
-- dish entry/bob, guest/waiter movement, city pickup pulse, and courier motion;
+- dish entry/bob/exit, discrete guest/waiter tile movement and directional frame loops, city pickup pulse, and courier motion;
 - no console errors or missing assets;
 - exact traversed-road highlighting, including routes that revisit stops.

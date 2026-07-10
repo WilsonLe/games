@@ -110,6 +110,7 @@ type BeltFood = {
   lane: number;
   spawnedAt: number;
   travelMs: number;
+  leavingAt?: number;
 };
 
 type DraggingDish = {
@@ -236,9 +237,11 @@ const MAX_LEVEL = Math.ceil(TARGET_SERVES / ORDERS_PER_LEVEL);
 const HAPPY_GUEST_COMBO_BONUS = 15;
 const FIRST_DISH_DELAY_MS = 1800;
 const NEXT_GUEST_AFTER_COMPLETE_MS = 3_000;
-const GUEST_STEP_MS = 320;
-const WAITER_STEP_MS = 440;
+const CHARACTER_STEP_MS = 360;
 const LEAVING_GUEST_LINGER_MS = 350;
+const DISH_EXIT_MS = 360;
+const GREETING_PATIENCE_BONUS_MS = 1_500;
+const SERVED_DISH_PATIENCE_BONUS_MS = 2_000;
 const ORDER_LANES = 2;
 const GAME_TITLE = "Table Talk Diner";
 const GAME_PATH = "/games/table-talk-diner";
@@ -300,30 +303,16 @@ const SEAT_LAYOUT: SeatLayout[] = [
   { table: { col: 9, row: 6 }, customer: { col: 9, row: 6 }, waiter: { col: 9, row: 7 }, bubbleShift: "-70%", mobileBubbleShift: "-80%" },
 ];
 
-const WALK_TILES: TilePoint[] = [
-  { col: 0, row: 7 },
-  { col: 1, row: 7 },
-  { col: 2, row: 7 },
-  { col: 3, row: 7 },
-  { col: 4, row: 7 },
-  { col: 5, row: 7 },
-  { col: 6, row: 7 },
-  { col: 7, row: 7 },
-  { col: 8, row: 7 },
-  { col: 9, row: 7 },
-  { col: 1, row: 6 },
-  { col: 1, row: 5 },
-  { col: 1, row: 4 },
-  { col: 1, row: 3 },
-  { col: 5, row: 6 },
-  { col: 5, row: 5 },
-  { col: 5, row: 4 },
-  { col: 5, row: 3 },
-  { col: 9, row: 6 },
-  { col: 9, row: 5 },
-  { col: 9, row: 4 },
-  { col: 9, row: 3 },
-];
+const DINER_FLOOR_COLUMNS = 10;
+const DINER_FLOOR_FIRST_ROW = 3;
+const DINER_FLOOR_LAST_ROW = 7;
+const DINER_FLOOR_TILES: TilePoint[] = Array.from(
+  { length: DINER_FLOOR_COLUMNS * (DINER_FLOOR_LAST_ROW - DINER_FLOOR_FIRST_ROW + 1) },
+  (_, index) => ({
+    col: index % DINER_FLOOR_COLUMNS,
+    row: DINER_FLOOR_FIRST_ROW + Math.floor(index / DINER_FLOOR_COLUMNS),
+  }),
+);
 
 const foodById = new Map(FOODS.map((food) => [food.id, food]));
 
@@ -572,15 +561,15 @@ function getRouteVisual(path: TilePoint[], startedAt: number, now: number, stepM
   const duration = getRouteDuration(path, stepMs);
   const elapsed = clamp(now - startedAt, 0, duration);
   const done = elapsed >= duration;
-  const segmentIndex = done ? segmentCount - 1 : Math.floor(elapsed / stepMs);
-  const from = path[segmentIndex] ?? fallback;
-  const to = path[segmentIndex + 1] ?? from;
-  const segmentProgress = done ? 1 : (elapsed - segmentIndex * stepMs) / stepMs;
+  const tileIndex = done ? segmentCount : Math.floor(elapsed / stepMs);
+  const tile = path[tileIndex] ?? fallback;
+  const direction = done
+    ? getWalkDirection(path[Math.max(0, tileIndex - 1)] ?? tile, tile)
+    : getWalkDirection(tile, path[tileIndex + 1] ?? tile);
 
   return {
-    col: from.col + (to.col - from.col) * segmentProgress,
-    row: from.row + (to.row - from.row) * segmentProgress,
-    direction: getWalkDirection(from, to),
+    ...tile,
+    direction,
     walking: !done,
     done,
   };
@@ -599,19 +588,19 @@ function getGuestPath(guest: ActiveGuest) {
 }
 
 function getGuestWalkDuration(guest: ActiveGuest) {
-  return getRouteDuration(getGuestPath(guest), GUEST_STEP_MS);
+  return getRouteDuration(getGuestPath(guest), CHARACTER_STEP_MS);
 }
 
 function getGuestVisual(guest: ActiveGuest, now: number): CharacterVisual {
   const seat = getSeatLayout(guest.seatIndex);
 
   if (guest.phase === "entering") {
-    return getRouteVisual(getGuestPath(guest), guest.createdAt, now, GUEST_STEP_MS);
+    return getRouteVisual(getGuestPath(guest), guest.createdAt, now, CHARACTER_STEP_MS);
   }
 
   if (guest.phase === "leaving") {
     const path = [...getGuestPath(guest)].reverse();
-    return getRouteVisual(path, guest.leavingAt ?? now, now, GUEST_STEP_MS);
+    return getRouteVisual(path, guest.leavingAt ?? now, now, CHARACTER_STEP_MS);
   }
 
   return { ...seat.customer, direction: "south", walking: false, done: true };
@@ -832,57 +821,45 @@ function FoodArt({ id }: { id: FoodId }) {
   );
 }
 
-function CustomerSprite({
+function CharacterActor({
+  visual,
   customer,
-  active,
-  walking,
-  direction = "south",
+  active = false,
+  phase,
 }: {
-  customer: CustomerProfile;
+  visual: CharacterVisual;
+  customer?: CustomerProfile;
   active?: boolean;
-  walking?: boolean;
-  direction?: WalkDirection;
+  phase?: GuestPhase;
 }) {
+  const isCustomer = Boolean(customer);
+  const actorStyle = {
+    "--actor-col": visual.col,
+    "--actor-row": visual.row,
+    zIndex: Math.round((isCustomer ? 14 : 16) + visual.row),
+  } as CSSProperties;
   const spriteStyle = {
-    "--sprite-y": customerSpriteRowById[customer.id],
-    backgroundImage: `url(${customerFullbodySheetUrl})`,
+    "--sprite-y": customer ? customerSpriteRowById[customer.id] : "0%",
+    backgroundImage: `url(${customer ? customerFullbodySheetUrl : waiterFullbodySheetUrl})`,
   } as CSSProperties;
 
   return (
-    <span
-      className={cx(
-        "customerSprite",
-        "customerSprite--sheet",
-        `customerSprite--${customer.id}`,
-        `customerSprite--${direction}`,
-        active && "customerSprite--active",
-        walking && "customerSprite--walking",
-      )}
-      aria-hidden="true"
-    >
-      <span className="customerSprite__shadow" />
-      <span className="customerSprite__sheet" style={spriteStyle} />
-    </span>
-  );
-}
-
-function PlayerSprite({
-  direction,
-  walking,
-  style,
-}: {
-  direction: WalkDirection;
-  walking: boolean;
-  style: CSSProperties;
-}) {
-  return (
     <div
-      className={cx("playerSprite", `playerSprite--${direction}`, walking && "playerSprite--walking")}
-      style={style}
+      className={cx(
+        "characterActor",
+        isCustomer ? "characterActor--customer" : "characterActor--waiter",
+        phase && `characterActor--${phase}`,
+        `characterActor--${visual.direction}`,
+        visual.walking && "characterActor--walking",
+        active && "characterActor--active",
+      )}
+      style={actorStyle}
       aria-hidden="true"
     >
-      <span className="playerSprite__shadow" />
-      <span className="playerSprite__sheet" style={{ backgroundImage: `url(${waiterFullbodySheetUrl})` }} />
+      <span className="characterSprite">
+        <span className="characterSprite__shadow" />
+        <span className="characterSprite__sheet" style={spriteStyle} />
+      </span>
     </div>
   );
 }
@@ -896,31 +873,13 @@ function CustomerActor({
   now: number;
   selected: boolean;
 }) {
-  const visual = getGuestVisual(guest, now);
-  const actorStyle = {
-    "--actor-col": visual.col,
-    "--actor-row": visual.row,
-    zIndex: Math.round(14 + visual.row),
-  } as CSSProperties;
-
   return (
-    <div
-      className={cx(
-        "customerActor",
-        `customerActor--${guest.phase}`,
-        visual.walking && "customerActor--walking",
-      )}
-      data-direction={visual.direction}
-      style={actorStyle}
-      aria-hidden="true"
-    >
-      <CustomerSprite
-        customer={guest.customer}
-        active={selected}
-        direction={visual.direction}
-        walking={visual.walking}
-      />
-    </div>
+    <CharacterActor
+      active={selected}
+      customer={guest.customer}
+      phase={guest.phase}
+      visual={getGuestVisual(guest, now)}
+    />
   );
 }
 
@@ -1064,7 +1023,9 @@ function KitchenStation({
         <span />
       </div>
       <div className="prepCounter" aria-hidden="true">
-        <span>Kitchen</span>
+        <span />
+        <span />
+        <span />
       </div>
       <div className="dishRail" aria-label="Kitchen pass dishes">
         <span className="dishRail__label">{formatTime(profile.beltTravelMs)} pass</span>
@@ -1075,10 +1036,16 @@ function KitchenStation({
 
             return (
               <button
-                className={cx("beltFood", `beltFood--lane${food.lane}`, draggingFoodId === food.id && "beltFood--dragging")}
+                className={cx(
+                  "beltFood",
+                  `beltFood--lane${food.lane}`,
+                  draggingFoodId === food.id && "beltFood--dragging",
+                  Boolean(food.leavingAt) && "beltFood--leaving",
+                )}
                 data-belt-id={food.id}
                 data-belt-food={food.foodId}
-                draggable
+                disabled={Boolean(food.leavingAt)}
+                draggable={!food.leavingAt}
                 key={food.id}
                 type="button"
                 style={{ "--dish-life": `${Math.max(0, 1 - progress)}` } as CSSProperties}
@@ -1088,8 +1055,10 @@ function KitchenStation({
                 onPointerDown={(event) => onStartFoodDrag(food, event)}
                 aria-label={`Drag ${foodName} to a guest`}
               >
-                <FoodArt id={food.foodId} />
-                <strong>{foodName}</strong>
+                <span className="beltFood__dish">
+                  <FoodArt id={food.foodId} />
+                  <strong>{foodName}</strong>
+                </span>
                 <span className="beltFood__timer" aria-hidden="true">
                   <span />
                 </span>
@@ -1135,26 +1104,19 @@ function RestaurantStage({
   onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
   onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
 }) {
-  const playerStyle = {
-    "--actor-col": waiterVisual.col,
-    "--actor-row": waiterVisual.row,
-    zIndex: Math.round(16 + waiterVisual.row),
-  } as CSSProperties;
-
   return (
     <section className="restaurantStage" aria-label="Top down restaurant floor">
-      <div className="floorTiles" aria-hidden="true" />
-      <div className="restaurantDoor" aria-hidden="true">
-        <span />
-      </div>
-      <div className="walkTileLayer" aria-hidden="true">
-        {WALK_TILES.map((tile, index) => (
+      <div className="floorTiles" aria-hidden="true">
+        {DINER_FLOOR_TILES.map((tile) => (
           <span
-            className="walkTile"
-            key={`${tile.col}-${tile.row}-${index}`}
+            className="floorTile"
+            key={`${tile.col}-${tile.row}`}
             style={{ "--tile-col": tile.col, "--tile-row": tile.row } as CSSProperties}
           />
         ))}
+      </div>
+      <div className="restaurantDoor" aria-hidden="true">
+        <span />
       </div>
       <KitchenStation
         beltFoods={beltFoods}
@@ -1204,7 +1166,7 @@ function RestaurantStage({
         </div>
       )}
 
-      <PlayerSprite direction={waiterVisual.direction} walking={waiterVisual.walking} style={playerStyle} />
+      <CharacterActor visual={waiterVisual} />
     </section>
   );
 }
@@ -1921,7 +1883,12 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     setActiveGuests((currentGuests) =>
       currentGuests.map((currentGuest) =>
         currentGuest.instanceId === guest.instanceId
-          ? { ...currentGuest, heardOrder: true, phase: "seated" }
+          ? {
+              ...currentGuest,
+              expiresAt: currentGuest.expiresAt + GREETING_PATIENCE_BONUS_MS,
+              heardOrder: true,
+              phase: "seated",
+            }
           : currentGuest,
       ),
     );
@@ -1952,7 +1919,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         targetGuestId: guest.instanceId,
         path,
         startedAt: requestTime,
-        stepMs: WAITER_STEP_MS,
+        stepMs: CHARACTER_STEP_MS,
       });
       setFeedback({ kind: "neutral", text: `The waiter is walking to ${guest.customer.name}.` });
     },
@@ -1986,8 +1953,15 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         return;
       }
 
+      const interactionAt = Date.now();
       consumedDishIdsRef.current.add(food.id);
-      setBeltFoods((currentFoods) => currentFoods.filter((currentFood) => currentFood.id !== food.id));
+      setBeltFoods((currentFoods) =>
+        currentFoods.map((currentFood) =>
+          currentFood.id === food.id
+            ? { ...currentFood, leavingAt: currentFood.leavingAt ?? interactionAt }
+            : currentFood,
+        ),
+      );
 
       if (!needsFood(droppedGuest, food.foodId)) {
         playSound("wrong");
@@ -2001,6 +1975,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       const levelBonus = difficulty.level * 5;
       const nextMatchingGuest: ActiveGuest = {
         ...droppedGuest,
+        expiresAt: droppedGuest.expiresAt + SERVED_DISH_PATIENCE_BONUS_MS,
         heardOrder: true,
         phase: "seated",
         servedFoods: [...droppedGuest.servedFoods, food.foodId],
@@ -2034,7 +2009,11 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
           currentFoods.filter((scheduledFood) => scheduledFood.targetGuestId !== completedGuest?.instanceId),
         );
         setBeltFoods((currentFoods) =>
-          currentFoods.filter((currentFood) => currentFood.targetGuestId !== completedGuest?.instanceId),
+          currentFoods.map((currentFood) =>
+            currentFood.targetGuestId === completedGuest.instanceId
+              ? { ...currentFood, leavingAt: currentFood.leavingAt ?? completedAt }
+              : currentFood,
+          ),
         );
         setSelectedGuestId((currentSelected) => (currentSelected === completedGuest.instanceId ? null : currentSelected));
         if (nextGuestAtRef.current <= completedAt) {
@@ -2075,7 +2054,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   );
 
   const handleStartFoodDrag = useCallback((food: BeltFood, event: PointerEvent<HTMLButtonElement>) => {
-    if (event.button !== 0 || gameStatus !== "playing") {
+    if (event.button !== 0 || gameStatus !== "playing" || food.leavingAt) {
       return;
     }
 
@@ -2093,7 +2072,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   }, [gameStatus]);
 
   const handleNativeFoodDragStart = useCallback((food: BeltFood, event: DragEvent<HTMLButtonElement>) => {
-    if (gameStatus !== "playing") {
+    if (gameStatus !== "playing" || food.leavingAt) {
       event.preventDefault();
       return;
     }
@@ -2137,7 +2116,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         event.dataTransfer.getData("application/x-belt-food") || event.dataTransfer.getData("text/plain");
       const droppedFood =
         (droppedFoodId && draggingDishRef.current?.food.id === droppedFoodId ? draggingDishRef.current.food : null) ||
-        beltFoods.find((food) => food.id === droppedFoodId) ||
+        beltFoods.find((food) => food.id === droppedFoodId && !food.leavingAt) ||
         null;
 
       draggingDishRef.current = null;
@@ -2337,17 +2316,15 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       return;
     }
 
-    const stillVisible: BeltFood[] = [];
+    const leavingFoodIds = new Set<string>();
     const recycleFoods: ScheduledFood[] = [];
 
     for (const food of beltFoods) {
-      const progress = (now - food.spawnedAt) / food.travelMs;
-
-      if (progress < 1) {
-        stillVisible.push(food);
+      if (food.leavingAt || (now - food.spawnedAt) / food.travelMs < 1) {
         continue;
       }
 
+      leavingFoodIds.add(food.id);
       const guestStillNeedsFood =
         food.targetGuestId &&
         activeGuests.some(
@@ -2367,8 +2344,12 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       }
     }
 
-    if (stillVisible.length !== beltFoods.length) {
-      setBeltFoods(stillVisible);
+    if (leavingFoodIds.size > 0) {
+      setBeltFoods((currentFoods) =>
+        currentFoods.map((food) =>
+          leavingFoodIds.has(food.id) ? { ...food, leavingAt: food.leavingAt ?? now } : food,
+        ),
+      );
     }
 
     if (recycleFoods.length > 0) {
@@ -2393,6 +2374,26 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   }, [activeGuests, beltFoods, difficulty.dishGapMs, gameStatus, now]);
 
   useEffect(() => {
+    const nextExitAt = beltFoods.reduce(
+      (earliest, food) => (food.leavingAt ? Math.min(earliest, food.leavingAt + DISH_EXIT_MS) : earliest),
+      Number.POSITIVE_INFINITY,
+    );
+
+    if (!Number.isFinite(nextExitAt)) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const cleanupAt = Date.now();
+      setBeltFoods((currentFoods) =>
+        currentFoods.filter((food) => !food.leavingAt || cleanupAt - food.leavingAt < DISH_EXIT_MS),
+      );
+    }, Math.max(0, nextExitAt - Date.now()));
+
+    return () => window.clearTimeout(timeout);
+  }, [beltFoods]);
+
+  useEffect(() => {
     if (gameStatus !== "playing") {
       return;
     }
@@ -2414,7 +2415,11 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       currentFoods.filter((food) => !expiredGuests.some((guest) => guest.instanceId === food.targetGuestId)),
     );
     setBeltFoods((currentFoods) =>
-      currentFoods.filter((food) => !expiredGuests.some((guest) => guest.instanceId === food.targetGuestId)),
+      currentFoods.map((food) =>
+        expiredGuests.some((guest) => guest.instanceId === food.targetGuestId)
+          ? { ...food, leavingAt: food.leavingAt ?? now }
+          : food,
+      ),
     );
     setSelectedGuestId((currentSelected) =>
       expiredGuests.some((guest) => guest.instanceId === currentSelected) ? null : currentSelected,

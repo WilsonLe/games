@@ -8,8 +8,10 @@ references: []
 ## Gameplay Model
 
 - The game starts automatically with one entering guest.
-- A seated table selection sends the waiter there; the order is revealed and spoken after arrival.
-- Correct dishes advance the guest checklist; wrong-table drops and expiration reset the combo.
+- A seated table selection sends the waiter there in discrete tile steps; the order is revealed and
+  spoken after arrival, and the greeting adds a small patience reward.
+- Correct dishes advance the checklist, animate off the pass, and add patience; wrong-table drops and
+  expiration reset the combo.
 - Completing all requested food sends the guest out, awards points, and advances order/level progress.
 - The target is 24 orders; there is no diner loss state.
 - A visible status toast reports feedback, and completion offers `New Shift`.
@@ -18,7 +20,7 @@ references: []
 
 - Food/customer data and balancing constants: top of `src/App.tsx`.
 - Difficulty: `difficultyForLevel`.
-- Movement: `SEAT_LAYOUT`, `WALK_TILES`, `buildTileRoute`, `getRouteVisual`.
+- Movement: `SEAT_LAYOUT`, `DINER_FLOOR_TILES`, `buildTileRoute`, `getRouteVisual`, `CharacterActor`.
 - Generation: `makeGuest`, `makeDecoyFood`, `chooseSpawnLane`.
 - Order-taking: `handleGuestSelect`, waiter effects, `revealGuestOrder`.
 - Serving/scoring: `handleFoodDrop`.
@@ -36,6 +38,7 @@ references: []
 
 ## Verify
 
-Initial guest/second spawn, waiter reveal, correct/partial/complete service, decoy match, drop outside,
-unheard guest, wrong table, expiration, recycling, keyboard service, win, New Shift, portal return,
-desktop, and mobile.
+Initial guest/second spawn, integer-only guest/waiter tile steps, all direction frames/mirroring,
+greeting and correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service,
+decoy match, drop outside, unheard guest, wrong table, expiration, recycling, keyboard service, win,
+New Shift, portal return, desktop, and mobile.

@@ -84,25 +84,26 @@ City does not render them.
 
 | Layer/class | Position | z-index | Role |
 | --- | --- | ---: | --- |
-| `.floorTiles` | absolute stage fill | 0 | Floor pattern. |
+| `.floorTiles` / `.floorTile` | absolute stage/tile positions | 0 | Opaque 10 × 5 floor-tile board aligned to actor coordinates. |
 | stage frame/wall pseudo-elements | absolute | 1–2 | Room boundary and kitchen wall. |
-| `.walkTileLayer` | absolute stage fill | 2 | Visible route tiles. |
-| `.kitchenStation` | absolute top | 4 | Stove, prep counter, and dish rail. |
+| `.kitchenStation` | absolute top | 4 | Kitchen-art backdrop, burners, cabinets, and dish rail. |
 | `.restaurantDoor` | tile-positioned | 8 | Guest entry/exit. |
 | `.guestTable` | tile-positioned | 11 / 18 selected | Interactive table and order UI. |
-| `.customerActor` | tile-positioned | `14 + row` | Moving guest art. |
-| `.playerSprite` | tile-positioned | `16 + row` | Moving waiter art. |
+| `.characterActor--customer` | tile-positioned | `14 + row` | Guest art rendered by the shared actor. |
+| `.characterActor--waiter` | tile-positioned | `16 + row` | Waiter art rendered at the same height and tile cadence. |
 | `.gameHud` | fixed | 30 | Portal button and three stats. |
 | `.dinerFeedback` / result | fixed | 31 | Visible status or completion controls. |
 | `.dragDishPreview` | fixed | 60 | Pointer drag preview. |
 
-The waiter and customer positions update every 100ms through React interpolation. CSS 90ms
-transitions smooth those updates.
+The 100ms React clock selects whole route tiles; actor coordinates are always integers and have no
+position transition. The shared character renderer loops vertical or side sheet-frame pairs while a
+route is active, and west-facing side art mirrors east.
 
 ## Diner Tile System
 
-`restaurantStage` defines `--tile-size`, `--tile-origin-x`, and `--tile-origin-y`. Actor and table
-positions use:
+`restaurantStage` defines `--tile-size`, `--tile-origin-x`, and `--tile-origin-y`. The stage renders
+50 opaque `floorTile` elements for columns 0–9 and rows 3–7. Actors and tables use the same coordinate
+formula:
 
 ```css
 calc(var(--tile-origin-x) + var(--column) * var(--tile-size))
@@ -137,10 +138,10 @@ repeats.
 
 ## Animation Inventory
 
-Active animations include portal backdrop pan, dish card entry/bob, selected guest bob, diner actor
-step/shadow motion, Tiny City pickup pulse, delivery pop, and courier bob. Direction classes select
-sheet columns for north/south/east/west; west-facing art mirrors the east-facing column. Whole-actor
-step motion supplies the walking bounce.
+Active animations include portal backdrop pan, dish card entry/content bob/exit, selected guest bob,
+diner sheet-frame loops and actor step/shadow motion, Tiny City pickup pulse, delivery pop, and
+courier bob. Dish entry/exit runs on the button while its nested dish content bobs inside padded rail
+clearance. Direction classes select vertical or side sheet-frame pairs; west-facing art mirrors east.
 
 ## Visual Rules
 

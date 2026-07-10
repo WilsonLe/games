@@ -27,8 +27,8 @@ references: []
 | `FOODS`, `foodArtById` | Diner food inventory and image mapping. |
 | `CUSTOMERS`, `customerSpriteRowById` | Guest inventory and generated sheet rows. |
 | `TARGET_SERVES`, `ORDERS_PER_LEVEL`, `difficultyForLevel` | Diner progression and pacing. |
-| `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `WALK_TILES` | Diner actor and table coordinates. |
-| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Diner route interpolation. |
+| `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `DINER_FLOOR_TILES` | Diner actor, table, and concrete floor-tile coordinates. |
+| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Discrete diner tile routes and directional actor state. |
 | `makeGuest`, `makeDecoyFood`, `chooseSpawnLane` | Diner guest and dish generation. |
 | `handleGuestSelect`, `revealGuestOrder`, `handleFoodDrop` | Diner order-taking and serving decisions. |
 | `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS` | Tiny City map, road graph, and lesson content. |
@@ -66,7 +66,7 @@ provider-specific deployment configuration.
 | --- | --- |
 | Static deep links need fallback routing | Hosts must serve `index.html` for both `/games/...` paths. |
 | Diner and city share generic class names | Diner full-viewport overrides must stay under `.appShell:not(.appShell--city)` when they touch `.mainSurface`, `.gameGrid`, `.resultBanner`, or `.sceneBackdrop`. |
-| `targetGuestId` is dish lifecycle metadata | The table receiving a drop decides service; a decoy can satisfy a matching request. |
+| `targetGuestId` is dish lifecycle metadata | The table receiving a drop decides service; a decoy can satisfy a matching request. `leavingAt` retains dishes only for their exit animation. |
 | `selectFoods` requires enough unique foods | Never allow `orderSize > FOODS.length`. |
 | Diner has no mid-shift pause | Tiny City has ready/play/pause/end controls; Diner starts automatically and only offers a new shift after completion. |
 | Audio is browser-dependent | Speech and Web Audio may be absent or gesture-gated. |
