@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import type { CSSProperties, DragEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import {
   BadgeCheck,
   Bike,
@@ -24,12 +24,9 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import customerBenUrl from "./assets/sprites/customer-ben.png";
-import customerIvyUrl from "./assets/sprites/customer-ivy.png";
-import customerLeoUrl from "./assets/sprites/customer-leo.png";
 import customerMaiUrl from "./assets/sprites/customer-mai.png";
-import customerNoraUrl from "./assets/sprites/customer-nora.png";
-import customerSamUrl from "./assets/sprites/customer-sam.png";
+import customerFullbodySheetUrl from "./assets/sprites/generated/customer-fullbody-sheet.png";
+import waiterFullbodySheetUrl from "./assets/sprites/generated/waiter-fullbody-sheet.png";
 import foodBreadUrl from "./assets/sprites/food-bread.png";
 import foodChickenUrl from "./assets/sprites/food-chicken.png";
 import foodEggUrl from "./assets/sprites/food-egg.png";
@@ -99,6 +96,13 @@ type BeltFood = {
   lane: number;
   spawnedAt: number;
   travelMs: number;
+};
+
+type DraggingDish = {
+  food: BeltFood;
+  pointerId: number;
+  x: number;
+  y: number;
 };
 
 type Feedback = {
@@ -190,13 +194,13 @@ const CUSTOMERS: CustomerProfile[] = [
   { id: "sam", name: "Sam" },
 ];
 
-const customerSpriteById: Record<CustomerProfile["id"], string> = {
-  mai: customerMaiUrl,
-  leo: customerLeoUrl,
-  nora: customerNoraUrl,
-  ben: customerBenUrl,
-  ivy: customerIvyUrl,
-  sam: customerSamUrl,
+const customerSpriteRowById: Record<CustomerProfile["id"], string> = {
+  mai: "0%",
+  leo: "20%",
+  nora: "40%",
+  ben: "60%",
+  ivy: "80%",
+  sam: "100%",
 };
 
 const TARGET_SERVES = 24;
@@ -327,6 +331,23 @@ const SEAT_LAYOUT = [
     mobileWaiterY: "86%",
     mobileBubbleShift: "-64%",
   },
+];
+
+const WALK_TILES = [
+  { x: "9%", y: "82%" },
+  { x: "16%", y: "78%" },
+  { x: "24%", y: "74%" },
+  { x: "34%", y: "70%" },
+  { x: "45%", y: "68%" },
+  { x: "56%", y: "68%" },
+  { x: "67%", y: "70%" },
+  { x: "77%", y: "74%" },
+  { x: "28%", y: "61%" },
+  { x: "50%", y: "60%" },
+  { x: "72%", y: "61%" },
+  { x: "34%", y: "84%" },
+  { x: "55%", y: "86%" },
+  { x: "74%", y: "84%" },
 ];
 
 const foodById = new Map(FOODS.map((food) => [food.id, food]));
@@ -715,17 +736,49 @@ function FoodArt({ id }: { id: FoodId }) {
   );
 }
 
-function CustomerSprite({ customer, active }: { customer: CustomerProfile; active?: boolean }) {
+function CustomerSprite({
+  customer,
+  active,
+  walking,
+}: {
+  customer: CustomerProfile;
+  active?: boolean;
+  walking?: boolean;
+}) {
+  const spriteStyle = {
+    "--sprite-y": customerSpriteRowById[customer.id],
+    backgroundImage: `url(${customerFullbodySheetUrl})`,
+  } as CSSProperties;
+
   return (
-    <span className={cx("customerSprite", `customerSprite--${customer.id}`, active && "customerSprite--active")} aria-hidden="true">
+    <span
+      className={cx(
+        "customerSprite",
+        "customerSprite--sheet",
+        `customerSprite--${customer.id}`,
+        active && "customerSprite--active",
+        walking && "customerSprite--walking",
+      )}
+      aria-hidden="true"
+    >
       <span className="customerSprite__shadow" />
-      <span className="customerSprite__legs" />
-      <span className="customerSprite__body" />
-      <span className="customerSprite__arms" />
-      <span className="customerSprite__head">
-        <img src={customerSpriteById[customer.id]} alt="" draggable="false" />
-      </span>
+      <span className="customerSprite__sheet" style={spriteStyle} />
     </span>
+  );
+}
+
+function PlayerSprite({
+  walking,
+  style,
+}: {
+  walking: boolean;
+  style: CSSProperties;
+}) {
+  return (
+    <div className={cx("playerSprite", walking && "playerSprite--walking")} style={style} aria-hidden="true">
+      <span className="playerSprite__shadow" />
+      <span className="playerSprite__sheet" style={{ backgroundImage: `url(${waiterFullbodySheetUrl})` }} />
+    </div>
   );
 }
 
@@ -751,11 +804,19 @@ function GuestTable({
   guest,
   now,
   selected,
+  dropActive,
+  dropReady,
+  onFoodDragOver,
+  onFoodDrop,
   onSelect,
 }: {
   guest: ActiveGuest;
   now: number;
   selected: boolean;
+  dropActive: boolean;
+  dropReady: boolean;
+  onFoodDragOver: (event: DragEvent<HTMLButtonElement>) => void;
+  onFoodDrop: (guest: ActiveGuest, event: DragEvent<HTMLButtonElement>) => void;
   onSelect: () => void;
 }) {
   const patienceRatio = clamp((guest.expiresAt - now) / (guest.expiresAt - guest.createdAt), 0, 1);
@@ -779,11 +840,16 @@ function GuestTable({
         !guest.heardOrder && "guestTable--unheard",
         guest.phase === "entering" && "guestTable--entering",
         guest.phase === "leaving" && "guestTable--leaving",
+        dropActive && "guestTable--dropTarget",
+        dropReady && "guestTable--dropReady",
       )}
+      data-guest-id={guest.instanceId}
       disabled={guest.phase === "leaving"}
       key={guest.instanceId}
       style={tableStyle}
       type="button"
+      onDragOver={onFoodDragOver}
+      onDrop={(event) => onFoodDrop(guest, event)}
       onClick={onSelect}
       aria-label={guest.heardOrder ? `${guest.customer.name} ordered ${formatList(guest.foods)}` : `Ask ${guest.customer.name} for an order`}
     >
@@ -792,7 +858,11 @@ function GuestTable({
       <span className="dinerChair dinerChair--bottom" aria-hidden="true" />
       <span className="dinerChair dinerChair--left" aria-hidden="true" />
       <span className="dinerTable" aria-hidden="true" />
-      <CustomerSprite customer={guest.customer} />
+      <CustomerSprite
+        customer={guest.customer}
+        active={selected}
+        walking={guest.phase === "entering" || guest.phase === "leaving"}
+      />
       <span className="guestTable__name">{guest.customer.name}</span>
 
       <span className="guestSpeech">
@@ -831,12 +901,20 @@ function KitchenStation({
   beltFoods,
   now,
   profile,
-  onSelectFood,
+  draggingFoodId,
+  onFoodDragEnd,
+  onFoodKeyDown,
+  onNativeFoodDragStart,
+  onStartFoodDrag,
 }: {
   beltFoods: BeltFood[];
   now: number;
   profile: DifficultyProfile;
-  onSelectFood: (food: BeltFood) => void;
+  draggingFoodId: string | null;
+  onFoodDragEnd: (food: BeltFood) => void;
+  onFoodKeyDown: (food: BeltFood, event: KeyboardEvent<HTMLButtonElement>) => void;
+  onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
+  onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
 }) {
   return (
     <div className="kitchenStation" aria-label="Kitchen cooking station">
@@ -850,28 +928,35 @@ function KitchenStation({
       </div>
       <div className="dishRail" aria-label="Kitchen pass dishes">
         <span className="dishRail__label">{formatTime(profile.beltTravelMs)} pass</span>
+        <div className="dishRail__items">
+          {beltFoods.map((food) => {
+            const progress = clamp((now - food.spawnedAt) / food.travelMs, 0, 1);
+            const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
 
-        {beltFoods.map((food) => {
-          const progress = clamp((now - food.spawnedAt) / food.travelMs, 0, 1);
-          const left = 6 + progress * 88;
-          const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
-
-          return (
-            <button
-              className={cx("beltFood", `beltFood--lane${food.lane}`)}
-              data-belt-id={food.id}
-              data-belt-food={food.foodId}
-              key={food.id}
-              type="button"
-              style={{ left: `${left}%` }}
-              onClick={() => onSelectFood(food)}
-              aria-label={`Select ${foodName}`}
-            >
-              <FoodArt id={food.foodId} />
-              <strong>{foodName}</strong>
-            </button>
-          );
-        })}
+            return (
+              <button
+                className={cx("beltFood", `beltFood--lane${food.lane}`, draggingFoodId === food.id && "beltFood--dragging")}
+                data-belt-id={food.id}
+                data-belt-food={food.foodId}
+                draggable
+                key={food.id}
+                type="button"
+                style={{ "--dish-life": `${Math.max(0, 1 - progress)}` } as CSSProperties}
+                onDragEnd={() => onFoodDragEnd(food)}
+                onDragStart={(event) => onNativeFoodDragStart(food, event)}
+                onKeyDown={(event) => onFoodKeyDown(food, event)}
+                onPointerDown={(event) => onStartFoodDrag(food, event)}
+                aria-label={`Drag ${foodName} to a guest`}
+              >
+                <FoodArt id={food.foodId} />
+                <strong>{foodName}</strong>
+                <span className="beltFood__timer" aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -884,8 +969,14 @@ function RestaurantStage({
   gameStatus,
   beltFoods,
   profile,
+  draggingDish,
   onSelectGuest,
-  onSelectFood,
+  onFoodDragEnd,
+  onFoodDragOver,
+  onFoodDrop,
+  onFoodKeyDown,
+  onNativeFoodDragStart,
+  onStartFoodDrag,
 }: {
   guests: ActiveGuest[];
   now: number;
@@ -893,8 +984,14 @@ function RestaurantStage({
   gameStatus: GameStatus;
   beltFoods: BeltFood[];
   profile: DifficultyProfile;
+  draggingDish: DraggingDish | null;
   onSelectGuest: (guest: ActiveGuest) => void;
-  onSelectFood: (food: BeltFood) => void;
+  onFoodDragEnd: (food: BeltFood) => void;
+  onFoodDragOver: (event: DragEvent<HTMLButtonElement>) => void;
+  onFoodDrop: (guest: ActiveGuest, event: DragEvent<HTMLButtonElement>) => void;
+  onFoodKeyDown: (food: BeltFood, event: KeyboardEvent<HTMLButtonElement>) => void;
+  onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
+  onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
 }) {
   const selectedSeat =
     selectedGuest && selectedGuest.phase !== "leaving"
@@ -913,14 +1010,36 @@ function RestaurantStage({
       <div className="restaurantDoor" aria-hidden="true">
         <span />
       </div>
-      <KitchenStation beltFoods={beltFoods} now={now} profile={profile} onSelectFood={onSelectFood} />
+      <div className="walkTileLayer" aria-hidden="true">
+        {WALK_TILES.map((tile, index) => (
+          <span
+            className="walkTile"
+            key={`${tile.x}-${tile.y}-${index}`}
+            style={{ "--tile-x": tile.x, "--tile-y": tile.y } as CSSProperties}
+          />
+        ))}
+      </div>
+      <KitchenStation
+        beltFoods={beltFoods}
+        draggingFoodId={draggingDish?.food.id ?? null}
+        now={now}
+        profile={profile}
+        onFoodDragEnd={onFoodDragEnd}
+        onFoodKeyDown={onFoodKeyDown}
+        onNativeFoodDragStart={onNativeFoodDragStart}
+        onStartFoodDrag={onStartFoodDrag}
+      />
 
       {guests.map((guest) => (
         <GuestTable
           guest={guest}
           key={guest.instanceId}
           now={now}
+          dropActive={Boolean(draggingDish)}
+          dropReady={Boolean(draggingDish && guest.heardOrder && needsFood(guest, draggingDish.food.foodId))}
           selected={selectedGuest?.instanceId === guest.instanceId}
+          onFoodDragOver={onFoodDragOver}
+          onFoodDrop={onFoodDrop}
           onSelect={() => onSelectGuest(guest)}
         />
       ))}
@@ -932,9 +1051,14 @@ function RestaurantStage({
         </div>
       )}
 
-      <div className={cx("playerSprite", Boolean(selectedGuest) && "playerSprite--walking")} style={playerStyle} aria-hidden="true">
-        <img src={playerChefUrl} alt="" draggable="false" />
-      </div>
+      {draggingDish && (
+        <div className="dragDishPreview" style={{ left: draggingDish.x, top: draggingDish.y }} aria-hidden="true">
+          <FoodArt id={draggingDish.food.foodId} />
+          <strong>{foodById.get(draggingDish.food.foodId)?.name ?? draggingDish.food.foodId}</strong>
+        </div>
+      )}
+
+      <PlayerSprite walking={Boolean(selectedGuest)} style={playerStyle} />
     </section>
   );
 }
@@ -1518,6 +1642,7 @@ function RestaurantGame() {
   const [score, setScore] = useState(0);
   const [served, setServed] = useState(0);
   const [combo, setCombo] = useState(0);
+  const [draggingDish, setDraggingDish] = useState<DraggingDish | null>(null);
   const [, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a guest to take an order.",
@@ -1528,6 +1653,8 @@ function RestaurantGame() {
   const nextGuestAtRef = useRef(Date.now());
   const nextDecoyAtRef = useRef(Date.now());
   const audioContextRef = useRef<AudioContext | null>(null);
+  const draggingDishRef = useRef<DraggingDish | null>(null);
+  const consumedDishIdsRef = useRef<Set<string>>(new Set());
 
   const level = levelForServed(served);
   const difficulty = useMemo(() => difficultyForLevel(level), [level]);
@@ -1601,6 +1728,9 @@ function RestaurantGame() {
     setScore(0);
     setServed(0);
     setCombo(0);
+    draggingDishRef.current = null;
+    consumedDishIdsRef.current.clear();
+    setDraggingDish(null);
     setFeedback({ kind: "neutral", text: "Tap a guest, listen to the order, then serve dishes from the kitchen pass." });
     setGameStatus("playing");
   }, []);
@@ -1631,45 +1761,51 @@ function RestaurantGame() {
     });
   }, []);
 
-  const handleFoodClick = useCallback(
-    (food: BeltFood) => {
+  const handleFoodDrop = useCallback(
+    (food: BeltFood, guestId: string | null) => {
       if (gameStatus !== "playing") {
         setFeedback({ kind: "neutral", text: "The diner is getting ready." });
         return;
       }
 
       const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
-      const owningGuest =
-        food.targetGuestId &&
-        activeGuests.find(
-          (guest) => guest.phase !== "leaving" && guest.instanceId === food.targetGuestId && needsFood(guest, food.foodId),
-        );
-      const preferredGuest =
-        selectedGuest && activeGuests.some((guest) => guest.phase !== "leaving" && guest.instanceId === selectedGuest.instanceId)
-          ? selectedGuest
-          : null;
-      const matchingGuest =
-        preferredGuest && needsFood(preferredGuest, food.foodId)
-          ? preferredGuest
-          : owningGuest || activeGuests.find((guest) => guest.phase !== "leaving" && needsFood(guest, food.foodId));
+      const droppedGuest = activeGuests.find((guest) => guest.phase !== "leaving" && guest.instanceId === guestId);
 
-      setBeltFoods((currentFoods) => currentFoods.filter((currentFood) => currentFood.id !== food.id));
-
-      if (!matchingGuest) {
-        playSound("wrong");
-        speak(`No one ordered ${foodName}.`, 1.02);
-        resetCombo(`No guest needs ${foodName}.`);
+      if (!droppedGuest) {
+        setFeedback({ kind: "neutral", text: `Drag ${foodName} to the guest who ordered it.` });
         return;
       }
 
-      const secondsLeft = Math.ceil((matchingGuest.expiresAt - Date.now()) / 1000);
+      setSelectedGuestId(droppedGuest.instanceId);
+
+      if (!droppedGuest.heardOrder) {
+        setFeedback({ kind: "neutral", text: `Ask ${droppedGuest.customer.name} for an order before serving.` });
+        speak(`Ask ${droppedGuest.customer.name} for an order first.`, 1.02);
+        return;
+      }
+
+      if (consumedDishIdsRef.current.has(food.id)) {
+        return;
+      }
+
+      consumedDishIdsRef.current.add(food.id);
+      setBeltFoods((currentFoods) => currentFoods.filter((currentFood) => currentFood.id !== food.id));
+
+      if (!needsFood(droppedGuest, food.foodId)) {
+        playSound("wrong");
+        speak(`${droppedGuest.customer.name} did not order ${foodName}.`, 1.02);
+        resetCombo(`Wrong table: ${droppedGuest.customer.name} did not order ${foodName}.`);
+        return;
+      }
+
+      const secondsLeft = Math.ceil((droppedGuest.expiresAt - Date.now()) / 1000);
       const timeBonus = Math.max(0, secondsLeft);
       const levelBonus = difficulty.level * 5;
       const nextMatchingGuest: ActiveGuest = {
-        ...matchingGuest,
+        ...droppedGuest,
         heardOrder: true,
         phase: "seated",
-        servedFoods: [...matchingGuest.servedFoods, food.foodId],
+        servedFoods: [...droppedGuest.servedFoods, food.foodId],
       };
       const completedGuest = isGuestComplete(nextMatchingGuest) ? nextMatchingGuest : null;
       const nextCombo = completedGuest ? combo + 1 : combo;
@@ -1678,7 +1814,7 @@ function RestaurantGame() {
       const earnedLabel = formatEarnedPoints(earned, comboBonus);
       const completedAt = Date.now();
       const nextGuests: ActiveGuest[] = activeGuests.map((guest) =>
-        guest.instanceId === matchingGuest.instanceId
+        guest.instanceId === droppedGuest.instanceId
           ? completedGuest
             ? { ...nextMatchingGuest, phase: "leaving" as const, leavingAt: completedAt }
             : nextMatchingGuest
@@ -1725,8 +1861,148 @@ function RestaurantGame() {
         speak(`Served ${foodName}.`, 1.04);
       }
     },
-    [activeGuests, combo, difficulty.level, gameStatus, playSound, resetCombo, selectedGuest, served],
+    [activeGuests, combo, difficulty.level, gameStatus, playSound, resetCombo, served],
   );
+
+  const handleFoodKeyDown = useCallback(
+    (food: BeltFood, event: KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      event.preventDefault();
+      handleFoodDrop(food, selectedGuest?.instanceId ?? null);
+    },
+    [handleFoodDrop, selectedGuest],
+  );
+
+  const handleStartFoodDrag = useCallback((food: BeltFood, event: PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 || gameStatus !== "playing") {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    const nextDraggingDish = {
+      food,
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    draggingDishRef.current = nextDraggingDish;
+    setDraggingDish(nextDraggingDish);
+    setFeedback({ kind: "neutral", text: `Serve ${foodById.get(food.foodId)?.name ?? food.foodId} to the correct guest.` });
+  }, [gameStatus]);
+
+  const handleNativeFoodDragStart = useCallback((food: BeltFood, event: DragEvent<HTMLButtonElement>) => {
+    if (gameStatus !== "playing") {
+      event.preventDefault();
+      return;
+    }
+
+    const nextDraggingDish = {
+      food,
+      pointerId: -1,
+      x: event.clientX,
+      y: event.clientY,
+    };
+
+    draggingDishRef.current = nextDraggingDish;
+    setDraggingDish(nextDraggingDish);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-belt-food", food.id);
+    event.dataTransfer.setData("text/plain", food.id);
+    setFeedback({ kind: "neutral", text: `Serve ${foodById.get(food.foodId)?.name ?? food.foodId} to the correct guest.` });
+  }, [gameStatus]);
+
+  const handleFoodDragEnd = useCallback((food: BeltFood) => {
+    if (draggingDishRef.current?.food.id === food.id) {
+      draggingDishRef.current = null;
+      setDraggingDish(null);
+    }
+  }, []);
+
+  const handleFoodDragOver = useCallback((event: DragEvent<HTMLButtonElement>) => {
+    if (!draggingDishRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleGuestFoodDrop = useCallback(
+    (guest: ActiveGuest, event: DragEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+
+      const droppedFoodId =
+        event.dataTransfer.getData("application/x-belt-food") || event.dataTransfer.getData("text/plain");
+      const droppedFood =
+        (droppedFoodId && draggingDishRef.current?.food.id === droppedFoodId ? draggingDishRef.current.food : null) ||
+        beltFoods.find((food) => food.id === droppedFoodId) ||
+        null;
+
+      draggingDishRef.current = null;
+      setDraggingDish(null);
+
+      if (!droppedFood) {
+        return;
+      }
+
+      handleFoodDrop(droppedFood, guest.instanceId);
+    },
+    [beltFoods, handleFoodDrop],
+  );
+
+  useEffect(() => {
+    const handlePointerMove = (event: globalThis.PointerEvent) => {
+      const currentDish = draggingDishRef.current;
+
+      if (!currentDish || event.pointerId !== currentDish.pointerId) {
+        return;
+      }
+
+      setDraggingDish((currentDish) =>
+        currentDish && currentDish.pointerId === event.pointerId
+          ? { ...currentDish, x: event.clientX, y: event.clientY }
+          : currentDish,
+      );
+    };
+
+    const finishDrag = (event: globalThis.PointerEvent) => {
+      const currentDish = draggingDishRef.current;
+
+      if (!currentDish || event.pointerId !== currentDish.pointerId) {
+        return;
+      }
+
+      const droppedElement = document.elementFromPoint(event.clientX, event.clientY);
+      const guestElement = droppedElement?.closest<HTMLElement>("[data-guest-id]");
+
+      draggingDishRef.current = null;
+      setDraggingDish(null);
+      handleFoodDrop(currentDish.food, guestElement?.dataset.guestId ?? null);
+    };
+
+    const cancelDrag = (event: globalThis.PointerEvent) => {
+      const currentDish = draggingDishRef.current;
+
+      if (currentDish && event.pointerId === currentDish.pointerId) {
+        draggingDishRef.current = null;
+        setDraggingDish(null);
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", finishDrag);
+    window.addEventListener("pointercancel", cancelDrag);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", finishDrag);
+      window.removeEventListener("pointercancel", cancelDrag);
+    };
+  }, [handleFoodDrop]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -1957,9 +2233,15 @@ function RestaurantGame() {
             guests={activeGuests}
             now={now}
             profile={difficulty}
+            draggingDish={draggingDish}
             selectedGuest={selectedGuest}
-            onSelectFood={handleFoodClick}
+            onFoodDragEnd={handleFoodDragEnd}
+            onFoodDragOver={handleFoodDragOver}
+            onFoodDrop={handleGuestFoodDrop}
+            onFoodKeyDown={handleFoodKeyDown}
+            onNativeFoodDragStart={handleNativeFoodDragStart}
             onSelectGuest={handleGuestSelect}
+            onStartFoodDrag={handleStartFoodDrag}
           />
         </section>
       </main>
