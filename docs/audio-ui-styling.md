@@ -18,8 +18,8 @@ references: []
 
 | Trigger | Spoken content |
 | --- | --- |
-| Dish Wish order reveal | A rotating greeting plus the guest's order. |
-| Dish Wish serve/wrong/complete | Served food, wrong-table message, happy guest line, or final completion. |
+| Dish Wish order reveal | The selected guest's order; selecting another seated guest cancels and replaces unfinished speech. |
+| Dish Wish serve/wrong/complete | Served food, incorrect-dish message, happy guest line, or final completion. |
 | Drop Hop start/reset/new ticket | Current mission phrase. |
 | Drop Hop listen | Current mission phrase, with visible fallback if unavailable. |
 | Drop Hop pickup/wrong/complete | Pickup, route error, or completion feedback. |
@@ -89,16 +89,15 @@ Hop does not render them.
 | `.kitchenStation` | absolute top | 4 | Kitchen-art backdrop, burners, cabinets, and dish rail. |
 | `.restaurantDoor` | tile-positioned | 8 | Guest entry/exit. |
 | `.guestTable` | tile-positioned | 11 / 18 selected | One of four persistent tables; guest UI appears only while occupied. |
-| `.characterActor--customer` | tile-positioned | `14 + row` | Guest art rendered by the shared actor. |
-| `.characterActor--waiter` | tile-positioned | `16 + row` | Waiter art rendered at the same height and tile cadence. |
+| `.characterActor--customer` | tile-positioned | `14 + row` | Guest art rendered by the directional actor. |
 | `.gameHud` | fixed | 30 | Portal button and three stats. |
 | `.dinerFeedback` / result | fixed | 31 | Visible status or completion controls. |
 | `.dragDishPreview` | fixed | 60 | Pointer drag preview. |
 
 The 100ms React clock samples fractional progress along each route segment, and matching linear
-`top`/`left` transitions bridge those samples so actors travel smoothly at `360ms` per tile. The
-shared character renderer loops four-frame south, north, or east sheet rows at `720ms` (`180ms` per
-frame) while a route is active; west mirrors east. Stopped actors use the front idle cell.
+`top`/`left` transitions bridge those samples so customers travel smoothly at `360ms` per tile. The
+customer renderer loops four-frame south, north, or east sheet rows at `720ms` (`180ms` per frame)
+while a route is active; west mirrors east. Stopped actors use the front idle cell.
 
 ## Dish Wish Tile System
 

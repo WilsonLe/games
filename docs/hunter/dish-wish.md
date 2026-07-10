@@ -10,10 +10,12 @@ references: []
 - The game starts automatically with one entering guest.
 - Four sparse tables are rendered before service and remain after guests leave; incoming guests are
   assigned to an available table.
-- A seated table selection sends the waiter smoothly along the tile route; the order is revealed and
-  spoken after arrival, and the greeting adds a small patience reward.
-- Correct dishes advance the checklist, animate off the pass, and add patience; wrong-table drops and
-  expiration reset the combo.
+- Customers travel smoothly along their tile routes when entering and leaving.
+- Selecting a seated customer's table reveals and speaks the order immediately. Selecting another
+  customer replaces unfinished speech, while every previously revealed order remains visible and
+  serviceable.
+- Correct dishes advance the checklist, animate off the pass, and add patience. Incorrect dishes stay
+  available and reduce only that guest's patience; expiration resets the combo.
 - Completing all requested food sends the guest out, awards points, and advances order/level progress.
 - The target is 24 orders; there is no diner loss state.
 - A visible status toast reports feedback, and completion offers `New Shift`.
@@ -24,7 +26,7 @@ references: []
 - Difficulty: `difficultyForLevel`.
 - Movement: `SEAT_LAYOUT`, `DINER_FLOOR_TILES`, `buildTileRoute`, `getRouteVisual`, `CharacterActor`.
 - Generation: `makeGuest`, `makeDecoyFood`, `chooseSpawnLane`.
-- Order-taking: `handleGuestSelect`, waiter effects, `revealGuestOrder`.
+- Order-taking: `handleGuestSelect` and `revealGuestOrder`.
 - Serving/scoring: `handleFoodDrop`.
 - Spawning/recycling/expiration: `RestaurantGame` effects.
 - Presentation: `RestaurantStage` and the scoped top-down CSS section.
@@ -35,14 +37,15 @@ references: []
 - Treat `targetGuestId` as lifecycle metadata, not a serve lock.
 - Preserve both custom pointer and keyboard service.
 - Keep empty tables and tables with entering guests non-interactive, preserve table occupancy until a
-  leaving guest is removed, and keep deferred reveal aligned with waiter/guest movement.
+  leaving guest is removed, and reveal orders immediately once customers are seated.
 - Keep diner full-viewport generic selectors scoped away from `.appShell--city`.
 - Update visible feedback, speech, tones, score, combo, and cleanup together when changing outcomes.
 
 ## Verify
 
 Initial guest/second spawn, all four tables visible before and after occupancy, responsive floor
-coverage, linear guest/waiter route travel, all direction frames/mirroring and `180ms` frame cadence,
-greeting and correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service,
-decoy match, drop outside, unheard guest, wrong table, expiration, recycling, keyboard service, win,
+coverage, linear guest route travel, all direction frames/mirroring and `180ms` frame cadence,
+immediate order reveal and speech switching, persistent revealed orders, correct-dish patience
+increases, dish entry/bob/exit, correct/partial/complete service, decoy match, drop outside, unheard
+guest, non-consuming incorrect-dish patience loss, expiration, recycling, keyboard service, win,
 New Shift, portal return, desktop, and mobile.

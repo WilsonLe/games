@@ -43,10 +43,11 @@ references: []
 | `HAPPY_GUEST_COMBO_BONUS` | Consecutive completed-guest bonus. |
 | `FIRST_DISH_DELAY_MS` | First ordered dish timing. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement pacing. |
-| `DINER_CLOCK_MS`, `CHARACTER_STEP_MS` | Shared route sampling interval and linearly interpolated guest/waiter travel time per tile. |
+| `DINER_CLOCK_MS`, `CHARACTER_STEP_MS` | Customer-route sampling interval and linearly interpolated travel time per tile. |
 | `LEAVING_GUEST_LINGER_MS` | Post-exit guest cleanup. |
 | `DISH_EXIT_MS` | Serving-line exit-animation cleanup delay. |
-| `GREETING_PATIENCE_BONUS_MS`, `SERVED_DISH_PATIENCE_BONUS_MS` | Patience rewarded by positive interactions. |
+| `WRONG_DISH_PATIENCE_BASE_MS`, `WRONG_DISH_PATIENCE_PER_LEVEL_MS` | Level-scaled patience removed by an incorrect dish. |
+| `SERVED_DISH_PATIENCE_BONUS_MS` | Patience rewarded by a correct dish. |
 | `ORDER_LANES` | Lane selection/lift; requires matching CSS support. |
 | `difficultyForLevel` | Capacity, order size, dish timing, decoys, and patience. |
 
@@ -97,13 +98,13 @@ Run `npm run dev`, then inspect the console throughout.
 | Test | Expected |
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1. |
-| Guest selection | After seating, the waiter moves linearly across the tile route, then order text/TTS appears and patience rises. |
-| Character travel and walk cycles | Waiter and all six customers move smoothly at `360ms` per tile, advance four distinct frames at `180ms` per frame in south, north, east, and mirrored-west movement, and return to front idle without flicker or size jitter. |
+| Guest selection | After seating, the full customer/table area reveals and speaks the order immediately; selecting another customer replaces unfinished speech, and earlier orders remain visible. |
+| Character travel and walk cycles | All six customers move smoothly at `360ms` per tile, advance four distinct frames at `180ms` per frame in south, north, east, and mirrored-west movement, and return to front idle without flicker or size jitter. |
 | Reduced motion | With reduced motion enabled, position transitions and gait/step/shadow loops stop while required route-position updates continue. |
 | Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
-| Drop before order | Dish remains and status asks player to take the order. |
+| Drop before order | Dish remains and status asks the player to select the customer and hear the order. |
 | Drop outside | Dish remains and status explains where to serve it. |
-| Wrong table | Dish animates off and combo resets with bad feedback. |
+| Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and bad feedback appears. |
 | Expiration | Guest leaves and owned dishes animate off before cleanup. |
 | Keyboard service | `Enter`/`Space` serves to selected table. |
 | Win | At 24 orders, completion banner and `New Shift` appear. |
