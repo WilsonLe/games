@@ -1937,19 +1937,25 @@ h2 {
   isolation: isolate;
   --dining-inset: 18px;
   --dining-top: clamp(278px, 36vh, 318px);
-  --dining-width: calc(100vw - var(--dining-inset) - var(--dining-inset));
-  --dining-height: calc(var(--viewport-height) - var(--dining-top) - var(--dining-inset));
+  --dining-available-width: calc(100vw - var(--dining-inset) - var(--dining-inset));
+  --dining-available-height: calc(var(--viewport-height) - var(--dining-top) - var(--dining-inset));
+  --dining-width: min(
+    var(--dining-available-width),
+    calc(var(--dining-available-height) + var(--dining-available-height))
+  );
+  --dining-height: calc(var(--dining-width) / 2);
+  --dining-left: calc((100vw - var(--dining-width)) / 2);
   --tile-width: calc(var(--dining-width) / 10);
   --tile-height: calc(var(--dining-height) / 5);
-  --tile-size: clamp(30px, min(var(--tile-width), var(--tile-height)), 72px);
+  --tile-size: clamp(30px, var(--tile-width), 72px);
 }
 
 .floorTiles {
   position: absolute;
   top: var(--dining-top);
-  right: var(--dining-inset);
-  bottom: var(--dining-inset);
-  left: var(--dining-inset);
+  left: var(--dining-left);
+  width: var(--dining-width);
+  height: var(--dining-height);
   z-index: 0;
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
@@ -2008,7 +2014,7 @@ h2 {
 .restaurantDoor {
   top: calc(var(--dining-top) + 4.5 * var(--tile-height));
   bottom: auto;
-  left: calc(var(--dining-inset) + 0.5 * var(--tile-width));
+  left: calc(var(--dining-left) + 0.5 * var(--tile-width));
   z-index: 8;
   width: clamp(68px, 8vw, 98px);
   height: clamp(96px, 14vh, 132px);
@@ -2308,7 +2314,7 @@ h2 {
 .guestTable {
   top: calc(var(--dining-top) + var(--table-row) * var(--tile-height));
   bottom: auto;
-  left: calc(var(--dining-inset) + var(--table-col) * var(--tile-width));
+  left: calc(var(--dining-left) + var(--table-col) * var(--tile-width));
   z-index: 11;
   width: clamp(112px, 13vw, 178px);
   min-height: clamp(112px, 13vw, 178px);
@@ -2401,7 +2407,7 @@ h2 {
 .characterActor {
   position: absolute;
   top: calc(var(--dining-top) + var(--actor-row) * var(--tile-height) + var(--actor-seat-lift, 0px));
-  left: calc(var(--dining-inset) + var(--actor-col) * var(--tile-width));
+  left: calc(var(--dining-left) + var(--actor-col) * var(--tile-width));
   width: 0;
   height: 0;
   pointer-events: none;
@@ -3180,7 +3186,20 @@ h2 {
     min-height: var(--viewport-height);
     --dining-inset: 8px;
     --dining-top: 248px;
-    --tile-size: clamp(28px, min(var(--tile-width), var(--tile-height)), 34px);
+    --dining-height: min(
+      var(--dining-available-height),
+      calc(var(--dining-available-width) + var(--dining-available-width))
+    );
+    --dining-width: calc(var(--dining-height) / 2);
+    --dining-left: calc((100vw - var(--dining-width)) / 2);
+    --tile-width: calc(var(--dining-width) / 5);
+    --tile-height: calc(var(--dining-height) / 10);
+    --tile-size: clamp(28px, var(--tile-width), 34px);
+  }
+
+  .floorTiles {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(10, minmax(0, 1fr));
   }
 
   .restaurantStage::before {
@@ -3198,9 +3217,9 @@ h2 {
   }
 
   .restaurantDoor {
-    top: calc(var(--dining-top) + 4.5 * var(--tile-height));
+    top: calc(var(--dining-top) + 0.5 * var(--tile-height));
     bottom: auto;
-    left: calc(var(--dining-inset) + 0.5 * var(--tile-width));
+    left: calc(var(--dining-left) + 4.5 * var(--tile-width));
     width: 64px;
     height: 94px;
     padding-right: 12px;
@@ -3334,8 +3353,15 @@ h2 {
   }
 
   .guestTable {
-    width: clamp(94px, 27vw, 108px);
-    min-height: 116px;
+    top: calc(var(--dining-top) + var(--table-col) * var(--tile-height));
+    left: calc(var(--dining-left) + var(--table-row) * var(--tile-width));
+    width: clamp(76px, calc(var(--tile-width) * 1.65), 108px);
+    min-height: clamp(84px, calc(var(--tile-width) * 1.8), 116px);
+  }
+
+  .characterActor {
+    top: calc(var(--dining-top) + var(--actor-col) * var(--tile-height) + var(--actor-seat-lift, 0px));
+    left: calc(var(--dining-left) + var(--actor-row) * var(--tile-width));
   }
 
   .characterActor--seated {
@@ -3343,8 +3369,8 @@ h2 {
   }
 
   .dinerTable {
-    width: clamp(74px, 22vw, 86px);
-    height: clamp(74px, 22vw, 86px);
+    width: clamp(66px, calc(var(--tile-width) * 1.35), 86px);
+    height: clamp(66px, calc(var(--tile-width) * 1.35), 86px);
     border-width: 4px;
   }
 
