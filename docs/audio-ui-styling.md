@@ -1,5 +1,5 @@
 ---
-description: "Speech, Web Audio, UI layers, animation, responsive layout, and styling rules."
+description: "Speech, Web Audio, portal and game UI layers, CSS scope, animation, and responsive layout."
 references: []
 ---
 
@@ -7,180 +7,151 @@ references: []
 
 [Docs index](./README.md) | [Repo README](../README.md)
 
-## Audio Overview
-
-Audio is implemented directly in `src/App.tsx`.
-
-| Helper | Purpose |
-| --- | --- |
-| `speak(text, rate = 0.9)` | Uses `window.speechSynthesis` to speak English order and feedback text. |
-| `scheduleTone(...)` | Creates one oscillator and gain envelope in an `AudioContext`. |
-| `playSound(kind)` | Lazily creates/resumes an audio context and schedules tone patterns. |
-
-There are no audio files in the repo.
-
 ## Speech Synthesis
 
-`speak` behavior:
+`speak(text, rate = 0.9)`:
 
-1. Returns `false` when `speechSynthesis` is not available.
-2. Calls `window.speechSynthesis.cancel()` before each new utterance.
-3. Creates a `SpeechSynthesisUtterance`.
-4. Sets `lang = "en-US"`, `rate`, `pitch = 1`, and `volume = 0.95`.
-5. Calls `window.speechSynthesis.speak(utterance)` and returns `true`.
+1. returns `false` when `speechSynthesis` is unavailable;
+2. cancels any current utterance;
+3. creates `SpeechSynthesisUtterance` with `en-US`, the requested rate, pitch `1`, and volume `0.95`;
+4. speaks it and returns `true`.
 
-| Trigger | Text source |
+| Trigger | Spoken content |
 | --- | --- |
-| Tiny City start/reset or new mission | Mission phrase. |
-| Diner guest table click/tap, after waiter arrival | Greeting plus that guest phrase. |
-| Dish dropped before hearing order | `Ask {guestName} for an order first.` |
-| Correct dish | `Served {foodName}.` |
-| Completed order | Thank-you/completion message. |
-| Wrong table | `{guestName} did not order {foodName}.` |
-| Dinner service complete | `Dinner service complete. All guests are happy.` |
+| Diner order reveal | A rotating greeting plus the guest's order. |
+| Diner serve/wrong/complete | Served food, wrong-table message, happy guest line, or final completion. |
+| Tiny City start/reset/new ticket | Current mission phrase. |
+| Tiny City listen | Current mission phrase, with visible fallback if unavailable. |
+| Tiny City pickup/wrong/complete | Pickup, route error, or completion feedback. |
 
-Only `revealGuestOrder` and Tiny City's `listenToMission` show explicit bad feedback when speech is
-unavailable. Other callers ignore the boolean return.
+Only order/listen flows that inspect the boolean result explicitly report unavailable speech. Other
+automatic callers remain visual-first but ignore a failed speech return.
 
-## Sound Effects
+## Web Audio
 
-`playSound` supports `AudioContext` and `webkitAudioContext`.
+`scheduleTone` creates an oscillator and gain envelope. Each game lazily owns an audio context,
+resumes it when suspended, and closes it on unmount.
 
-| `SoundKind` | Trigger | Tone pattern |
-| --- | --- | --- |
-| `correct` | Correct dish, order still incomplete | Triangle tones at `660Hz` and `880Hz`. |
-| `complete` | Guest order completed | Triangle tones at `523.25Hz`, `659.25Hz`, `783.99Hz`, and `1046.5Hz`. |
-| `wrong` | Wrong table or expired guest | Sawtooth tones at `180Hz` and `130Hz`. |
-
-If no audio context constructor exists, `playSound` returns `false`. The UI does not currently surface that fallback.
-
-## Browser Constraints
-
-Speech synthesis and Web Audio behavior can vary by browser:
-
-| Constraint | Current handling |
+| Game/event | Pattern |
 | --- | --- |
-| Audio APIs absent | `speak`/`playSound` return `false`. |
-| Web Audio suspended until user gesture | `playSound` calls `audioContext.resume()` when suspended. |
-| Speech queue overlap | `speak` cancels current speech before starting the next utterance. |
-| Voice availability | The app requests `en-US` but does not choose a specific installed voice. |
+| Diner correct | Triangle `660Hz`, `880Hz`. |
+| Diner complete | Triangle `523.25Hz`, `659.25Hz`, `783.99Hz`, `1046.5Hz`. |
+| Diner wrong | Sawtooth `180Hz`, `130Hz`. |
+| City correct | Triangle `523.25Hz`, `698.46Hz`. |
+| City complete | Triangle `587.33Hz`, `783.99Hz`, `1174.66Hz`. |
+| City wrong | Sawtooth `170Hz`, `120Hz`. |
 
-Starting the game is a user gesture, which helps unlock audio in common browsers. Later timed guest spawns can still depend on browser policy.
+There are no audio files. Web Audio may be absent or gesture-gated; `playSound` returns `false`, and
+callers currently do not surface that failure.
 
-## Scene Layers
+## Portal UI
 
-Layering is controlled by `src/styles.css`.
+`GamePortal` renders:
 
-| Layer/class | Positioning | z-index | Purpose |
+- a fixed kitchen-art backdrop and dark overlay;
+- a `Mini-game portal` header;
+- one real anchor card per game;
+- imported diner preview art;
+- a CSS-built Tiny City preview;
+- stacked cards below `980px` and tighter art/card dimensions below `560px`.
+
+The portal scrolls vertically when the two cards exceed the viewport.
+
+## Shared Game UI
+
+- `.appShell` is the root for either game.
+- `.mainSurface` is the primary game content wrapper.
+- `.topBar`, `.scoreStrip`, `.statPill`, `.resultBanner`, buttons, and feedback classes are shared.
+- Tiny City uses the normal document layout and must be allowed to scroll at narrow sizes.
+- Diner intentionally uses a fixed full-viewport stage.
+
+## Critical CSS Scope
+
+The later section headed `/* Top-down restaurant game stage */` overrides generic classes for the
+diner. Any override touching `.appShell`, `.sceneBackdrop`, `.mainSurface`, `.gameGrid`, or
+`.resultBanner` must remain scoped under:
+
+```css
+.appShell:not(.appShell--city)
+```
+
+Without that scope, Tiny City's three-column grid becomes a block, its result banner becomes fixed,
+and its content can be clipped by diner overflow rules. Diner-specific classes such as
+`.restaurantStage`, `.guestTable`, and `.kitchenStation` do not need the extra qualifier because Tiny
+City does not render them.
+
+## Diner Layers
+
+| Layer/class | Position | z-index | Role |
 | --- | --- | ---: | --- |
-| `.sceneBackdrop` | fixed full-screen | `-2` | Background container. |
-| `.sceneBackdrop__image` | absolute oversized inset | inherited | Kitchen image with slow pan. |
-| `.mainSurface` | full viewport | auto | Main game UI surface. |
-| `.gameHud` | fixed top overlay | `30` | Diner score, order count, and level. |
-| `.restaurantStage` | relative full viewport | isolated | Diner floor and all tile-positioned actors. |
-| `.floorTiles` | absolute stage fill | `0` | Tile-pattern floor. |
-| `.walkTileLayer` | absolute stage fill | `2` | Visible walk markers from `WALK_TILES`. |
-| `.kitchenStation` | absolute top pass | `4` | Stove, prep counter, and draggable dish rail. |
-| `.restaurantDoor` | tile-positioned | `8` | Guest entry/exit door. |
-| `.guestTable` | tile-positioned button | `11` or `18` when selected | Table, chairs, speech bubble, and timer. |
-| `.customerActor` | tile-positioned actor | `14 + row` | Guest sprite independent from the table button. |
-| `.playerSprite` | tile-positioned actor | `16 + row` | Waiter sprite. |
-| `.dragDishPreview` | fixed pointer overlay | `60` | Custom pointer-drag dish preview. |
+| `.floorTiles` | absolute stage fill | 0 | Floor pattern. |
+| stage frame/wall pseudo-elements | absolute | 1–2 | Room boundary and kitchen wall. |
+| `.walkTileLayer` | absolute stage fill | 2 | Visible route tiles. |
+| `.kitchenStation` | absolute top | 4 | Stove, prep counter, and dish rail. |
+| `.restaurantDoor` | tile-positioned | 8 | Guest entry/exit. |
+| `.guestTable` | tile-positioned | 11 / 18 selected | Interactive table and order UI. |
+| `.customerActor` | tile-positioned | `14 + row` | Moving guest art. |
+| `.playerSprite` | tile-positioned | `16 + row` | Moving waiter art. |
+| `.gameHud` | fixed | 30 | Portal button and three stats. |
+| `.dinerFeedback` / result | fixed | 31 | Visible status or completion controls. |
+| `.dragDishPreview` | fixed | 60 | Pointer drag preview. |
 
-`.appShell` uses `isolation: isolate`, so the negative backdrop layer remains scoped behind the app content.
-The diner route hides `.sceneBackdrop`; the portal and legacy styles still define backdrop behavior.
+The waiter and customer positions update every 100ms through React interpolation. CSS 90ms
+transitions smooth those updates.
+
+## Diner Tile System
+
+`restaurantStage` defines `--tile-size`, `--tile-origin-x`, and `--tile-origin-y`. Actor and table
+positions use:
+
+```css
+calc(var(--tile-origin-x) + var(--column) * var(--tile-size))
+calc(var(--tile-origin-y) + var(--row) * var(--tile-size))
+```
+
+Below `560px`, tile size/origin, kitchen dimensions, table/sprite size, and speech bubble offsets are
+reduced independently. Check all six seats after changing these variables.
+
+## Tiny City Layout
+
+Default `.cityGameGrid` has three columns:
+
+1. mission ticket and feedback;
+2. map;
+3. clue/fact panel.
+
+Below `1360px`, the clue panel spans the full row. Below `980px`, the layout becomes one column. The
+map uses percentage-positioned location buttons and road geometry, so desktop and mobile checks are
+required after coordinate or minimum-height changes.
+
+`CityMap` marks only consecutive path edges as used. Route dots show each visited stop, including
+repeats.
+
+## Feedback And Controls
+
+- Diner feedback is a visible fixed status toast with `aria-live="polite"` while playing.
+- Diner completion replaces the toast with a result banner and `New Shift` action.
+- Tiny City feedback stays in the mission column with `role="status"`.
+- Both game routes expose a portal-return button.
+- Buttons and location/table/dish controls remain native interactive elements.
 
 ## Animation Inventory
 
-| Animation | Applied to | Purpose |
-| --- | --- | --- |
-| `kitchenScenePan` | `.sceneBackdrop__image` | Slow background drift. |
-| `dishCardEnter` | `.dishRail .beltFood` | Dish card entrance scale/fade on the kitchen pass. |
-| `dishCardBob` | `.dishRail .beltFood` | Subtle dish card motion. |
-| `customerSpriteSideWalk` | east/west walking customer sheet | Side-facing customer frame stepping. |
-| `customerSpriteNorthWalk` | north walking customer sheet | North-facing customer frame stepping. |
-| `customerSpriteSouthWalk` | south walking customer sheet | South-facing customer frame stepping. |
-| `playerSpriteSideWalk` | east/west walking waiter sheet | Side-facing waiter frame stepping. |
-| `playerSpriteNorthWalk` | north walking waiter sheet | North-facing waiter frame stepping. |
-| `playerSpriteSouthWalk` | south walking waiter sheet | South-facing waiter frame stepping. |
-| `guestCustomerBob` | `.customerSprite--active` | Selected customer bob. |
+Active animations include portal backdrop pan, dish card entry/bob, selected guest bob, diner actor
+step/shadow motion, Tiny City pickup pulse, delivery pop, and courier bob. Direction classes select
+sheet columns for north/south/east/west; west-facing art mirrors the east-facing column. Whole-actor
+step motion supplies the walking bounce.
 
-Guest and waiter travel between tables is primarily React-driven tile interpolation through
-`getRouteVisual`; CSS transitions smooth the `top` and `left` updates over the tile grid.
+## Visual Rules
 
-## Diner Tile Grid
+- Preserve chunky borders, offset shadows, and the compact arcade palette.
+- Keep ordinary panel/button radii at `8px` or less; circular map/courier elements are intentional.
+- Keep character actors non-interactive; tables, dishes, and map stops own input.
+- Do not let diner full-viewport rules leak into `.appShell--city`.
+- Check portal, diner, and city at desktop, `980px`, `560px`, and a short mobile viewport.
+- Keep dish buttons stable in size and retain keyboard service.
 
-The diner stage defines tile placement variables on `.restaurantStage`:
+## Cursor
 
-| Variable | Default | Mobile override under `560px` |
-| --- | --- | --- |
-| `--tile-origin-x` | `8%` | `14%` |
-| `--tile-origin-y` | `34%` | `30%` |
-| `--tile-step-x` | `7.5%` | `7%` |
-| `--tile-step-y` | `7.4%` | `7%` |
-
-`GuestTable`, `CustomerActor`, `PlayerSprite`, `walkTile`, and `restaurantDoor` all derive their
-positions from these variables. Any change to tile sizing should be checked against desktop and
-mobile actor overlap.
-
-## Responsive Layout
-
-| Breakpoint | Behavior |
-| --- | --- |
-| Default | The diner route uses a full restaurant stage with an overlaid three-stat HUD. Tiny City uses its own map/sidebar grid. |
-| `max-width: 1360px` | Wide surfaces tighten and multi-column layouts begin collapsing where needed. |
-| `max-width: 980px` | Game grid and score strip become one column; top bar stacks where present; action buttons widen; sprites shrink. |
-| `max-width: 560px` | Diner tile origin/step values shift, kitchen pass and dish sizes shrink, guest/table/sprite sizes shrink. |
-
-## Styling Organization
-
-`src/styles.css` is organized in this practical order:
-
-1. Global variables, font rendering, body, cursor.
-2. Full-screen shell, background, and player sprite.
-3. Portal rail and navigation.
-4. Main surface, top bar, buttons.
-5. Score strip and result banner.
-6. Game grid, restaurant stage, walk tiles, guest tables, actors, kitchen pass, feedback, and side panels.
-7. Customer and food art wrappers.
-8. Directional sprite frame rules and keyframes.
-9. Responsive media queries.
-
-## Palette
-
-Main custom properties:
-
-| Variable | Value | Use |
-| --- | --- | --- |
-| `--ink` | `#172f2b` | Primary text/dark borders. |
-| `--muted` | `#65736f` | Secondary text. |
-| `--panel` | `#fffdf8` | Warm panel background. |
-| `--line` | `#dbe4df` | Light borders. |
-| `--green` | `#167451` | Good/accent green. |
-| `--green-dark` | `#103c34` | Dark green surfaces. |
-| `--blue` | `#2d6fa8` | Blue accents. |
-| `--yellow` | `#f1b83f` | Buttons, borders, timers. |
-| `--red` | `#ce5143` | Bad feedback accents. |
-| `--coral` | `#f07d5f` | Food/CSS art accent. |
-| `--steel` | `#5c7182` | Kitchen-pass and city-map adjacent accent. |
-
-## Visual Rules To Preserve
-
-| Rule | Why |
-| --- | --- |
-| Keep cards and buttons at `8px` radius or less | Matches the arcade panel style already in CSS. |
-| Preserve chunky borders and offset shadows | They create the game-like physical UI. |
-| Keep waiter and customer actors non-interactive | Guest tables and dish buttons are the controls; actors are visual feedback. |
-| Avoid adding text-heavy instruction panels inside the game scene | The current UI teaches through labels, cards, and controls. |
-| Keep dish buttons fixed-size on the kitchen pass | Variable sizes could make drag targets unstable. |
-| Check mobile after changing dimensions | The kitchen pass, tile grid, actors, tables, and speech bubbles have separate mobile sizing rules. |
-
-## Custom Cursor
-
-The cursor is declared once:
-
-```css
---game-cursor: url("./assets/game-cursor.svg") 7 6, auto;
-```
-
-It is applied globally through `*`, and repeated on `button` and `[role="button"]`. If the cursor asset changes, verify the hotspot coordinates still line up with the visible pointer.
+`--game-cursor: url("./assets/game-cursor.svg") 7 6, auto` is applied globally. Verify the hotspot if
+the SVG changes.

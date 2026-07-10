@@ -1,5 +1,5 @@
 ---
-description: "Table Talk Diner gameplay model, state flow, and implementation notes."
+description: "Table Talk Diner gameplay model, state flow, implementation risks, and verification notes."
 references: []
 ---
 
@@ -7,33 +7,35 @@ references: []
 
 ## Gameplay Model
 
-- Players serve food to active dining-room guests.
-- Guests request practical English orders, spoken through browser speech synthesis.
-- Matching a requested food advances that guest's checklist; a wrong table or expired patience
-  resets the happy-guest combo.
-- Serving all requested food completes the guest, awards points, and contributes to level progress.
+- The game starts automatically with one entering guest.
+- A seated table selection sends the waiter there; the order is revealed and spoken after arrival.
+- Correct dishes advance the guest checklist; wrong-table drops and expiration reset the combo.
+- Completing all requested food sends the guest out, awards points, and advances order/level progress.
+- The target is 24 orders; there is no diner loss state.
+- A visible status toast reports feedback, and completion offers `New Shift`.
 
 ## Implementation Map
 
-- Food and customer types are defined near the top of `src/App.tsx`.
-- `difficultyForLevel` controls guest pressure, order size, food timing, decoys, and patience.
-- `SEAT_LAYOUT`, `WALK_TILES`, `buildTileRoute`, and `getRouteVisual` control table placement and
-  tile-based movement for guests and the waiter.
-- `makeGuest` creates a guest plus scheduled target foods.
-- `makeDecoyFood` adds non-target food items.
-- `handleGuestSelect` starts waiter movement; `revealGuestOrder` marks an order heard after the
-  waiter route completes and the guest is seated.
-- `handleFoodDrop` is the key drag/drop serve and wrong-table decision path.
-- `RestaurantStage` handles the current table-oriented presentation.
-- The main game loop is implemented with React effects that spawn guests, spawn food, expire guests,
-  and end the game.
+- Food/customer data and balancing constants: top of `src/App.tsx`.
+- Difficulty: `difficultyForLevel`.
+- Movement: `SEAT_LAYOUT`, `WALK_TILES`, `buildTileRoute`, `getRouteVisual`.
+- Generation: `makeGuest`, `makeDecoyFood`, `chooseSpawnLane`.
+- Order-taking: `handleGuestSelect`, waiter effects, `revealGuestOrder`.
+- Serving/scoring: `handleFoodDrop`.
+- Spawning/recycling/expiration: `RestaurantGame` effects.
+- Presentation: `RestaurantStage` and the scoped top-down CSS section.
 
-## Editing Guidance
+## Risks
 
-- Keep timing constants readable and named; avoid burying gameplay tuning in JSX.
-- Update score, combo, level, wrong-table, expiration, and feedback behavior together when changing
-  serve outcomes.
-- Preserve keyboard and pointer ergonomics: food and guest controls should remain buttons or clear
-  drag/drop or keyboard-accessible controls.
-- If adding foods or customers, update the type unions, source arrays, image maps, and display art in
-  the same change.
+- Keep `orderSize <= FOODS.length`.
+- Treat `targetGuestId` as lifecycle metadata, not a serve lock.
+- Preserve both custom pointer and keyboard service.
+- Keep entering tables non-interactive and deferred reveal aligned with waiter/guest movement.
+- Keep diner full-viewport generic selectors scoped away from `.appShell--city`.
+- Update visible feedback, speech, tones, score, combo, and cleanup together when changing outcomes.
+
+## Verify
+
+Initial guest/second spawn, waiter reveal, correct/partial/complete service, decoy match, drop outside,
+unheard guest, wrong table, expiration, recycling, keyboard service, win, New Shift, portal return,
+desktop, and mobile.

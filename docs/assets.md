@@ -20,8 +20,8 @@ from CSS scene styles, and the cursor URL is declared in `src/styles.css`.
 | `src/assets/player-chef-source.png` | `1024 x 1536` | Not imported by app code | Source/reference image kept in the repo. |
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
 | `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | Not imported by app code | Legacy/reference kitchen sprite sheet. |
-| `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | `customerFullbodySheetUrl` in `CustomerSprite` | Runtime full-body customer sheet, sliced by CSS at `400% 600%`. |
-| `src/assets/sprites/generated/waiter-fullbody-sheet.png` | `2172 x 724` | `waiterFullbodySheetUrl` in `PlayerSprite` | Runtime full-body waiter sheet, sliced by CSS at `400% 100%`. |
+| `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | `customerFullbodySheetUrl` in `CustomerSprite` | Runtime 4-column × 6-row customer sheet, sliced at `400% 600%`; the wrapper preserves each cell's `2 / 1` aspect ratio. |
+| `src/assets/sprites/generated/waiter-fullbody-sheet.png` | `2172 x 724` | `waiterFullbodySheetUrl` in `PlayerSprite` | Runtime 4-column waiter sheet, sliced at `400% 100%`; west-facing art mirrors the east column. |
 
 ## Food Sprites
 

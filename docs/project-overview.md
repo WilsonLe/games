@@ -1,5 +1,5 @@
 ---
-description: "Current product scope, stack, setup, scripts, and repo map."
+description: "Current portal scope, game summaries, routes, stack, setup, scripts, and repo map."
 references: []
 ---
 
@@ -9,103 +9,101 @@ references: []
 
 ## Current App
 
-Table Talk Games is a client-only React/Vite game portal. The current playable games are
-`Table Talk Diner` and `Tiny City Delivery`.
+Table Talk Games is a browser-only React/Vite mini-game portal. The root is the playable game
+chooser, with two shipped games:
 
-`Table Talk Diner` is a 2D food-serving arcade game for practicing practical English food orders.
-Guests sit at tables, ask for meals in English, dishes appear on the kitchen pass, and the player
-drags dishes to the matching guest before patience timers expire.
+- **Table Talk Diner** — guests request food in spoken and written English; the player takes orders
+  and drags matching dishes from the kitchen pass to each table.
+- **Tiny City Delivery** — the player follows delivery tickets across a road map using place names,
+  quantities, and spatial language such as `behind`, `between`, `over`, `next to`, `inside`,
+  `outside`, and `across`.
 
-`Tiny City Delivery` is a map-routing simulator. Children follow English delivery instructions using
-place names, quantities, and prepositions such as `behind`, `between`, `over`, `next to`, `inside`,
-`outside`, and `across`.
+This is not a marketing site. The portal cards launch a game immediately, and both games provide a
+return-to-portal control.
 
-## Core Gameplay
+## Routes
 
-| Concept | Current behavior |
+| Path | Behavior |
 | --- | --- |
-| Goal | Complete `24` guest orders. |
-| Guest orders | Each guest asks for `2` or `3` unique foods at current max level. |
-| Guest movement | Guests and the waiter move on a shared tile grid; tapping a guest sends the waiter to that table before the order is revealed. |
-| Food service | Ordered dishes and decoy dishes appear as draggable kitchen-pass buttons. |
-| Serving | Dropping a dish on a guest table serves it only if that guest has heard the order and still needs that food. |
-| Feedback | Diner feedback is maintained in React state for speech/sound flow, but no diner feedback bar is currently rendered. |
-| Audio | Orders and serve messages use browser speech synthesis; feedback sounds use Web Audio tones. |
+| `/` | Renders `GamePortal`. |
+| `/games/table-talk-diner` | Renders `RestaurantGame`. |
+| `/games/tiny-city-delivery` | Renders `TinyCityDeliveryGame`. |
+| Other paths | Render `GamePortal` while leaving the current address unchanged. |
 
-Tiny City Delivery has its own route score, delivery target, mistake limit, map locations, roads,
-delivery cargo, and word-clue panel.
+`App` normalizes trailing slashes, intercepts ordinary primary-button card clicks, writes paths with
+`history.pushState`, listens for `popstate`, and updates `document.title`. Modified clicks retain
+normal anchor behavior.
+
+## Gameplay At A Glance
+
+| Area | Table Talk Diner | Tiny City Delivery |
+| --- | --- | --- |
+| Goal | Complete 24 guest orders. | Complete 10 deliveries before 5 mistakes. |
+| Primary input | Select a table, then drag or keyboard-serve dishes. | Click adjacent map locations. |
+| Language focus | Practical food requests and listening. | Places, quantities, directions, and prepositions. |
+| Progress | Score, completed orders, and level 1–6. | Score, deliveries, streak, lives, and level 1–5. |
+| Feedback | Visible status toast, speech, and Web Audio tones. | Visible feedback panel, speech, and Web Audio tones. |
+| Restart | `New Shift` after the target is reached. | Reset button or `New Route` after win/loss. |
 
 ## Target User
 
-The UI copy and README identify the game as an English learning arcade experience. The target user is a learner practicing simple food-order listening and recognition through quick arcade-style interaction.
+The copy and mechanics target English learners, especially children practicing short practical
+instructions. The games combine written clues, optional spoken prompts, immediate feedback, and
+arcade-style repetition.
 
 ## Tech Stack
 
 | Area | Current choice |
 | --- | --- |
-| Runtime | Browser-only single page app. |
+| Runtime | Client-only single-page app. |
 | Framework | React `18.3.1`. |
-| Build tool | Vite 5, declared as `^5.4.11` in `package.json`. |
-| Language | TypeScript with strict project settings. |
+| Build tool | Vite 6 (`^6.4.3`; the lockfile resolves the patched `6.4.3` release). |
+| Language | TypeScript with project references and strict checking. |
 | Icons | `lucide-react`. |
-| Styling | One CSS file, `src/styles.css`, with custom properties, responsive media queries, and CSS animations. |
-| Assets | PNG sprites/backgrounds plus one SVG cursor under `src/assets/`. |
+| Routing | Small History API implementation inside `App`; no router dependency. |
+| Styling | One global `src/styles.css` file with custom properties, responsive rules, and animations. |
+| Assets | Imported PNG art plus an SVG cursor under `src/assets/`. |
 | Audio | `window.speechSynthesis` and `AudioContext`/`webkitAudioContext`. |
-| State | Local React `useState`, `useRef`, `useMemo`, `useCallback`, and `useEffect`. |
+| State | Component-local React hooks; there is no external store or persistence. |
 
 ## Local Setup
 
-Use Node compatible with Vite 5. The installed Vite package declares this engine range:
-
-```text
-^18.0.0 || >=20.0.0
-```
-
-This workspace was inspected with:
-
-| Tool | Version observed |
-| --- | --- |
-| Node | `v24.15.0` |
-| npm | `11.12.1` |
-| package lock | lockfile version `3` |
-
-Install dependencies and run the app:
+Vite 6 declares Node `^18.0.0 || ^20.0.0 || >=22.0.0`.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Build and preview the production output:
+Build and preview the static output:
 
 ```bash
 npm run build
 npm run preview
+npm audit
 ```
-
-## Scripts
 
 | Script | Defined as | Purpose |
 | --- | --- | --- |
-| `npm run dev` | `vite` | Start a local Vite dev server. |
-| `npm run build` | `tsc -b && vite build` | Type-check project references, then build static output into `dist/`. |
-| `npm run preview` | `vite preview` | Serve the built static output locally. |
+| `npm run dev` | `vite` | Start the development server. |
+| `npm run build` | `tsc -b && vite build` | Type-check, then emit `dist/`. |
+| `npm run preview` | `vite preview` | Serve the built output locally. |
+| `npm audit` | npm built-in | Check installed dependencies against known advisories. |
 
 ## Repo Map
 
 | Path | Purpose |
 | --- | --- |
-| `index.html` | HTML shell, metadata, root node, and Vite module entry. |
-| `src/main.tsx` | Mounts `<App />` under React `StrictMode` and imports global CSS. |
-| `src/App.tsx` | Game data, components, route selection, gameplay state, timers, order/mission generation, scoring, TTS, and sound effects. |
-| `src/styles.css` | Full visual system: palette, layout, game scene layers, cards, diner/table UI, city map UI, sprites, animation, responsive rules, cursor. |
-| `src/assets/` | Runtime assets for background, player, cursor, sprite sheet, food sprites, and customer sprites. |
-| `docs/` | Maintainer documentation. |
-| `dist/` | Vite build output, ignored by Git. |
-| `node_modules/` | Installed dependencies, ignored by Git. |
+| `index.html` | HTML metadata, root node, and Vite module entry. |
+| `src/main.tsx` | Mounts `<App />` under `StrictMode` and imports CSS. |
+| `src/App.tsx` | Portal, path routing, both game engines, data, state, timing, scoring, speech, and tones. |
+| `src/styles.css` | Portal, diner, city, sprites, responsive behavior, and animation. |
+| `src/assets/` | Runtime background, character, food, and cursor assets. |
+| `docs/` | Maintainer and Hunter documentation. |
+| `dist/` | Ignored production build output. |
+| `.pi/` | Ignored local Hunter/Pi runtime state when tools create it. |
 
-## Current Scope
+## Current Boundaries
 
-The repo currently supports two client-side games, generated/static visual assets, speech/audio in
-browser APIs, and local static builds. It does not include user accounts, saved progress, analytics,
-server APIs, automated tests, or deployment configuration.
+The repository has no server APIs, accounts, saved progress, multiplayer, analytics, automated test
+suite, CI configuration, browser support policy, or deployment-provider configuration.

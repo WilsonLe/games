@@ -1,5 +1,5 @@
 ---
-description: "Tiny City Delivery gameplay model, map data, route state, and implementation notes."
+description: "Tiny City Delivery map data, route state, gameplay rules, implementation risks, and verification notes."
 references: []
 ---
 
@@ -7,26 +7,34 @@ references: []
 
 ## Gameplay Model
 
-- Players follow English delivery instructions across a small city map.
-- Missions combine pickup/dropoff locations, quantities, cargo, and spatial language.
-- The player moves along valid roads, picks up cargo, and delivers it to the requested place.
-- Wrong roads, wrong pickup/dropoff, or missing required stops count as mistakes.
+- The game opens ready and starts on explicit input.
+- Tickets combine pickup/dropoff, cargo quantity, place names, and spatial language.
+- Movement is allowed only over a directly connected road.
+- Depot cargo starts in the basket; other cargo is picked up at its configured stop.
+- Valid detours are allowed. Non-neighbor moves and missing required stops at delivery are mistakes.
+- Ten deliveries win; five mistakes end the route.
 
 ## Implementation Map
 
-- Location IDs, road edges, delivery items, and mission definitions live near the top of
-  `src/App.tsx`.
-- `CITY_LOCATIONS` controls map labels, icon kind, and percentage-based coordinates.
-- `CITY_ROADS` controls valid movement edges.
-- `CITY_MISSIONS` controls phrases, pickup/dropoff, cargo, focus words, and optional required stops.
-- `TinyCityDeliveryGame` owns route state, scoring, mistakes, feedback, audio, and reset/pause flow.
-- `CityMap` renders roads, route dots, location buttons, spatial badges, and the courier.
+- Map IDs/data: `LocationId`, `CITY_LOCATIONS`.
+- Movement graph: `CITY_ROADS`, `cityNeighbors`.
+- Lesson content: `CITY_ITEMS`, `CITY_MISSIONS`.
+- Edge highlighting: `getCityRoadKey` and the consecutive `path` pairs in `CityMap`.
+- State, pause/reset, movement, scoring, and completion: `TinyCityDeliveryGame`.
+- Layout: `.cityGameGrid`, `.cityMap`, location/road/courier styles.
 
-## Editing Guidance
+## Risks
 
-- Keep every mission phrase aligned with its `pickup`, `dropoff`, `itemId`, `quantity`,
-  `relationLabel`, `focusWords`, and optional `requiredStop`.
-- If adding a map location, update `LocationId`, `CITY_LOCATIONS`, `CITY_ROADS`, and any missions
-  that should use it.
-- Keep route buttons as real buttons so the map remains keyboard and assistive-technology reachable.
-- After map layout changes, check desktop and mobile widths because coordinates are percentage-based.
+- Keep mission text and structured fields synchronized.
+- Update ID unions, location rows, roads, and missions together.
+- Do not replace consecutive-edge highlighting with a set of visited locations; that marks roads that
+  were never traversed.
+- Keep map stops as native buttons.
+- Do not let diner full-screen `.gameGrid` or overflow rules leak into `.appShell--city`.
+- Percentage coordinates and CSS road lengths require desktop/mobile visual checks.
+
+## Verify
+
+Ready/start, depot/non-depot pickup, valid move, invalid road, valid detour, required stop, delivery,
+score/streak, pause guidance, repeat audio, reset, five-mistake loss, ten-delivery win, New Route,
+portal return, exact road highlights, scrolling, and mobile layout.
