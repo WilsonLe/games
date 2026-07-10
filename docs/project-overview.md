@@ -13,8 +13,8 @@ Table Talk Games is a client-only React/Vite game portal. The current playable g
 `Table Talk Diner` and `Tiny City Delivery`.
 
 `Table Talk Diner` is a 2D food-serving arcade game for practicing practical English food orders.
-Guests ask for meals in English, food appears in the dining room, and the player clicks food to
-complete guest orders before their patience timers expire.
+Guests sit at tables, ask for meals in English, dishes appear on the kitchen pass, and the player
+drags dishes to the matching guest before patience timers expire.
 
 `Tiny City Delivery` is a map-routing simulator. Children follow English delivery instructions using
 place names, quantities, and prepositions such as `behind`, `between`, `over`, `next to`, `inside`,
@@ -24,12 +24,11 @@ place names, quantities, and prepositions such as `behind`, `between`, `over`, `
 
 | Concept | Current behavior |
 | --- | --- |
-| Goal | Complete `24` guest orders before losing all lives. |
-| Lives | The player starts each shift with `5` lives. |
+| Goal | Complete `24` guest orders. |
 | Guest orders | Each guest asks for `2` or `3` unique foods at current max level. |
-| Food service | Ordered foods and decoy foods appear as clickable serving targets. |
-| Serving | Clicking a food serves it to the best matching guest. |
-| Feedback | The status bar reports neutral, good, or bad feedback. |
+| Food service | Ordered dishes and decoy dishes appear as draggable kitchen-pass buttons. |
+| Serving | Dropping a dish on a guest table serves it only if that guest has heard the order and still needs that food. |
+| Feedback | Diner feedback is maintained in React state for speech/sound flow, but no diner feedback bar is currently rendered. |
 | Audio | Orders and serve messages use browser speech synthesis; feedback sounds use Web Audio tones. |
 
 Tiny City Delivery has its own route score, delivery target, mistake limit, map locations, roads,

@@ -1,0 +1,18 @@
+{
+  "task": "Refresh Table Talk Games setup docs",
+  "status": "completed",
+  "items": [
+    {
+      "text": "Update stale click-to-serve and sprite mapping documentation.",
+      "status": "done"
+    },
+    {
+      "text": "Validate Hunter Markdown graph reachability.",
+      "status": "done"
+    },
+    {
+      "text": "Run docs-only verification.",
+      "status": "done"
+    }
+  ]
+}

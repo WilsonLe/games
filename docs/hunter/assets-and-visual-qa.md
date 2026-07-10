@@ -15,15 +15,15 @@ references: []
 ## Styling
 
 - The visual system is defined in `src/styles.css` with CSS variables at `:root`.
-- The game uses compact panels, responsive columns, fixed-format conveyor lanes, and animated sprites.
+- The game uses compact panels, responsive columns, a fixed-format kitchen pass, and animated sprites.
 - Keep button, card, and panel radii at 8px or less unless extending an existing circular element.
-- Avoid layouts where text can overlap game controls, counters, sprites, or belt items at small widths.
+- Avoid layouts where text can overlap game controls, counters, sprites, or dish items at small widths.
 
 ## Visual QA
 
 - Check desktop and mobile breakpoints after layout changes, especially near 980px and 560px.
 - Confirm the kitchen background, player sprite, customer sprites, food sprites, and cursor all render.
-- Confirm active animations are visible but do not shift layout: belt movement, food entry, customer
-  bobbing, kitchen pan, and chef idle motion.
-- Use browser inspection or screenshots when changing fixed-format surfaces such as the belt, guest
-  stack, stat pills, or top controls.
+- Confirm active animations are visible but do not shift layout: dish entry, customer walking/bobbing,
+  kitchen pan, and waiter idle motion.
+- Use browser inspection or screenshots when changing fixed-format surfaces such as the kitchen pass,
+  guest tables, stat pills, or top controls.

@@ -33,11 +33,11 @@ There are no audio files in the repo.
 | --- | --- |
 | Starting/resetting a shift | First guest phrase. |
 | New guest spawn | Guest phrase. |
-| Guest speaker button | That guest phrase. |
+| Guest table click/tap | Greeting plus that guest phrase. |
 | Correct dish | `Served {foodName}.` |
 | Completed order | Thank-you/completion message. |
-| Wrong dish | `No one ordered {foodName}.` |
-| Shift complete | `Shift complete. All orders served.` |
+| Wrong table | `{guestName} did not order {foodName}.` |
+| Dinner service complete | `Dinner service complete. All guests are happy.` |
 
 Only `listenToGuest` shows explicit bad feedback when speech is unavailable. Other callers ignore the boolean return.
 
@@ -49,7 +49,7 @@ Only `listenToGuest` shows explicit bad feedback when speech is unavailable. Oth
 | --- | --- | --- |
 | `correct` | Correct dish, order still incomplete | Triangle tones at `660Hz` and `880Hz`. |
 | `complete` | Guest order completed | Triangle tones at `523.25Hz`, `659.25Hz`, `783.99Hz`, and `1046.5Hz`. |
-| `wrong` | No guest needs clicked food | Sawtooth tones at `180Hz` and `130Hz`. |
+| `wrong` | Wrong table or expired guest | Sawtooth tones at `180Hz` and `130Hz`. |
 
 If no audio context constructor exists, `playSound` returns `false`. The UI does not currently surface that fallback.
 
@@ -77,7 +77,7 @@ Layering is controlled by `src/styles.css`.
 | `.mainSurface` | relative centered content | `2` | Main game UI. |
 | `.portalRail` | relative top rail | `3` | Portal brand/game nav. |
 | `.playerSprite` | fixed lower-left | `4` | Chef sprite in front of the scene. |
-| Panels/cards | normal flow | auto | Guest cards, conveyor, engine panel, feedback. |
+| Panels/cards | normal flow | auto | Game HUD, result banner, city panels, and supporting controls. |
 
 `.appShell` uses `isolation: isolate`, so the negative backdrop layer remains scoped behind the app content.
 
@@ -86,21 +86,23 @@ Layering is controlled by `src/styles.css`.
 | Animation | Applied to | Purpose |
 | --- | --- | --- |
 | `kitchenScenePan` | `.sceneBackdrop__image` | Slow background drift. |
-| `playerIdleBob` | `.playerSprite` | Chef idle bob; speeds up while playing. |
-| `beltRoll` | conveyor pseudo-elements | Moving belt texture. |
-| `foodEnter` | `.beltFood` | Food entrance scale/fade. |
-| `trayWobble` | `.beltFood` | Subtle food motion on trays. |
-| `guestArrive` | `.guestCard` | New guest card arrival. |
-| `customerBob` | `.customerSprite--active` | Selected customer motion. |
+| `playerIdleBob` | `.playerSprite` | Waiter idle bob; speeds up while playing. |
+| `foodEnterTopDown` | `.dishRail .beltFood` | Dish entrance scale/fade on the kitchen pass. |
+| `trayWobble` | `.beltFood` | Subtle dish motion on trays. |
+| `guestWalkToTopDownTable` | `.guestTable--entering` | Guest walk-in movement to a table. |
+| `guestTopDownWalkOut` | `.guestTable--leaving` | Guest walk-out movement after completion or expiration. |
+| `customerSpriteSheetWalk` | `.customerSprite__sheet` | Customer sheet-frame stepping while active, entering, or leaving. |
+| `playerSpriteSheetWalk` | `.playerSprite__sheet` | Waiter sheet-frame stepping while playing. |
+| `guestCustomerBob` | `.guestTable--selected .customerSprite` | Selected customer motion. |
 
 ## Responsive Layout
 
 | Breakpoint | Behavior |
 | --- | --- |
-| Default | Three-column game grid: guests, belt, engine. Score strip uses five columns. |
-| `max-width: 1360px` | Game grid becomes two columns; engine panel spans full width. |
-| `max-width: 980px` | Game grid and score strip become one column; top bar stacks; action buttons widen; chef shrinks. |
-| `max-width: 560px` | Background is reframed, surface widths tighten, conveyor height and belt food sizes shrink. |
+| Default | The diner route uses a full restaurant stage with an overlaid three-stat HUD. Tiny City uses its own map/sidebar grid. |
+| `max-width: 1360px` | Wide surfaces tighten and multi-column layouts begin collapsing where needed. |
+| `max-width: 980px` | Game grid and score strip become one column; top bar stacks where present; action buttons widen; sprites shrink. |
+| `max-width: 560px` | Background is reframed, surface widths tighten, kitchen pass and dish sizes shrink. |
 
 ## Styling Organization
 
@@ -111,7 +113,7 @@ Layering is controlled by `src/styles.css`.
 3. Portal rail and navigation.
 4. Main surface, top bar, buttons.
 5. Score strip and result banner.
-6. Game grid, guest cards, conveyor, feedback, engine panel.
+6. Game grid, restaurant stage, guest tables, kitchen pass, feedback, and side panels.
 7. Customer and food art wrappers.
 8. Keyframes.
 9. Responsive media queries.
@@ -132,7 +134,7 @@ Main custom properties:
 | `--yellow` | `#f1b83f` | Buttons, borders, timers. |
 | `--red` | `#ce5143` | Bad feedback accents. |
 | `--coral` | `#f07d5f` | Food/CSS art accent. |
-| `--steel` | `#5c7182` | Conveyor-adjacent accent. |
+| `--steel` | `#5c7182` | Kitchen-pass and city-map adjacent accent. |
 
 ## Visual Rules To Preserve
 
@@ -142,8 +144,8 @@ Main custom properties:
 | Preserve chunky borders and offset shadows | They create the game-like physical UI. |
 | Keep the chef fixed and non-interactive | It is scenic feedback, not a control. |
 | Avoid adding text-heavy instruction panels inside the game scene | The current UI teaches through labels, cards, and controls. |
-| Keep food buttons fixed-size on the belt | Variable sizes could make movement and click targets unstable. |
-| Check mobile after changing dimensions | The belt and background have separate mobile framing rules. |
+| Keep dish buttons fixed-size on the kitchen pass | Variable sizes could make drag targets unstable. |
+| Check mobile after changing dimensions | The kitchen pass and background have separate mobile framing rules. |
 
 ## Custom Cursor
 

@@ -7,17 +7,21 @@ references: []
 
 [Docs index](./README.md) | [Repo README](../README.md)
 
-Runtime assets live under `src/assets/`. Food and customer sprite imports are declared at the top of `src/App.tsx`; background and cursor URLs are declared in `src/styles.css`.
+Runtime assets live under `src/assets/`. Food sprites, generated character sheets, and portal
+preview images are imported at the top of `src/App.tsx`; background and cursor URLs are declared in
+`src/styles.css`.
 
 ## Scene Assets
 
 | File | Dimensions | Used by | Notes |
 | --- | ---: | --- | --- |
 | `src/assets/game-kitchen-bg.png` | `1672 x 941` | `.sceneBackdrop__image` in `src/styles.css` | Full-screen generated kitchen background with CSS pan animation. |
-| `src/assets/player-chef.png` | `1024 x 1536` | `playerChefUrl` in `src/App.tsx` | Runtime chef sprite shown fixed near the lower-left corner. |
+| `src/assets/player-chef.png` | `1024 x 1536` | `playerChefUrl` in `GamePortal` | Portal preview chef image. |
 | `src/assets/player-chef-source.png` | `1024 x 1536` | Not imported by app code | Source/reference image kept in the repo. |
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
-| `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | `spriteSheetUrl` in `EnginePanel` | Displayed as a preview image only; the app does not slice sprites from this sheet. |
+| `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | Not imported by app code | Legacy/reference kitchen sprite sheet. |
+| `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | `customerFullbodySheetUrl` in `CustomerSprite` | Runtime full-body customer sheet, sliced by CSS at `400% 600%`. |
+| `src/assets/sprites/generated/waiter-fullbody-sheet.png` | `2172 x 724` | `waiterFullbodySheetUrl` in `PlayerSprite` | Runtime full-body waiter sheet, sliced by CSS at `400% 100%`. |
 
 ## Food Sprites
 
@@ -39,23 +43,30 @@ Visible food art comes from `<img>` tags inside `FoodArt`. The `foodArt--...` CS
 
 ## Customer Sprites
 
-Customer IDs are defined by `CustomerProfile`, `CUSTOMERS`, and `customerSpriteById` in `src/App.tsx`.
+Customer IDs are defined by `CustomerProfile`, `CUSTOMERS`, and `customerSpriteRowById` in
+`src/App.tsx`. The active diner route uses `src/assets/sprites/generated/customer-fullbody-sheet.png`;
+`customerSpriteRowById` maps each customer to the row exposed through CSS `--sprite-y`.
 
-| Customer ID | Display name | File | Dimensions |
-| --- | --- | --- | ---: |
-| `mai` | `Mia` | `src/assets/sprites/customer-mai.png` | `228 x 310` |
-| `leo` | `Leo` | `src/assets/sprites/customer-leo.png` | `235 x 310` |
-| `nora` | `Nora` | `src/assets/sprites/customer-nora.png` | `237 x 310` |
-| `ben` | `Ben` | `src/assets/sprites/customer-ben.png` | `228 x 310` |
-| `ivy` | `Ivy` | `src/assets/sprites/customer-ivy.png` | `248 x 310` |
-| `sam` | `Sam` | `src/assets/sprites/customer-sam.png` | `239 x 310` |
+| Customer ID | Display name | Sheet row |
+| --- | --- | ---: |
+| `mai` | `Mia` | `0%` |
+| `leo` | `Leo` | `20%` |
+| `nora` | `Nora` | `40%` |
+| `ben` | `Ben` | `60%` |
+| `ivy` | `Ivy` | `80%` |
+| `sam` | `Sam` | `100%` |
+
+Individual `src/assets/sprites/customer-*.png` files remain in the repo. The portal preview imports
+`customer-mai.png`; the active diner table sprites come from the generated full-body sheet.
 
 ## Naming Conventions
 
 | Asset kind | Convention |
 | --- | --- |
 | Food sprite | `src/assets/sprites/food-{food-id}.png` |
-| Customer sprite | `src/assets/sprites/customer-{customer-id}.png` |
+| Customer sheet | `src/assets/sprites/generated/customer-fullbody-sheet.png` |
+| Waiter sheet | `src/assets/sprites/generated/waiter-fullbody-sheet.png` |
+| Legacy customer sprite | `src/assets/sprites/customer-{customer-id}.png` |
 | Background | `src/assets/game-kitchen-bg.png` |
 | Player chef | `src/assets/player-chef.png` |
 | Player source/reference | `src/assets/player-chef-source.png` |
@@ -76,12 +87,12 @@ Use lowercase kebab-case filenames. Keep `FoodId` and customer IDs lowercase bec
 
 ## Adding A Customer Asset
 
-1. Add `src/assets/sprites/customer-{id}.png`.
-2. Import it near the existing customer imports in `src/App.tsx`.
+1. Add or regenerate the customer row in `src/assets/sprites/generated/customer-fullbody-sheet.png`.
+2. If the new customer also needs a portal/legacy still, add `src/assets/sprites/customer-{id}.png`.
 3. Add the ID to `CustomerProfile["id"]`.
 4. Add `{ id, name }` to `CUSTOMERS`.
-5. Add the sprite to `customerSpriteById`.
-6. Update this guide's customer table.
+5. Add the row position to `customerSpriteRowById`.
+6. Update this guide's customer table and generated sheet metadata.
 7. Run `npm run build`.
 
 ## Replacing Existing Art
@@ -90,8 +101,9 @@ If the filename stays the same, no import changes are needed. Still check:
 
 | Asset | Check |
 | --- | --- |
-| Food/customer sprites | They crop well inside `object-fit: cover` square-ish wrappers. |
-| Chef sprite | Transparent background works over the scene and scales at mobile widths. |
+| Food sprites | They crop well inside fixed food-art wrappers. |
+| Customer/waiter sheets | Row/column slicing still aligns with `background-size` and animation keyframes. |
+| Portal chef sprite | Transparent background works in the portal preview. |
 | Kitchen background | `background-size: cover` and mobile inset still frame the useful part. |
 | Cursor | Hotspot in `--game-cursor` still feels accurate. |
-| Sprite sheet preview | It still reads inside `.assetPreview img` with `object-fit: contain`. |
+| Legacy/reference sheets | Leave unused reference files alone unless intentionally replacing the asset set. |

@@ -54,7 +54,7 @@ This docs set is for future maintainers and future Codex sessions. It describes 
 | Local setup, scripts, and Node/npm assumptions | Documented in [Project Overview](./project-overview.md) and [README](../README.md). |
 | React component/state architecture | Documented in [Game Architecture](./architecture.md). |
 | Main data structures and inventories | Documented in [Game Architecture](./architecture.md) and [Assets Guide](./assets.md). |
-| Timers, status flow, order generation, levels, scoring, lives, streaks | Documented in [Game Architecture](./architecture.md). |
+| Timers, status flow, order generation, levels, scoring, combo, and completion | Documented in [Game Architecture](./architecture.md). |
 | Gameplay controls and serve outcomes | Documented in [Gameplay Guide](./gameplay.md). |
 | Customer, food, background, player, cursor assets | Documented in [Assets Guide](./assets.md). |
 | Speech synthesis and sound effects | Documented in [Audio, UI, and Styling](./audio-ui-styling.md). |
