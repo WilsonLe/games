@@ -1908,10 +1908,9 @@ h2 {
   background: #cc8f58;
   border: 0;
   isolation: isolate;
-  --tile-origin-x: 8%;
-  --tile-origin-y: 34%;
-  --tile-step-x: 7.5%;
-  --tile-step-y: 7.4%;
+  --tile-size: clamp(30px, min(7.2vw, 9.4vh), 72px);
+  --tile-origin-x: clamp(56px, 10vw, 132px);
+  --tile-origin-y: clamp(178px, 25vh, 220px);
 }
 
 .floorTiles {
@@ -1919,11 +1918,20 @@ h2 {
   inset: 0;
   z-index: 0;
   background:
-    linear-gradient(90deg, rgba(117, 73, 43, 0.22) 2px, transparent 2px),
-    linear-gradient(0deg, rgba(117, 73, 43, 0.2) 2px, transparent 2px),
-    repeating-linear-gradient(45deg, rgba(255, 236, 186, 0.14) 0 22px, rgba(255, 236, 186, 0.03) 22px 44px),
+    linear-gradient(90deg, rgba(117, 73, 43, 0.24) 2px, transparent 2px),
+    linear-gradient(0deg, rgba(117, 73, 43, 0.22) 2px, transparent 2px),
+    linear-gradient(135deg, rgba(255, 247, 216, 0.18) 0 25%, transparent 25% 100%),
     #d79c61;
-  background-size: var(--tile-step-x) var(--tile-step-y), var(--tile-step-x) var(--tile-step-y), auto, auto;
+  background-position:
+    var(--tile-origin-x) var(--tile-origin-y),
+    var(--tile-origin-x) var(--tile-origin-y),
+    var(--tile-origin-x) var(--tile-origin-y),
+    0 0;
+  background-size:
+    var(--tile-size) var(--tile-size),
+    var(--tile-size) var(--tile-size),
+    calc(var(--tile-size) * 2) calc(var(--tile-size) * 2),
+    auto;
 }
 
 .restaurantStage::before {
@@ -1956,21 +1964,53 @@ h2 {
 }
 
 .restaurantDoor {
-  top: calc(var(--tile-origin-y) + 7 * var(--tile-step-y));
+  top: calc(var(--tile-origin-y) + 7 * var(--tile-size));
   bottom: auto;
   left: var(--tile-origin-x);
   z-index: 8;
-  width: 94px;
-  height: 124px;
+  width: clamp(68px, 8vw, 98px);
+  height: clamp(96px, 14vh, 132px);
   place-items: center end;
-  padding-right: 18px;
-  background: #17312d;
+  padding-right: clamp(12px, 1.3vw, 18px);
+  background:
+    linear-gradient(90deg, #17312d 0 48%, #23473f 48% 100%);
   border-color: #f1b83f;
   border-radius: 0 14px 14px 0;
   transform: translate(-38%, -50%);
 }
 
+.restaurantDoor::before {
+  position: absolute;
+  top: -34px;
+  right: 72%;
+  bottom: -34px;
+  width: 34px;
+  background: #7a3f2d;
+  border: 5px solid #17312d;
+  border-right: 0;
+  border-radius: 12px 0 0 12px;
+  box-shadow:
+    inset 8px 0 0 rgba(255, 247, 216, 0.12),
+    -12px 0 0 #4a2b25;
+  content: "";
+}
+
+.restaurantDoor::after {
+  position: absolute;
+  right: 8px;
+  bottom: -18px;
+  width: 72%;
+  height: 18px;
+  background: repeating-linear-gradient(90deg, #f1b83f 0 12px, #d98f45 12px 24px);
+  border: 4px solid #17312d;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.18);
+  content: "";
+}
+
 .restaurantDoor span {
+  position: relative;
+  z-index: 1;
   width: 12px;
   height: 12px;
   margin: 0;
@@ -1986,11 +2026,11 @@ h2 {
 
 .walkTile {
   position: absolute;
-  top: calc(var(--tile-origin-y) + var(--tile-row) * var(--tile-step-y));
-  left: calc(var(--tile-origin-x) + var(--tile-col) * var(--tile-step-x));
-  width: clamp(30px, 3.4vw, 48px);
+  top: calc(var(--tile-origin-y) + var(--tile-row) * var(--tile-size));
+  left: calc(var(--tile-origin-x) + var(--tile-col) * var(--tile-size));
+  width: calc(var(--tile-size) - 6px);
   aspect-ratio: 1;
-  background: rgba(255, 247, 216, 0.24);
+  background: rgba(255, 247, 216, 0.22);
   border: 2px solid rgba(117, 73, 43, 0.25);
   border-radius: 6px;
   box-shadow: inset 0 -6px 0 rgba(117, 73, 43, 0.1);
@@ -2000,28 +2040,58 @@ h2 {
 .kitchenStation {
   position: absolute;
   top: 92px;
-  right: 36px;
-  left: 132px;
+  right: clamp(54px, 7vw, 100px);
+  left: clamp(210px, 26vw, 330px);
   z-index: 4;
-  height: 186px;
-  background: #fff7d8;
+  height: clamp(148px, 17vh, 172px);
+  background:
+    linear-gradient(180deg, #fff7d8 0 48%, #f2c87a 48% 52%, #fff3c7 52% 100%);
   border: 5px solid #17312d;
   border-radius: 12px;
-  box-shadow: 0 10px 0 rgba(23, 49, 45, 0.26), inset 0 -16px 0 rgba(217, 143, 69, 0.16);
+  box-shadow:
+    0 10px 0 rgba(23, 49, 45, 0.26),
+    inset 0 -14px 0 rgba(217, 143, 69, 0.18);
+}
+
+.kitchenStation::before {
+  position: absolute;
+  top: -18px;
+  right: 14px;
+  left: 14px;
+  height: 22px;
+  background:
+    linear-gradient(90deg, rgba(23, 49, 45, 0.2) 1px, transparent 1px),
+    #e8b35d;
+  background-size: 38px 100%, auto;
+  border: 4px solid #17312d;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  content: "";
+}
+
+.kitchenStation::after {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  left: 18px;
+  height: 18px;
+  background: rgba(23, 49, 45, 0.16);
+  border-radius: 999px;
+  content: "";
 }
 
 .stoveBank {
   position: absolute;
-  top: 18px;
-  left: 20px;
+  top: 20px;
+  left: 22px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stoveBank span {
   display: block;
-  width: 58px;
-  height: 58px;
+  width: clamp(42px, 4.4vw, 56px);
+  height: clamp(42px, 4.4vw, 56px);
   background: #314b56;
   border: 5px solid #17312d;
   border-radius: 50%;
@@ -2033,7 +2103,7 @@ h2 {
   right: 20px;
   bottom: 18px;
   left: 20px;
-  height: 62px;
+  height: 54px;
   background: #d98f45;
   border: 4px solid #17312d;
   border-radius: 10px;
@@ -2053,15 +2123,15 @@ h2 {
 
 .dishRail {
   position: absolute;
-  right: 28px;
-  bottom: 10px;
-  left: 150px;
+  right: 26px;
+  bottom: 12px;
+  left: clamp(126px, 16vw, 180px);
   z-index: 4;
-  height: 102px;
+  height: 80px;
   padding: 0 10px;
-  background: rgba(255, 253, 248, 0.36);
-  border: 3px dashed rgba(23, 49, 45, 0.5);
-  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.46);
+  border: 3px solid rgba(23, 49, 45, 0.52);
+  border-radius: 10px;
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -2073,7 +2143,7 @@ h2 {
 
 .dishRail__label {
   position: absolute;
-  top: -58px;
+  top: -38px;
   right: 0;
   color: #17312d;
   font-size: 0.78rem;
@@ -2095,10 +2165,10 @@ h2 {
   top: auto;
   bottom: auto;
   left: auto;
-  flex: 0 0 92px;
-  width: 92px;
-  height: 88px;
-  padding: 7px 7px 9px;
+  flex: 0 0 74px;
+  width: 74px;
+  height: 70px;
+  padding: 5px 5px 7px;
   overflow: visible;
   transform: translateY(var(--dish-lift, 0));
   touch-action: none;
@@ -2114,13 +2184,13 @@ h2 {
 }
 
 .dishRail .beltFood .foodArt {
-  width: 52px;
-  height: 52px;
-  flex-basis: 52px;
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
 }
 
 .dishRail .beltFood strong {
-  font-size: 0.76rem;
+  font-size: 0.66rem;
 }
 
 .beltFood--dragging {
@@ -2176,12 +2246,12 @@ h2 {
 }
 
 .guestTable {
-  top: calc(var(--tile-origin-y) + var(--table-row) * var(--tile-step-y));
+  top: calc(var(--tile-origin-y) + var(--table-row) * var(--tile-size));
   bottom: auto;
-  left: calc(var(--tile-origin-x) + var(--table-col) * var(--tile-step-x));
+  left: calc(var(--tile-origin-x) + var(--table-col) * var(--tile-size));
   z-index: 11;
-  width: 190px;
-  min-height: 190px;
+  width: clamp(112px, 13vw, 178px);
+  min-height: clamp(112px, 13vw, 178px);
   transform: translate(-50%, -50%);
 }
 
@@ -2220,8 +2290,8 @@ h2 {
   right: auto;
   bottom: auto;
   left: 50%;
-  width: 126px;
-  height: 126px;
+  width: clamp(86px, 8.8vw, 118px);
+  height: clamp(86px, 8.8vw, 118px);
   background:
     radial-gradient(circle at 50% 42%, rgba(255, 247, 216, 0.28) 0 18px, transparent 19px),
     #d98f45;
@@ -2233,8 +2303,8 @@ h2 {
 .dinerChair {
   position: absolute;
   z-index: 1;
-  width: 42px;
-  height: 38px;
+  width: clamp(28px, 3.1vw, 40px);
+  height: clamp(26px, 2.9vw, 36px);
   background: #58aa69;
   border: 4px solid #17312d;
   border-radius: 10px;
@@ -2266,8 +2336,8 @@ h2 {
 
 .customerActor {
   position: absolute;
-  top: calc(var(--tile-origin-y) + var(--actor-row) * var(--tile-step-y));
-  left: calc(var(--tile-origin-x) + var(--actor-col) * var(--tile-step-x));
+  top: calc(var(--tile-origin-y) + var(--actor-row) * var(--tile-size));
+  left: calc(var(--tile-origin-x) + var(--actor-col) * var(--tile-size));
   width: 0;
   height: 0;
   pointer-events: none;
@@ -2282,8 +2352,8 @@ h2 {
   bottom: 0;
   left: 0;
   z-index: 6;
-  width: 78px;
-  height: 104px;
+  width: clamp(56px, 5.8vw, 78px);
+  aspect-ratio: 3 / 4;
   overflow: visible;
   background: transparent;
   border: 0;
@@ -2331,7 +2401,7 @@ h2 {
 }
 
 .guestSpeech {
-  bottom: 164px;
+  bottom: clamp(116px, 11.6vw, 164px);
   width: min(290px, 26vw);
   gap: 6px;
   transform: translateX(var(--bubble-shift, -50%));
@@ -2366,19 +2436,19 @@ h2 {
 }
 
 .guestTable .guestTimer {
-  right: 38px;
+  right: clamp(24px, 2.8vw, 38px);
   bottom: 13px;
-  left: 38px;
+  left: clamp(24px, 2.8vw, 38px);
   z-index: 5;
 }
 
 .playerSprite {
-  top: calc(var(--tile-origin-y) + var(--actor-row) * var(--tile-step-y));
+  top: calc(var(--tile-origin-y) + var(--actor-row) * var(--tile-size));
   bottom: auto;
-  left: calc(var(--tile-origin-x) + var(--actor-col) * var(--tile-step-x));
+  left: calc(var(--tile-origin-x) + var(--actor-col) * var(--tile-size));
   width: clamp(88px, 8.4vw, 140px);
   aspect-ratio: 3 / 4;
-  transform: translate(-50%, 4%);
+  transform: translate(-50%, -88%);
   animation: none;
   transition:
     left 90ms linear,
@@ -2404,54 +2474,44 @@ h2 {
   filter: drop-shadow(0 14px 0 rgba(23, 49, 45, 0.14)) drop-shadow(0 18px 14px rgba(23, 49, 45, 0.24));
 }
 
-.customerSprite--south .customerSprite__sheet {
-  background-position: 0 var(--sprite-y, 0%);
-}
-
-.customerSprite--north .customerSprite__sheet {
-  background-position: 66.666% var(--sprite-y, 0%);
-}
-
+.customerSprite--south .customerSprite__sheet,
+.customerSprite--north .customerSprite__sheet,
+.customerSprite--east .customerSprite__sheet,
 .customerSprite--west .customerSprite__sheet {
-  transform: scaleX(-1);
+  background-position: 0 var(--sprite-y, 0%);
+  transform: none;
 }
 
-.customerSprite--walking.customerSprite--east .customerSprite__sheet,
-.customerSprite--walking.customerSprite--west .customerSprite__sheet {
-  animation: customerSpriteSideWalk 520ms steps(1, end) infinite;
+.customerActor--walking .customerSprite {
+  animation: customerTileStep 520ms ease-in-out infinite;
 }
 
-.customerSprite--walking.customerSprite--north .customerSprite__sheet {
-  animation: customerSpriteNorthWalk 520ms steps(1, end) infinite;
+.customerActor--walking .customerSprite__shadow {
+  animation: dinerShadowStep 520ms ease-in-out infinite;
 }
 
-.customerSprite--walking.customerSprite--south .customerSprite__sheet {
-  animation: customerSpriteSouthWalk 520ms steps(1, end) infinite;
+.customerActor--walking .customerSprite__sheet {
+  animation: none;
 }
 
-.playerSprite--south .playerSprite__sheet {
-  background-position: 0 0;
-}
-
-.playerSprite--north .playerSprite__sheet {
-  background-position: 66.666% 0;
-}
-
+.playerSprite--south .playerSprite__sheet,
+.playerSprite--north .playerSprite__sheet,
+.playerSprite--east .playerSprite__sheet,
 .playerSprite--west .playerSprite__sheet {
-  transform: scaleX(-1);
+  background-position: 0 0;
+  transform: none;
 }
 
-.playerSprite--walking.playerSprite--east .playerSprite__sheet,
-.playerSprite--walking.playerSprite--west .playerSprite__sheet {
-  animation: playerSpriteSideWalk 560ms steps(1, end) infinite;
+.playerSprite--walking {
+  animation: playerTileStep 560ms ease-in-out infinite;
 }
 
-.playerSprite--walking.playerSprite--north .playerSprite__sheet {
-  animation: playerSpriteNorthWalk 560ms steps(1, end) infinite;
+.playerSprite--walking .playerSprite__shadow {
+  animation: dinerShadowStep 560ms ease-in-out infinite;
 }
 
-.playerSprite--walking.playerSprite--south .playerSprite__sheet {
-  animation: playerSpriteSouthWalk 560ms steps(1, end) infinite;
+.playerSprite--walking .playerSprite__sheet {
+  animation: none;
 }
 
 @keyframes beltRoll {
@@ -2563,75 +2623,38 @@ h2 {
   }
 }
 
-@keyframes customerSpriteSideWalk {
+@keyframes customerTileStep {
   0%,
-  49.99% {
-    background-position: 33.333% var(--sprite-y, 0%);
+  100% {
+    transform: translate(-50%, 4%);
   }
 
-  50%,
-  100% {
-    background-position: 100% var(--sprite-y, 0%);
+  50% {
+    transform: translate(-50%, calc(4% - 6px));
   }
 }
 
-@keyframes customerSpriteNorthWalk {
+@keyframes playerTileStep {
   0%,
-  49.99% {
-    background-position: 66.666% var(--sprite-y, 0%);
+  100% {
+    transform: translate(-50%, -88%);
   }
 
-  50%,
-  100% {
-    background-position: 100% var(--sprite-y, 0%);
+  50% {
+    transform: translate(-50%, calc(-88% - 7px));
   }
 }
 
-@keyframes customerSpriteSouthWalk {
+@keyframes dinerShadowStep {
   0%,
-  49.99% {
-    background-position: 0 var(--sprite-y, 0%);
-  }
-
-  50%,
   100% {
-    background-position: 33.333% var(--sprite-y, 0%);
-  }
-}
-
-@keyframes playerSpriteSideWalk {
-  0%,
-  49.99% {
-    background-position: 33.333% 0;
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
   }
 
-  50%,
-  100% {
-    background-position: 100% 0;
-  }
-}
-
-@keyframes playerSpriteNorthWalk {
-  0%,
-  49.99% {
-    background-position: 66.666% 0;
-  }
-
-  50%,
-  100% {
-    background-position: 100% 0;
-  }
-}
-
-@keyframes playerSpriteSouthWalk {
-  0%,
-  49.99% {
-    background-position: 0 0;
-  }
-
-  50%,
-  100% {
-    background-position: 33.333% 0;
+  50% {
+    opacity: 0.72;
+    transform: translateX(-50%) scale(0.88);
   }
 }
 
@@ -2987,17 +3010,18 @@ h2 {
   }
 
   .kitchenStation {
-    right: 24px;
-    left: 104px;
-    height: 150px;
+    right: 20px;
+    left: 96px;
+    height: 138px;
   }
 
   .dishRail {
-    left: 126px;
+    left: 112px;
   }
 
   .guestTable {
-    width: 148px;
+    width: 136px;
+    min-height: 136px;
   }
 
   .guestSpeech {
@@ -3113,10 +3137,9 @@ h2 {
 
   .restaurantStage {
     min-height: var(--viewport-height);
-    --tile-origin-x: 14%;
-    --tile-origin-y: 30%;
-    --tile-step-x: 7%;
-    --tile-step-y: 7%;
+    --tile-size: clamp(28px, 8vw, 34px);
+    --tile-origin-x: clamp(24px, 8vw, 34px);
+    --tile-origin-y: clamp(188px, 24vh, 230px);
   }
 
   .restaurantStage::before {
@@ -3134,22 +3157,55 @@ h2 {
   }
 
   .restaurantDoor {
-    top: calc(var(--tile-origin-y) + 7 * var(--tile-step-y));
+    top: calc(var(--tile-origin-y) + 7 * var(--tile-size));
     bottom: auto;
     left: var(--tile-origin-x);
     width: 64px;
     height: 94px;
     padding-right: 12px;
-    transform: translate(-56%, -50%);
+    transform: translate(-48%, -50%);
+  }
+
+  .restaurantDoor::before {
+    top: -24px;
+    bottom: -24px;
+    width: 24px;
+    border-width: 4px;
+    box-shadow:
+      inset 6px 0 0 rgba(255, 247, 216, 0.12),
+      -8px 0 0 #4a2b25;
+  }
+
+  .restaurantDoor::after {
+    right: 6px;
+    bottom: -14px;
+    height: 14px;
+    border-width: 3px;
   }
 
   .kitchenStation {
     top: 72px;
     right: 12px;
-    left: 78px;
+    left: 76px;
     height: 112px;
     border-width: 4px;
     border-radius: 10px;
+  }
+
+  .kitchenStation::before {
+    top: -14px;
+    right: 10px;
+    left: 10px;
+    height: 16px;
+    border-width: 3px;
+    border-bottom: 0;
+  }
+
+  .kitchenStation::after {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    height: 12px;
   }
 
   .stoveBank {
@@ -3181,10 +3237,10 @@ h2 {
   .dishRail {
     right: 9px;
     bottom: 8px;
-    left: 72px;
+    left: 68px;
     height: 64px;
     border-width: 2px;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 0 5px;
   }
 
@@ -3227,8 +3283,8 @@ h2 {
   }
 
   .guestTable {
-    width: clamp(96px, 27vw, 106px);
-    min-height: 132px;
+    width: clamp(94px, 27vw, 108px);
+    min-height: 116px;
   }
 
   .dinerTable {
@@ -3262,7 +3318,7 @@ h2 {
 
   .customerActor .customerSprite {
     width: 52px;
-    height: 76px;
+    height: auto;
   }
 
   .customerSprite__shadow {

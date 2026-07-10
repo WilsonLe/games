@@ -236,8 +236,8 @@ const MAX_LEVEL = Math.ceil(TARGET_SERVES / ORDERS_PER_LEVEL);
 const HAPPY_GUEST_COMBO_BONUS = 15;
 const FIRST_DISH_DELAY_MS = 1800;
 const NEXT_GUEST_AFTER_COMPLETE_MS = 3_000;
-const GUEST_STEP_MS = 260;
-const WAITER_STEP_MS = 230;
+const GUEST_STEP_MS = 320;
+const WAITER_STEP_MS = 440;
 const LEAVING_GUEST_LINGER_MS = 350;
 const ORDER_LANES = 2;
 const GAME_TITLE = "Table Talk Diner";
@@ -292,12 +292,12 @@ const WAITER_HOME_TILE: TilePoint = { col: 1, row: 7 };
 const DINER_AISLE_ROW = 7;
 
 const SEAT_LAYOUT: SeatLayout[] = [
-  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 }, waiter: { col: 2, row: 4 }, bubbleShift: "-34%", mobileBubbleShift: "-30%" },
-  { table: { col: 6, row: 3 }, customer: { col: 6, row: 3 }, waiter: { col: 6, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 10, row: 3 }, customer: { col: 10, row: 3 }, waiter: { col: 10, row: 4 }, bubbleShift: "-66%", mobileBubbleShift: "-70%" },
-  { table: { col: 2, row: 6 }, customer: { col: 2, row: 6 }, waiter: { col: 2, row: 7 }, bubbleShift: "-34%", mobileBubbleShift: "-30%" },
-  { table: { col: 6, row: 6 }, customer: { col: 6, row: 6 }, waiter: { col: 6, row: 7 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 10, row: 6 }, customer: { col: 10, row: 6 }, waiter: { col: 10, row: 7 }, bubbleShift: "-66%", mobileBubbleShift: "-70%" },
+  { table: { col: 1, row: 3 }, customer: { col: 1, row: 3 }, waiter: { col: 1, row: 4 }, bubbleShift: "-30%", mobileBubbleShift: "-20%" },
+  { table: { col: 5, row: 3 }, customer: { col: 5, row: 3 }, waiter: { col: 5, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 9, row: 3 }, customer: { col: 9, row: 3 }, waiter: { col: 9, row: 4 }, bubbleShift: "-70%", mobileBubbleShift: "-80%" },
+  { table: { col: 1, row: 6 }, customer: { col: 1, row: 6 }, waiter: { col: 1, row: 7 }, bubbleShift: "-30%", mobileBubbleShift: "-20%" },
+  { table: { col: 5, row: 6 }, customer: { col: 5, row: 6 }, waiter: { col: 5, row: 7 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 9, row: 6 }, customer: { col: 9, row: 6 }, waiter: { col: 9, row: 7 }, bubbleShift: "-70%", mobileBubbleShift: "-80%" },
 ];
 
 const WALK_TILES: TilePoint[] = [
@@ -311,19 +311,18 @@ const WALK_TILES: TilePoint[] = [
   { col: 7, row: 7 },
   { col: 8, row: 7 },
   { col: 9, row: 7 },
-  { col: 10, row: 7 },
-  { col: 2, row: 6 },
-  { col: 2, row: 5 },
-  { col: 2, row: 4 },
-  { col: 2, row: 3 },
-  { col: 6, row: 6 },
-  { col: 6, row: 5 },
-  { col: 6, row: 4 },
-  { col: 6, row: 3 },
-  { col: 10, row: 6 },
-  { col: 10, row: 5 },
-  { col: 10, row: 4 },
-  { col: 10, row: 3 },
+  { col: 1, row: 6 },
+  { col: 1, row: 5 },
+  { col: 1, row: 4 },
+  { col: 1, row: 3 },
+  { col: 5, row: 6 },
+  { col: 5, row: 5 },
+  { col: 5, row: 4 },
+  { col: 5, row: 3 },
+  { col: 9, row: 6 },
+  { col: 9, row: 5 },
+  { col: 9, row: 4 },
+  { col: 9, row: 3 },
 ];
 
 const foodById = new Map(FOODS.map((food) => [food.id, food]));
