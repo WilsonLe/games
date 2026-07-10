@@ -1,4 +1,4 @@
-# Amsoft Games
+# Table Talk Games
 
 A React/Vite game portal with:
 
