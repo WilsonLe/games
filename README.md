@@ -17,13 +17,15 @@ Audio provide the full experience; there is no backend or persistence layer.
 
 ## Quick Start
 
-Use Node compatible with Vite 5. The installed Vite package declares `^18.0.0 || >=20.0.0`.
+Use Node compatible with Vite 6. The installed Vite package declares
+`^18.0.0 || ^20.0.0 || >=22.0.0`.
 
 ```bash
 npm ci
 npm run dev
 npm run build
 npm run preview
+npm audit
 ```
 
 | Script | Purpose |
@@ -31,6 +33,7 @@ npm run preview
 | `npm run dev` | Start the Vite development server. |
 | `npm run build` | Run TypeScript project checks, then build static files into `dist/`. |
 | `npm run preview` | Serve the built `dist/` output locally. |
+| `npm audit` | Check the installed dependency graph for known vulnerabilities. |
 
 There is no automated test script in this repository. Use the documented browser smoke tests after
 gameplay or layout changes.

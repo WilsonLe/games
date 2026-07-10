@@ -7,7 +7,7 @@ references: []
 
 ## Stack And Entrypoints
 
-- React 18, Vite 5, and TypeScript.
+- React 18, patched Vite 6.4.x, and TypeScript.
 - HTML entry: `index.html`.
 - React mount: `src/main.tsx`.
 - Portal, routing, and both games: `src/App.tsx`.
@@ -21,6 +21,7 @@ npm ci
 npm run dev
 npm run build
 npm run preview
+npm audit
 git diff --check
 ```
 
@@ -50,7 +51,7 @@ changing any shared selector.
 
 ## Verification
 
-- Source/dependency/asset/package changes: `npm run build` and `git diff --check`.
+- Source/dependency/asset/package changes: `npm run build`, `npm audit`, and `git diff --check`.
 - Routing changes: root, both game paths, home controls, back/forward, and title updates.
 - Layout/animation/assets: portal plus both games at desktop and mobile widths.
 - Audio/speech: manual browser check because policy and API support vary.

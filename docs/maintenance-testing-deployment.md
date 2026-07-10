@@ -143,10 +143,12 @@ Source, imports, dependencies, assets, or package metadata:
 ```bash
 npm ci          # when dependencies are missing or suspect
 npm run build
+npm audit
 git diff --check
 ```
 
-No automated test script exists today.
+No automated test script exists today. `npm audit` should report zero known vulnerabilities before
+publication.
 
 ## Documentation Validation
 

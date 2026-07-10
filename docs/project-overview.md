@@ -57,7 +57,7 @@ arcade-style repetition.
 | --- | --- |
 | Runtime | Client-only single-page app. |
 | Framework | React `18.3.1`. |
-| Build tool | Vite 5 (`^5.4.11`; lockfile currently resolves a compatible 5.x release). |
+| Build tool | Vite 6 (`^6.4.3`; the lockfile resolves the patched `6.4.3` release). |
 | Language | TypeScript with project references and strict checking. |
 | Icons | `lucide-react`. |
 | Routing | Small History API implementation inside `App`; no router dependency. |
@@ -68,7 +68,7 @@ arcade-style repetition.
 
 ## Local Setup
 
-Vite 5 declares Node `^18.0.0 || >=20.0.0`.
+Vite 6 declares Node `^18.0.0 || ^20.0.0 || >=22.0.0`.
 
 ```bash
 npm ci
@@ -80,6 +80,7 @@ Build and preview the static output:
 ```bash
 npm run build
 npm run preview
+npm audit
 ```
 
 | Script | Defined as | Purpose |
@@ -87,6 +88,7 @@ npm run preview
 | `npm run dev` | `vite` | Start the development server. |
 | `npm run build` | `tsc -b && vite build` | Type-check, then emit `dist/`. |
 | `npm run preview` | `vite preview` | Serve the built output locally. |
+| `npm audit` | npm built-in | Check installed dependencies against known advisories. |
 
 ## Repo Map
 
