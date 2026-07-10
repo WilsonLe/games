@@ -1,0 +1,18 @@
+{
+  "task": "Second documentation update pass for tile-based diner waiter flow",
+  "status": "completed",
+  "items": [
+    {
+      "text": "Compare current diner source against existing docs for stale gameplay and architecture details.",
+      "status": "done"
+    },
+    {
+      "text": "Update documentation to cover tile-based waiter movement and verification expectations.",
+      "status": "done"
+    },
+    {
+      "text": "Validate Markdown graph reachability and run docs-only verification.",
+      "status": "done"
+    }
+  ]
+}

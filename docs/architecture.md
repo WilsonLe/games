@@ -24,11 +24,16 @@ All types below live in `src/App.tsx`.
 | `FoodId` | Union of supported food IDs: `rice`, `fish`, `chicken`, `egg`, `noodles`, `soup`, `salad`, `tea`, `bread`. |
 | `Food` | Food catalog row with `id` and display `name`. |
 | `CustomerProfile` | Customer catalog row with `id` and display `name`. |
+| `WalkDirection` | Cardinal direction used to pick waiter and customer sprite frames. |
+| `TilePoint` | Diner movement grid coordinate with `col` and `row`. |
+| `SeatLayout` | Per-seat table, customer, waiter, and speech-bubble placement data. |
 | `DifficultyProfile` | Derived per-level limits and timer values. |
 | `ActiveGuest` | Runtime guest instance, order foods, served foods, phrase, timestamps, and level. |
 | `ScheduledFood` | Future ordered food waiting to spawn on the kitchen pass. |
 | `BeltFood` | Visible kitchen-pass dish button, including target guest, lane, spawn time, and travel time. |
 | `DraggingDish` | Active pointer/native drag state for the dish preview. |
+| `CharacterVisual` | Interpolated tile position plus direction/walking/done flags for actors. |
+| `WaiterRoute` | Current waiter path, target guest, start timestamp, and step duration. |
 | `Feedback` | Status text and visual kind: `neutral`, `good`, or `bad`. |
 | `GameStatus` | `ready`, `playing`, `paused`, or `ended`. |
 | `SoundKind` | `correct`, `complete`, or `wrong`. |
@@ -43,6 +48,11 @@ All types below live in `src/App.tsx`.
 | `customerSpriteRowById` | Maps each customer ID to a row in `customer-fullbody-sheet.png`. |
 | `customerFullbodySheetUrl` | Generated full-body customer sprite sheet used by `CustomerSprite`. |
 | `waiterFullbodySheetUrl` | Generated full-body waiter sprite sheet used by `PlayerSprite`. |
+| `DINER_DOOR_TILE` | Tile where entering/leaving guests start and end. |
+| `WAITER_HOME_TILE` | Initial waiter tile on reset. |
+| `DINER_AISLE_ROW` | Shared aisle row used by `buildTileRoute`. |
+| `SEAT_LAYOUT` | Six table/customer/waiter tile layouts plus speech-bubble offsets. |
+| `WALK_TILES` | Visible tile markers rendered by `RestaurantStage`. |
 | `foodById` | Lookup map derived from `FOODS`. |
 
 ## Components
@@ -53,8 +63,9 @@ All types below live in `src/App.tsx`.
 | `RestaurantGame` | Table Talk Diner engine, state owner, effects owner, and render tree. |
 | `RestaurantStage` | Top-down diner floor, guest tables, kitchen station, drag preview, and waiter sprite. |
 | `GuestTable` | Guest table button, speech bubble, food chips, patience timer, selected/drop state. |
+| `CustomerActor` | Absolute-positioned customer sprite actor driven by `getGuestVisual`. |
 | `KitchenStation` | Kitchen pass and visible draggable `BeltFood` dish buttons. |
-| `PlayerSprite` | Generated full-body waiter sprite sheet wrapper. |
+| `PlayerSprite` | Generated full-body waiter sprite sheet wrapper driven by `waiterVisual`. |
 | `FoodArt` | Image wrapper for a food sprite. |
 | `CustomerSprite` | Generated full-body customer sprite sheet wrapper. |
 | `StatPill` | Reusable stat display in the score strip. |
@@ -75,6 +86,9 @@ All types below live in `src/App.tsx`.
 | `served` | number | Completed guest orders. |
 | `combo` | number | Consecutive happy guests completed without a wrong table or expired guest. |
 | `draggingDish` | `DraggingDish | null` | Current custom pointer drag preview state. |
+| `waiterTile` | `TilePoint` | Last settled waiter tile when no route is active. |
+| `waiterRoute` | `WaiterRoute | null` | Active waiter movement path to a selected guest table. |
+| `pendingOrderGuestId` | `string | null` | Guest whose order should be revealed after the waiter route completes and the guest is seated. |
 | `feedback` | `Feedback` | Status message and color state; maintained for diner logic but not currently rendered by diner JSX. |
 | `guestSequenceRef` | ref number | Monotonic guest sequence for deterministic rotation and IDs. |
 | `foodSequenceRef` | ref number | Monotonic food sequence for decoys/recycles/IDs. |
@@ -111,7 +125,9 @@ pause/resume/reset controls in its route UI.
 | `HAPPY_GUEST_COMBO_BONUS` | `15` | Added per completed happy-guest combo step after the first completed guest. |
 | `FIRST_DISH_DELAY_MS` | `1800` | Delay before first ordered dish can spawn. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | `3000` | Minimum delay before spawning after a completed order when needed. |
-| `LEAVING_GUEST_VISIBLE_MS` | `2200` | How long completed/expired guests remain visible while leaving. |
+| `GUEST_STEP_MS` | `260` | Milliseconds per guest tile-route segment. |
+| `WAITER_STEP_MS` | `230` | Milliseconds per waiter tile-route segment. |
+| `LEAVING_GUEST_LINGER_MS` | `350` | Extra delay after a leaving guest's reverse route before removal. |
 | `ORDER_LANES` | `2` | Kitchen-pass lane offsets. |
 
 ## Difficulty Table
@@ -136,6 +152,9 @@ Values are derived by `difficultyForLevel(level)`.
 | `makeGuest(sequence, now, profile)` | Picks `CUSTOMERS[sequence % CUSTOMERS.length]`, selects foods, builds a phrase through `makeOrderPhrase`, creates `ActiveGuest`, and schedules each ordered food. |
 | `makeDecoyFood(sequence, now, profile)` | Creates untargeted belt food from `(sequence * 5 + profile.level) % FOODS.length`. |
 | `chooseSpawnLane(preferredLane, currentFoods, now)` | Uses the preferred lane or the other lane if all existing foods in that lane have moved past `24%` progress; returns `null` when blocked. |
+| `buildTileRoute(start, end, aisleRow)` | Builds a row/column path through the shared aisle and removes duplicate adjacent points. |
+| `getRouteVisual(path, startedAt, now, stepMs)` | Interpolates a route into actor tile coordinates, walk direction, and completion state. |
+| `getGuestVisual(guest, now)` | Uses a forward route for entering guests, reverse route for leaving guests, and the seat tile for seated guests. |
 
 `targetGuestId` is used to recycle/remove scheduled dishes for their owning guest. Serving is decided
 by the guest table passed to `handleFoodDrop`, so a decoy can still count if the player drops it on a
@@ -146,11 +165,15 @@ guest who needs that food.
 | Effect | Runs when | Behavior |
 | --- | --- | --- |
 | Clock | `gameStatus === "playing"` | Updates `now` every `100ms`. |
+| Guest arrival | Playing, entering guests complete their tile route | Converts entering guests to `seated`. |
+| Waiter route completion | `waiterRoute` and `now` changes | Stores the final tile, clears the route, and marks `pendingOrderGuestId`. |
+| Pending order reveal | `pendingOrderGuestId` or active guests change | Calls `revealGuestOrder` once the target guest exists, is not leaving, and is no longer entering. |
 | Guest and decoy spawning | Playing, `now` changes | Adds guests while under `difficulty.maxGuests`; adds decoys on `nextDecoyAtRef` if a lane is clear. |
 | Scheduled food spawning | Playing, scheduled foods due | Converts due `ScheduledFood` entries into `BeltFood`; blocked lanes delay the food by `650ms`. |
 | Belt cleanup and recycle | Playing, belt foods age past `travelMs` | Removes food after travel. Targeted food recycles if its target guest still needs it; decoys disappear. |
 | Guest expiration | Playing, guests expire | Marks expired guests leaving, removes their targeted foods, clears selection if needed, plays `wrong`, and resets combo. |
 | Selection repair | Active guests change | Clears the selected guest if the previous selection no longer exists. |
+| Leaving guest cleanup | Active guests or `now` changes | Removes leaving guests after their reverse tile route plus `LEAVING_GUEST_LINGER_MS`. |
 | Cleanup | Unmount | Closes the audio context and cancels speech synthesis. |
 
 ## Serving, Scoring, And Completion

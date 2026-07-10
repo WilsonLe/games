@@ -8,14 +8,14 @@ references: []
 [Docs index](./README.md) | [Repo README](../README.md)
 
 Runtime assets live under `src/assets/`. Food sprites, generated character sheets, and portal
-preview images are imported at the top of `src/App.tsx`; background and cursor URLs are declared in
-`src/styles.css`.
+preview images are imported at the top of `src/App.tsx`; the kitchen background is also referenced
+from CSS scene styles, and the cursor URL is declared in `src/styles.css`.
 
 ## Scene Assets
 
 | File | Dimensions | Used by | Notes |
 | --- | ---: | --- | --- |
-| `src/assets/game-kitchen-bg.png` | `1672 x 941` | `.sceneBackdrop__image` in `src/styles.css` | Full-screen generated kitchen background with CSS pan animation. |
+| `src/assets/game-kitchen-bg.png` | `1672 x 941` | `.sceneBackdrop__image` in `src/styles.css`; `gameKitchenBgUrl` in `GamePortal` | Generated kitchen background for scene styles and the portal preview tile. |
 | `src/assets/player-chef.png` | `1024 x 1536` | `playerChefUrl` in `GamePortal` | Portal preview chef image. |
 | `src/assets/player-chef-source.png` | `1024 x 1536` | Not imported by app code | Source/reference image kept in the repo. |
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
