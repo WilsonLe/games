@@ -73,8 +73,8 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | Component | Role |
 | --- | --- |
 | `RestaurantGame` | Diner state and effects owner. |
-| `RestaurantStage` | Full-viewport floor, tables, actors, kitchen, and drag preview. |
-| `GuestTable` | Interactive table, speech bubble, food checklist, and patience progressbar. |
+| `RestaurantStage` | Full-viewport kitchen and responsive dining floor, persistent tables, actors, and drag preview. |
+| `GuestTable` | Persistent table renderer with optional guest interaction, speech bubble, food checklist, and patience progressbar. |
 | `CharacterActor` | Shared tile-positioned sprite renderer for guests and the waiter. |
 | `CustomerActor` | Guest wrapper that derives a visual route state for `CharacterActor`. |
 | `KitchenStation` | Animated dish rail and keyboard/pointer/native-drag controls. |
@@ -142,8 +142,10 @@ orders it is half that time.
 ## Generation And Effects
 
 - `selectFoods` deterministically selects unique foods for a sequence and level.
-- `makeGuest` rotates customer profiles, creates the phrase and expiration, and schedules each
-  ordered food from 1800ms through `timeToLastDishMs`.
+- `chooseAvailableSeatIndex` reserves one of the four persistent table positions, including while a
+  departing guest is still walking out, so two guests cannot occupy the same table.
+- `makeGuest` rotates customer profiles, assigns the available table, creates the phrase and
+  expiration, and schedules each ordered food from 1800ms through `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
 - `buildTileRoute` routes actors through the diner aisle; `getRouteVisual` selects one whole route

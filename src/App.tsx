@@ -386,27 +386,24 @@ const HAPPY_GUEST_LINES = [
   "Nice work. The meal was great.",
 ];
 
-const DINER_DOOR_TILE: TilePoint = { col: 0, row: 7 };
-const WAITER_HOME_TILE: TilePoint = { col: 1, row: 7 };
-const DINER_AISLE_ROW = 7;
+const DINER_FLOOR_COLUMNS = 10;
+const DINER_FLOOR_ROWS = 5;
+const DINER_DOOR_TILE: TilePoint = { col: 0, row: DINER_FLOOR_ROWS - 1 };
+const WAITER_HOME_TILE: TilePoint = { col: 1, row: DINER_FLOOR_ROWS - 1 };
+const DINER_AISLE_ROW = DINER_FLOOR_ROWS - 1;
 
 const SEAT_LAYOUT: SeatLayout[] = [
-  { table: { col: 1, row: 3 }, customer: { col: 1, row: 3 }, waiter: { col: 1, row: 4 }, bubbleShift: "-30%", mobileBubbleShift: "-20%" },
-  { table: { col: 5, row: 3 }, customer: { col: 5, row: 3 }, waiter: { col: 5, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 9, row: 3 }, customer: { col: 9, row: 3 }, waiter: { col: 9, row: 4 }, bubbleShift: "-70%", mobileBubbleShift: "-80%" },
-  { table: { col: 1, row: 6 }, customer: { col: 1, row: 6 }, waiter: { col: 1, row: 7 }, bubbleShift: "-30%", mobileBubbleShift: "-20%" },
-  { table: { col: 5, row: 6 }, customer: { col: 5, row: 6 }, waiter: { col: 5, row: 7 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 9, row: 6 }, customer: { col: 9, row: 6 }, waiter: { col: 9, row: 7 }, bubbleShift: "-70%", mobileBubbleShift: "-80%" },
+  { table: { col: 2, row: 1 }, customer: { col: 2, row: 1 }, waiter: { col: 2, row: 2 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 1 }, customer: { col: 7, row: 1 }, waiter: { col: 7, row: 2 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 }, waiter: { col: 2, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 3 }, customer: { col: 7, row: 3 }, waiter: { col: 7, row: 4 }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
 ];
 
-const DINER_FLOOR_COLUMNS = 10;
-const DINER_FLOOR_FIRST_ROW = 3;
-const DINER_FLOOR_LAST_ROW = 7;
 const DINER_FLOOR_TILES: TilePoint[] = Array.from(
-  { length: DINER_FLOOR_COLUMNS * (DINER_FLOOR_LAST_ROW - DINER_FLOOR_FIRST_ROW + 1) },
+  { length: DINER_FLOOR_COLUMNS * DINER_FLOOR_ROWS },
   (_, index) => ({
     col: index % DINER_FLOOR_COLUMNS,
-    row: DINER_FLOOR_FIRST_ROW + Math.floor(index / DINER_FLOOR_COLUMNS),
+    row: Math.floor(index / DINER_FLOOR_COLUMNS),
   }),
 );
 
@@ -587,6 +584,20 @@ function clamp(value: number, min: number, max: number) {
 
 function getSeatLayout(seatIndex: number) {
   return SEAT_LAYOUT[seatIndex % SEAT_LAYOUT.length];
+}
+
+function chooseAvailableSeatIndex(guests: ActiveGuest[], sequence: number) {
+  const occupiedSeats = new Set(guests.map((guest) => guest.seatIndex));
+
+  for (let offset = 0; offset < SEAT_LAYOUT.length; offset += 1) {
+    const seatIndex = (sequence + offset) % SEAT_LAYOUT.length;
+
+    if (!occupiedSeats.has(seatIndex)) {
+      return seatIndex;
+    }
+  }
+
+  return null;
 }
 
 function getWalkDirection(from: TilePoint, to: TilePoint): WalkDirection {
@@ -791,7 +802,7 @@ function makeOrderPhrase(seed: number, foodNames: string[]) {
   return template(formatList(foodNames));
 }
 
-function makeGuest(sequence: number, now: number, profile: DifficultyProfile) {
+function makeGuest(sequence: number, now: number, profile: DifficultyProfile, seatIndex: number) {
   const customer = CUSTOMERS[sequence % CUSTOMERS.length];
   const foods = selectFoods(sequence, profile.orderSize, profile.level);
   const foodNames = foods.map((foodId) => foodById.get(foodId)?.name ?? foodId);
@@ -809,7 +820,7 @@ function makeGuest(sequence: number, now: number, profile: DifficultyProfile) {
     createdAt: now,
     expiresAt,
     level: profile.level,
-    seatIndex: sequence % SEAT_LAYOUT.length,
+    seatIndex,
     heardOrder: false,
     phase: "entering",
   };
@@ -931,8 +942,8 @@ function CharacterActor({
 }) {
   const isCustomer = Boolean(customer);
   const actorStyle = {
-    "--actor-col": visual.col,
-    "--actor-row": visual.row,
+    "--actor-col": visual.col + 0.5,
+    "--actor-row": visual.row + 0.5,
     zIndex: Math.round((isCustomer ? 14 : 16) + visual.row),
   } as CSSProperties;
   const spriteStyle = {
@@ -999,6 +1010,7 @@ function StatPill({
 
 function GuestTable({
   guest,
+  seatIndex,
   now,
   selected,
   dropActive,
@@ -1007,7 +1019,8 @@ function GuestTable({
   onFoodDrop,
   onSelect,
 }: {
-  guest: ActiveGuest;
+  guest: ActiveGuest | null;
+  seatIndex: number;
   now: number;
   selected: boolean;
   dropActive: boolean;
@@ -1016,78 +1029,92 @@ function GuestTable({
   onFoodDrop: (guest: ActiveGuest, event: DragEvent<HTMLButtonElement>) => void;
   onSelect: () => void;
 }) {
-  const patienceRatio = clamp((guest.expiresAt - now) / (guest.expiresAt - guest.createdAt), 0, 1);
-  const seat = getSeatLayout(guest.seatIndex);
+  const patienceRatio = guest
+    ? clamp((guest.expiresAt - now) / (guest.expiresAt - guest.createdAt), 0, 1)
+    : 0;
+  const seat = getSeatLayout(seatIndex);
   const tableStyle = {
-    "--table-col": seat.table.col,
-    "--table-row": seat.table.row,
+    "--table-col": seat.table.col + 0.5,
+    "--table-row": seat.table.row + 0.5,
     "--bubble-shift": seat.bubbleShift,
     "--bubble-shift-mobile": seat.mobileBubbleShift,
   } as CSSProperties;
-  const showOrder = guest.heardOrder;
+  const showOrder = Boolean(guest?.heardOrder);
+  const tableIsInteractive = guest?.phase === "seated";
 
   return (
     <button
       className={cx(
         "guestTable",
+        !guest && "guestTable--empty",
         selected && "guestTable--selected",
-        !guest.heardOrder && "guestTable--unheard",
-        guest.phase === "entering" && "guestTable--entering",
-        guest.phase === "leaving" && "guestTable--leaving",
+        Boolean(guest && !guest.heardOrder) && "guestTable--unheard",
+        guest?.phase === "entering" && "guestTable--entering",
+        guest?.phase === "leaving" && "guestTable--leaving",
         dropActive && "guestTable--dropTarget",
         dropReady && "guestTable--dropReady",
       )}
-      data-guest-id={guest.instanceId}
-      disabled={guest.phase === "leaving"}
-      key={guest.instanceId}
+      data-guest-id={guest?.instanceId}
+      disabled={!tableIsInteractive}
       style={tableStyle}
       type="button"
       onDragOver={onFoodDragOver}
-      onDrop={(event) => onFoodDrop(guest, event)}
+      onDrop={(event) => guest && onFoodDrop(guest, event)}
       onClick={onSelect}
-      aria-label={guest.heardOrder ? `${guest.customer.name} ordered ${formatList(guest.foods)}` : `Ask ${guest.customer.name} for an order`}
+      aria-label={
+        guest
+          ? guest.heardOrder
+            ? `${guest.customer.name} ordered ${formatList(guest.foods)}`
+            : `Ask ${guest.customer.name} for an order`
+          : `Empty table ${seatIndex + 1}`
+      }
     >
       <span className="dinerChair dinerChair--top" aria-hidden="true" />
       <span className="dinerChair dinerChair--right" aria-hidden="true" />
       <span className="dinerChair dinerChair--bottom" aria-hidden="true" />
       <span className="dinerChair dinerChair--left" aria-hidden="true" />
       <span className="dinerTable" aria-hidden="true" />
-      <span className="guestTable__name">{guest.customer.name}</span>
 
-      <span className="guestSpeech">
-        <strong>{showOrder ? guest.phrase : "..."}</strong>
-        {showOrder && (
-          <span className="guestSpeech__foods" aria-label={`${guest.customer.name}'s requested food`}>
-            {guest.foods.map((foodId, index) => {
-              const servedCount = guest.servedFoods.filter((servedFoodId) => servedFoodId === foodId).length;
-              const requiredThroughThisChip = guest.foods
-                .slice(0, index + 1)
-                .filter((orderedFoodId) => orderedFoodId === foodId).length;
-              const served = servedCount >= requiredThroughThisChip;
-              const food = foodById.get(foodId);
+      {guest && (
+        <>
+          <span className="guestTable__name">{guest.customer.name}</span>
 
-              return (
-                <span className={cx("foodChip", served && "foodChip--served")} key={`${guest.instanceId}-bubble-${foodId}-${index}`}>
-                  <FoodArt id={foodId} />
-                  <span>{food?.name ?? foodId}</span>
-                  {served && <Check size={13} />}
-                </span>
-              );
-            })}
+          <span className="guestSpeech">
+            <strong>{showOrder ? guest.phrase : "..."}</strong>
+            {showOrder && (
+              <span className="guestSpeech__foods" aria-label={`${guest.customer.name}'s requested food`}>
+                {guest.foods.map((foodId, index) => {
+                  const servedCount = guest.servedFoods.filter((servedFoodId) => servedFoodId === foodId).length;
+                  const requiredThroughThisChip = guest.foods
+                    .slice(0, index + 1)
+                    .filter((orderedFoodId) => orderedFoodId === foodId).length;
+                  const served = servedCount >= requiredThroughThisChip;
+                  const food = foodById.get(foodId);
+
+                  return (
+                    <span className={cx("foodChip", served && "foodChip--served")} key={`${guest.instanceId}-bubble-${foodId}-${index}`}>
+                      <FoodArt id={foodId} />
+                      <span>{food?.name ?? foodId}</span>
+                      {served && <Check size={13} />}
+                    </span>
+                  );
+                })}
+              </span>
+            )}
           </span>
-        )}
-      </span>
 
-      <span
-        className="guestTimer"
-        role="progressbar"
-        aria-label={`${guest.customer.name} order time remaining`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(patienceRatio * 100)}
-      >
-        <span style={{ width: `${patienceRatio * 100}%` }} />
-      </span>
+          <span
+            className="guestTimer"
+            role="progressbar"
+            aria-label={`${guest.customer.name} order time remaining`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(patienceRatio * 100)}
+          >
+            <span style={{ width: `${patienceRatio * 100}%` }} />
+          </span>
+        </>
+      )}
     </button>
   );
 }
@@ -1200,15 +1227,13 @@ function RestaurantStage({
   onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
   onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
 }) {
+  const guestBySeatIndex = new Map(guests.map((guest) => [guest.seatIndex, guest]));
+
   return (
     <section className="restaurantStage" aria-label="Top down restaurant floor">
       <div className="floorTiles" aria-hidden="true">
         {DINER_FLOOR_TILES.map((tile) => (
-          <span
-            className="floorTile"
-            key={`${tile.col}-${tile.row}`}
-            style={{ "--tile-col": tile.col, "--tile-row": tile.row } as CSSProperties}
-          />
+          <span className="floorTile" key={`${tile.col}-${tile.row}`} />
         ))}
       </div>
       <div className="restaurantDoor" aria-hidden="true">
@@ -1225,19 +1250,25 @@ function RestaurantStage({
         onStartFoodDrag={onStartFoodDrag}
       />
 
-      {guests.map((guest) => (
-        <GuestTable
-          guest={guest}
-          key={guest.instanceId}
-          now={now}
-          dropActive={Boolean(draggingDish)}
-          dropReady={Boolean(draggingDish && guest.heardOrder && needsFood(guest, draggingDish.food.foodId))}
-          selected={selectedGuest?.instanceId === guest.instanceId}
-          onFoodDragOver={onFoodDragOver}
-          onFoodDrop={onFoodDrop}
-          onSelect={() => onSelectGuest(guest)}
-        />
-      ))}
+      {SEAT_LAYOUT.map((_, seatIndex) => {
+        const guest = guestBySeatIndex.get(seatIndex) ?? null;
+        const guestCanReceiveInput = guest?.phase === "seated";
+
+        return (
+          <GuestTable
+            guest={guest}
+            key={`table-${seatIndex}`}
+            seatIndex={seatIndex}
+            now={now}
+            dropActive={Boolean(draggingDish && guestCanReceiveInput)}
+            dropReady={Boolean(draggingDish && guestCanReceiveInput && guest.heardOrder && needsFood(guest, draggingDish.food.foodId))}
+            selected={selectedGuest?.instanceId === guest?.instanceId}
+            onFoodDragOver={onFoodDragOver}
+            onFoodDrop={onFoodDrop}
+            onSelect={() => guest && onSelectGuest(guest)}
+          />
+        );
+      })}
 
       {guests.map((guest) => (
         <CustomerActor
@@ -1925,8 +1956,8 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     return true;
   }, []);
 
-  const addGuest = useCallback((spawnNow: number, profile: DifficultyProfile) => {
-    const { guest, scheduledFoods: guestFoods } = makeGuest(guestSequenceRef.current, spawnNow, profile);
+  const addGuest = useCallback((spawnNow: number, profile: DifficultyProfile, seatIndex: number) => {
+    const { guest, scheduledFoods: guestFoods } = makeGuest(guestSequenceRef.current, spawnNow, profile, seatIndex);
     guestSequenceRef.current += 1;
 
     setActiveGuests((currentGuests) => [...currentGuests, guest]);
@@ -1937,7 +1968,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const resetGame = useCallback(() => {
     const startTime = Date.now();
     const profile = difficultyForLevel(1);
-    const firstGuest = makeGuest(0, startTime, profile);
+    const firstGuest = makeGuest(0, startTime, profile, 0);
 
     guestSequenceRef.current = 1;
     foodSequenceRef.current = 0;
@@ -2347,8 +2378,12 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     }
 
     if (activeGuestCount < difficulty.maxGuests && now >= nextGuestAtRef.current && served < TARGET_SERVES) {
-      addGuest(now, difficulty);
-      nextGuestAtRef.current = now + difficulty.guestIntervalMs;
+      const seatIndex = chooseAvailableSeatIndex(activeGuests, guestSequenceRef.current);
+
+      if (seatIndex !== null) {
+        addGuest(now, difficulty, seatIndex);
+        nextGuestAtRef.current = now + difficulty.guestIntervalMs;
+      }
     }
 
     if (now >= nextDecoyAtRef.current) {
@@ -2363,7 +2398,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         nextDecoyAtRef.current = now + difficulty.decoyIntervalMs;
       }
     }
-  }, [activeGuestCount, addGuest, beltFoods, difficulty, gameStatus, now, served]);
+  }, [activeGuestCount, activeGuests, addGuest, beltFoods, difficulty, gameStatus, now, served]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {

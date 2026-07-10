@@ -26,16 +26,19 @@ has no lives or loss condition.
 | --- | --- |
 | HUD | Portal button, score, completed orders, and level. |
 | Status toast | Visible neutral/good/bad gameplay feedback with `role="status"`. |
-| Restaurant stage | A 10 × 5 tiled floor, door, guest tables, and shared tile-based character actors. |
+| Restaurant stage | A responsive 10 × 5 tiled dining floor below the kitchen, four persistent tables, a door, and shared tile-based character actors. |
 | Kitchen station | Stove/counter art, dishes available for service, and a visual pass-lifetime indicator. |
 | Result banner | Completion message and `New Shift` button after 24 orders. |
 
 ## Starting And Taking Orders
 
-`RestaurantGame` starts automatically and creates one entering guest. A second guest may spawn from
-about 900ms after reset while the level-1 two-guest limit has room.
+`RestaurantGame` starts automatically and creates one entering guest. Future guests spawn when the
+current level's timing and capacity allow. Four tables are placed before service starts and remain
+visible; each new guest walks to an available table, and the same table can be reused after that guest
+leaves.
 
-Entering tables ignore pointer input. Once seated:
+Tables with an entering guest ignore pointer input. Empty tables are visible but non-interactive.
+Once seated:
 
 1. Select a guest table.
 2. The waiter steps through whole floor tiles to that table, using the same sprite actor model as guests.

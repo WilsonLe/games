@@ -27,7 +27,7 @@ references: []
 | `FOODS`, `foodArtById` | Diner food inventory and image mapping. |
 | `CUSTOMERS`, `customerWalkSheetById` | Guest inventory and per-character directional walk sheets. |
 | `DINER_LEVELS`, `TARGET_SERVES`, `difficultyForLevel` | Diner progression and pacing. |
-| `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `DINER_FLOOR_TILES` | Diner actor, table, and concrete floor-tile coordinates. |
+| `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `DINER_FLOOR_TILES` | Diner actor coordinates, four persistent tables, and the responsive 10 × 5 floor model. |
 | `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Discrete diner tile routes and directional actor state. |
 | `makeGuest`, `makeDecoyFood`, `chooseSpawnLane` | Diner guest and dish generation. |
 | `handleGuestSelect`, `revealGuestOrder`, `handleFoodDrop` | Diner order-taking and serving decisions. |
@@ -72,7 +72,7 @@ provider-specific deployment configuration.
 | `selectFoods` requires enough unique foods | Never allow `orderSize > FOODS.length`. |
 | Diner has no mid-shift pause | Drop Hop has ready/play/pause/end controls; the diner starts automatically and only offers a new shift after completion. |
 | Audio is browser-dependent | Speech and Web Audio may be absent or gesture-gated. |
-| Diner selection is movement-gated | Entering tables ignore pointer input; after selection, the order is revealed only once the waiter arrives and the guest is seated. |
+| Diner selection is movement-gated | Empty tables and tables with entering guests ignore pointer input; after selection, the order is revealed only once the waiter arrives and the guest is seated. |
 | Road highlighting is edge-based | Keep consecutive-path logic; checking only whether both stops appear in the path produces false highlights. |
 
 ## Verification

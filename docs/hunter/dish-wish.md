@@ -8,6 +8,8 @@ references: []
 ## Gameplay Model
 
 - The game starts automatically with one entering guest.
+- Four sparse tables are rendered before service and remain after guests leave; incoming guests are
+  assigned to an available table.
 - A seated table selection sends the waiter there in discrete tile steps; the order is revealed and
   spoken after arrival, and the greeting adds a small patience reward.
 - Correct dishes advance the checklist, animate off the pass, and add patience; wrong-table drops and
@@ -32,13 +34,15 @@ references: []
 - Keep `orderSize <= FOODS.length`.
 - Treat `targetGuestId` as lifecycle metadata, not a serve lock.
 - Preserve both custom pointer and keyboard service.
-- Keep entering tables non-interactive and deferred reveal aligned with waiter/guest movement.
+- Keep empty tables and tables with entering guests non-interactive, preserve table occupancy until a
+  leaving guest is removed, and keep deferred reveal aligned with waiter/guest movement.
 - Keep diner full-viewport generic selectors scoped away from `.appShell--city`.
 - Update visible feedback, speech, tones, score, combo, and cleanup together when changing outcomes.
 
 ## Verify
 
-Initial guest/second spawn, integer-only guest/waiter tile steps, all direction frames/mirroring,
-greeting and correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service,
+Initial guest/second spawn, all four tables visible before and after occupancy, responsive floor
+coverage, integer-only guest/waiter tile steps, all direction frames/mirroring, greeting and
+correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service,
 decoy match, drop outside, unheard guest, wrong table, expiration, recycling, keyboard service, win,
 New Shift, portal return, desktop, and mobile.
