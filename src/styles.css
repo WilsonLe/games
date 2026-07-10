@@ -816,14 +816,6 @@ h2 {
   z-index: 7;
 }
 
-.guestTable--entering {
-  animation: guestWalkToTable 720ms cubic-bezier(0.2, 0.8, 0.24, 1) both;
-}
-
-.guestTable--leaving {
-  animation: guestWalkOut 1.05s ease-in both;
-}
-
 .dinerTable {
   position: absolute;
   right: 10px;
@@ -2057,13 +2049,14 @@ h2 {
 .dishRail {
   position: absolute;
   right: 28px;
-  bottom: 23px;
+  bottom: 10px;
   left: 150px;
-  height: 52px;
-  padding: 0 8px;
-  background: rgba(23, 49, 45, 0.16);
-  border: 3px dashed rgba(23, 49, 45, 0.45);
-  border-radius: 999px;
+  z-index: 4;
+  height: 88px;
+  padding: 0 10px;
+  background: rgba(255, 253, 248, 0.36);
+  border: 3px dashed rgba(23, 49, 45, 0.5);
+  border-radius: 18px;
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -2087,35 +2080,38 @@ h2 {
   align-items: center;
   min-width: 100%;
   height: 100%;
-  gap: 10px;
+  gap: 12px;
+  padding-right: 10px;
 }
 
 .dishRail .beltFood {
   position: relative;
+  z-index: 2;
   top: auto;
   bottom: auto;
   left: auto;
-  flex: 0 0 74px;
-  width: 74px;
-  height: 72px;
-  padding: 6px;
-  transform: translateY(-10px);
+  flex: 0 0 78px;
+  width: 78px;
+  height: 76px;
+  padding: 6px 6px 8px;
+  overflow: visible;
+  transform: translateY(var(--dish-lift, 0));
   touch-action: none;
-  animation: foodEnterTopDown 220ms ease both, trayWobble 1.8s ease-in-out infinite;
+  animation: dishCardEnter 220ms ease both, dishCardBob 1.8s ease-in-out infinite;
 }
 
 .dishRail .beltFood--lane0 {
-  margin-top: -8px;
+  --dish-lift: -5px;
 }
 
 .dishRail .beltFood--lane1 {
-  margin-top: 8px;
+  --dish-lift: 5px;
 }
 
 .dishRail .beltFood .foodArt {
-  width: 38px;
-  height: 38px;
-  flex-basis: 38px;
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
 }
 
 .dishRail .beltFood strong {
@@ -2189,11 +2185,13 @@ h2 {
 }
 
 .guestTable--entering {
-  animation: guestWalkToTopDownTable 850ms cubic-bezier(0.2, 0.8, 0.24, 1) both;
+  animation: none;
+  pointer-events: none;
 }
 
 .guestTable--leaving {
-  animation: guestTopDownWalkOut 1.2s ease-in both;
+  animation: none;
+  pointer-events: none;
 }
 
 .guestTable--dropTarget {
@@ -2264,12 +2262,12 @@ h2 {
 .guestTable .customerSprite {
   position: absolute;
   display: block;
-  top: 24px;
+  top: 58px;
   bottom: auto;
   left: 50%;
-  z-index: 4;
-  width: 76px;
-  height: 104px;
+  z-index: 6;
+  width: 68px;
+  height: 92px;
   overflow: visible;
   background: transparent;
   border: 0;
@@ -2296,20 +2294,40 @@ h2 {
   background-position: 0 var(--sprite-y, 0%);
   background-size: 400% 600%;
   filter: drop-shadow(0 7px 5px rgba(23, 49, 45, 0.22));
+  transform-origin: center bottom;
 }
 
 .guestTable--selected .customerSprite {
   animation: guestCustomerBob 1.1s ease-in-out infinite;
 }
 
+.guestTable--entering .customerSprite {
+  animation: customerWalkInFromDoor 1.3s cubic-bezier(0.2, 0.8, 0.24, 1) both;
+}
+
+.guestTable--leaving .customerSprite {
+  animation: customerWalkOutToDoor 1.25s ease-in both;
+}
+
 .guestTable--entering .customerSprite__sheet,
-.guestTable--leaving .customerSprite__sheet,
-.guestTable--selected .customerSprite__sheet {
-  animation: customerSpriteSheetWalk 760ms steps(1, end) infinite;
+.guestTable--leaving .customerSprite__sheet {
+  animation: customerSpriteSideWalk 520ms steps(1, end) infinite;
+}
+
+.guestTable--leaving .customerSprite__sheet {
+  transform: scaleX(-1);
+}
+
+.guestTable--entering .guestSpeech,
+.guestTable--leaving .guestSpeech,
+.guestTable--entering .guestTimer,
+.guestTable--leaving .guestTimer,
+.guestTable--leaving .guestTable__name {
+  opacity: 0;
 }
 
 .guestTable__name {
-  bottom: 16px;
+  bottom: 10px;
   min-width: 72px;
 }
 
@@ -2350,7 +2368,7 @@ h2 {
 
 .guestTable .guestTimer {
   right: 32px;
-  bottom: 13px;
+  bottom: 7px;
   left: 32px;
   z-index: 5;
 }
@@ -2386,12 +2404,8 @@ h2 {
   filter: drop-shadow(0 14px 0 rgba(23, 49, 45, 0.14)) drop-shadow(0 18px 14px rgba(23, 49, 45, 0.24));
 }
 
-.appShell--playing .playerSprite__sheet {
-  animation: playerSpriteSheetWalk 980ms steps(1, end) infinite;
-}
-
 .playerSprite--walking .playerSprite__sheet {
-  animation-duration: 560ms;
+  animation: playerSpriteSideWalk 560ms steps(1, end) infinite;
 }
 
 @keyframes beltRoll {
@@ -2428,6 +2442,29 @@ h2 {
   }
 }
 
+@keyframes dishCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--dish-lift, 0px) + 8px)) scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(var(--dish-lift, 0px)) scale(1);
+  }
+}
+
+@keyframes dishCardBob {
+  0%,
+  100% {
+    transform: translateY(var(--dish-lift, 0px));
+  }
+
+  50% {
+    transform: translateY(calc(var(--dish-lift, 0px) - 3px));
+  }
+}
+
 @keyframes trayWobble {
   0%,
   100% {
@@ -2451,103 +2488,54 @@ h2 {
   }
 }
 
-@keyframes guestWalkToTopDownTable {
+@keyframes customerWalkInFromDoor {
   from {
     opacity: 0;
-    transform: translate(-82vw, 34vh) scale(0.72);
+    transform: translateX(-50%) translate(var(--guest-enter-x), var(--guest-enter-y)) scale(0.84);
   }
 
-  78% {
+  76% {
     opacity: 1;
-    transform: translate(-50%, -52%) scale(1.03);
+    transform: translateX(-50%) translate(6px, -5px) scale(1.03);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateX(-50%) translate(0, 0) scale(1);
   }
 }
 
-@keyframes guestTopDownWalkOut {
+@keyframes customerWalkOutToDoor {
   from {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateX(-50%) translate(0, 0) scale(1);
   }
 
   to {
     opacity: 0;
-    transform: translate(-86vw, 36vh) scale(0.72);
+    transform: translateX(-50%) translate(var(--guest-enter-x), var(--guest-enter-y)) scale(0.84);
   }
 }
 
-@keyframes guestWalkToTable {
-  from {
-    opacity: 0;
-    transform: translateX(-180%) translateY(34px) scale(0.86);
-  }
-
-  70% {
-    opacity: 1;
-    transform: translateX(-54%) translateY(-5px) scale(1.02);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-}
-
-@keyframes guestWalkOut {
-  from {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(180%) translateY(28px) scale(0.9);
-  }
-}
-
-@keyframes customerSpriteSheetWalk {
+@keyframes customerSpriteSideWalk {
   0%,
-  24.99% {
-    background-position: 0% var(--sprite-y, 0%);
-  }
-
-  25%,
   49.99% {
     background-position: 33.333% var(--sprite-y, 0%);
   }
 
   50%,
-  74.99% {
-    background-position: 66.667% var(--sprite-y, 0%);
-  }
-
-  75%,
   100% {
     background-position: 100% var(--sprite-y, 0%);
   }
 }
 
-@keyframes playerSpriteSheetWalk {
+@keyframes playerSpriteSideWalk {
   0%,
-  24.99% {
-    background-position: 0% 0;
-  }
-
-  25%,
   49.99% {
     background-position: 33.333% 0;
   }
 
   50%,
-  74.99% {
-    background-position: 66.667% 0;
-  }
-
-  75%,
   100% {
     background-position: 100% 0;
   }
@@ -3092,10 +3080,11 @@ h2 {
 
   .dishRail {
     right: 9px;
-    bottom: 12px;
+    bottom: 8px;
     left: 72px;
-    height: 36px;
+    height: 64px;
     border-width: 2px;
+    border-radius: 12px;
     padding: 0 5px;
   }
 
@@ -3115,7 +3104,15 @@ h2 {
     height: 56px;
     padding: 4px;
     border-width: 2px;
-    transform: translateY(-8px);
+    transform: translateY(var(--dish-lift, 0));
+  }
+
+  .dishRail .beltFood--lane0 {
+    --dish-lift: -3px;
+  }
+
+  .dishRail .beltFood--lane1 {
+    --dish-lift: 3px;
   }
 
   .dishRail .beltFood .foodArt {
@@ -3130,6 +3127,8 @@ h2 {
   }
 
   .guestTable {
+    --guest-enter-x: var(--guest-enter-x-mobile);
+    --guest-enter-y: var(--guest-enter-y-mobile);
     top: var(--seat-y-mobile, var(--seat-y));
     left: var(--seat-x-mobile, var(--seat-x));
     width: clamp(96px, 30vw, 112px);
