@@ -96,8 +96,8 @@ Hop does not render them.
 | `.dragDishPreview` | fixed | 60 | Pointer drag preview. |
 
 The 100ms React clock selects whole route tiles; actor coordinates are always integers and have no
-position transition. The shared character renderer loops vertical or side sheet-frame pairs while a
-route is active, and west-facing side art mirrors east.
+position transition. The shared character renderer loops four-frame south, north, or east sheet rows
+at `480ms` while a route is active; west mirrors east. Stopped actors use the front idle cell.
 
 ## Dish Wish Tile System
 
@@ -139,9 +139,11 @@ repeats.
 ## Animation Inventory
 
 Active animations include portal backdrop pan, dish card entry/content bob/exit, selected guest bob,
-diner sheet-frame loops and actor step/shadow motion, Drop Hop pickup pulse, delivery pop, and
-courier bob. Dish entry/exit runs on the button while its nested dish content bobs inside padded rail
-clearance. Direction classes select vertical or side sheet-frame pairs; west-facing art mirrors east.
+Dish Wish four-frame sheet loops and actor step/shadow motion, Drop Hop pickup pulse, delivery pop,
+and courier bob. Dish entry/exit runs on the button while its nested dish content bobs inside padded rail
+clearance. Direction classes select south, north, or east rows; west-facing art mirrors east. Under
+`prefers-reduced-motion: reduce`, diner gait, step, and shadow loops freeze on the first directional
+frame while tile-position updates continue.
 
 ## Visual Rules
 
