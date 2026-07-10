@@ -95,9 +95,10 @@ Hop does not render them.
 | `.dinerFeedback` / result | fixed | 31 | Visible status or completion controls. |
 | `.dragDishPreview` | fixed | 60 | Pointer drag preview. |
 
-The 100ms React clock selects whole route tiles; actor coordinates are always integers and have no
-position transition. The shared character renderer loops four-frame south, north, or east sheet rows
-at `480ms` while a route is active; west mirrors east. Stopped actors use the front idle cell.
+The 100ms React clock samples fractional progress along each route segment, and matching linear
+`top`/`left` transitions bridge those samples so actors travel smoothly at `360ms` per tile. The
+shared character renderer loops four-frame south, north, or east sheet rows at `720ms` (`180ms` per
+frame) while a route is active; west mirrors east. Stopped actors use the front idle cell.
 
 ## Dish Wish Tile System
 
@@ -141,11 +142,12 @@ repeats.
 ## Animation Inventory
 
 Active animations include portal backdrop pan, dish card entry/content bob/exit, selected guest bob,
-Dish Wish four-frame sheet loops and actor step/shadow motion, Drop Hop pickup pulse, delivery pop,
-and courier bob. Dish entry/exit runs on the button while its nested dish content bobs inside padded rail
-clearance. Direction classes select south, north, or east rows; west-facing art mirrors east. Under
-`prefers-reduced-motion: reduce`, diner gait, step, and shadow loops freeze on the first directional
-frame while tile-position updates continue.
+Dish Wish four-frame sheet loops, linear actor travel, and actor step/shadow motion, plus Drop Hop
+pickup pulse, delivery pop, and courier bob. Dish entry/exit runs on the button while its nested dish
+content bobs inside padded rail clearance. Direction classes select south, north, or east rows;
+west-facing art mirrors east. Under `prefers-reduced-motion: reduce`, diner position transitions are
+disabled and gait, step, and shadow loops freeze on the first directional frame while route-position
+updates continue.
 
 ## Visual Rules
 

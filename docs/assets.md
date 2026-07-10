@@ -20,7 +20,7 @@ from CSS scene styles, and the cursor URL is declared in `src/styles.css`.
 | `src/assets/player-chef-source.png` | `1024 x 1536` | Not imported by app code | Source/reference image kept in the repo. |
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
 | `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | Not imported by app code | Legacy/reference kitchen sprite sheet. |
-| `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` | `1536 x 1024` each | `customerWalkSheetById` in `CharacterActor` | Six runtime 4-column × 4-row sheets. Rows contain south, north, east, and front-idle art; four walk frames loop at `480ms`, and west mirrors east. |
+| `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` | `1536 x 1024` each | `customerWalkSheetById` in `CharacterActor` | Six runtime 4-column × 4-row sheets. Rows contain south, north, east, and front-idle art; four walk frames loop at `720ms` (`180ms` per frame), and west mirrors east. |
 | `src/assets/sprites/generated/walk/waiter-walk-sheet.png` | `1536 x 1024` | `waiterWalkSheetUrl` in `CharacterActor` | Runtime waiter sheet with the same layout, scale, foot anchor, and frame loop as customers. |
 | `src/assets/sprites/generated/walk/manifest.json` | JSON | Maintainer metadata | Generation model, layout, frame order, post-processing, character mapping, and SHA-256 hashes for the runtime sheets. |
 | `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | Not imported by app code | Legacy/reference 4-column × 6-row customer sheet retained for visual history. |

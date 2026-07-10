@@ -316,6 +316,7 @@ const TARGET_SERVES = DINER_LEVELS.reduce((total, profile) => total + profile.or
 const MAX_LEVEL = DINER_LEVELS.length;
 const HAPPY_GUEST_COMBO_BONUS = 15;
 const NEXT_GUEST_AFTER_COMPLETE_MS = 3_000;
+const DINER_CLOCK_MS = 100;
 const CHARACTER_STEP_MS = 360;
 const LEAVING_GUEST_LINGER_MS = 350;
 const DISH_EXIT_MS = 360;
@@ -668,15 +669,17 @@ function getRouteVisual(path: TilePoint[], startedAt: number, now: number, stepM
   const duration = getRouteDuration(path, stepMs);
   const elapsed = clamp(now - startedAt, 0, duration);
   const done = elapsed >= duration;
-  const tileIndex = done ? segmentCount : Math.floor(elapsed / stepMs);
-  const tile = path[tileIndex] ?? fallback;
-  const direction = done
-    ? getWalkDirection(path[Math.max(0, tileIndex - 1)] ?? tile, tile)
-    : getWalkDirection(tile, path[tileIndex + 1] ?? tile);
+  const segmentIndex = done
+    ? segmentCount - 1
+    : Math.min(Math.floor(elapsed / stepMs), segmentCount - 1);
+  const segmentStart = path[segmentIndex] ?? fallback;
+  const segmentEnd = path[segmentIndex + 1] ?? segmentStart;
+  const segmentProgress = done ? 1 : (elapsed - segmentIndex * stepMs) / stepMs;
 
   return {
-    ...tile,
-    direction,
+    col: segmentStart.col + (segmentEnd.col - segmentStart.col) * segmentProgress,
+    row: segmentStart.row + (segmentEnd.row - segmentStart.row) * segmentProgress,
+    direction: getWalkDirection(segmentStart, segmentEnd),
     walking: !done,
     done,
   };
@@ -944,6 +947,7 @@ function CharacterActor({
   const actorStyle = {
     "--actor-col": visual.col + 0.5,
     "--actor-row": visual.row + 0.5,
+    "--actor-position-transition-ms": `${DINER_CLOCK_MS}ms`,
     zIndex: Math.round((isCustomer ? 14 : 16) + visual.row),
   } as CSSProperties;
   const spriteStyle = {
@@ -2313,7 +2317,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       return undefined;
     }
 
-    const clock = window.setInterval(() => setNow(Date.now()), 100);
+    const clock = window.setInterval(() => setNow(Date.now()), DINER_CLOCK_MS);
     return () => window.clearInterval(clock);
   }, [gameStatus]);
 
