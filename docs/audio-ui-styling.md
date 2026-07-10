@@ -95,9 +95,12 @@ Hop does not render them.
 | `.dragDishPreview` | fixed | 60 | Pointer drag preview. |
 
 The 100ms React clock samples fractional progress along each route segment, and matching linear
-`top`/`left` transitions bridge those samples so customers travel smoothly at `360ms` per tile. The
-customer renderer loops four-frame south, north, or east sheet rows at `720ms` (`180ms` per frame)
-while a route is active; west mirrors east. Stopped actors use the front idle cell.
+`top`/`left` transitions bridge those samples so customers travel smoothly at `360ms` per tile. A
+final 100ms transition sample keeps the directional gait active until the actor reaches the exact
+route endpoint. The customer renderer loops four-frame south, north, or east sheet rows at `720ms`
+(`180ms` per frame) while a route is active; west mirrors east. Entering actors fade in at the door,
+departing actors keep their final west-facing frame and fade into the doorway, and seated actors use
+the front idle cell.
 
 ## Dish Wish Tile System
 
@@ -144,7 +147,8 @@ repeats.
 ## Animation Inventory
 
 Active animations include portal backdrop pan, dish card entry/content bob/exit, selected guest bob,
-Dish Wish four-frame sheet loops, linear actor travel, and actor step/shadow motion, plus Drop Hop
+Dish Wish four-frame sheet loops, linear actor travel, actor step/shadow motion, and doorway
+entry/exit transitions, plus Drop Hop
 pickup pulse, delivery pop, and courier bob. Dish entry/exit runs on the button while its nested dish
 content bobs inside padded rail clearance. Direction classes select south, north, or east rows;
 west-facing art mirrors east. Under `prefers-reduced-motion: reduce`, diner position transitions are

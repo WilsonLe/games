@@ -95,6 +95,7 @@ type ActiveGuest = {
   foods: FoodId[];
   servedFoods: FoodId[];
   createdAt: number;
+  serviceStartsAt: number;
   expiresAt: number;
   seatIndex: number;
   heardOrder: boolean;
@@ -659,7 +660,7 @@ function getRouteVisual(path: TilePoint[], startedAt: number, now: number, stepM
     col: segmentStart.col + (segmentEnd.col - segmentStart.col) * segmentProgress,
     row: segmentStart.row + (segmentEnd.row - segmentStart.row) * segmentProgress,
     direction: getWalkDirection(segmentStart, segmentEnd),
-    walking: !done,
+    walking: now - startedAt < duration + DINER_CLOCK_MS,
     done,
   };
 }
@@ -671,6 +672,10 @@ function getGuestPath(guest: ActiveGuest) {
 
 function getGuestWalkDuration(guest: ActiveGuest) {
   return getRouteDuration(getGuestPath(guest), CHARACTER_STEP_MS);
+}
+
+function getGuestRouteTransitionDuration(guest: ActiveGuest) {
+  return getGuestWalkDuration(guest) + DINER_CLOCK_MS;
 }
 
 function getGuestVisual(guest: ActiveGuest, now: number): CharacterVisual {
@@ -815,9 +820,7 @@ function makeGuest(sequence: number, now: number, profile: DifficultyProfile, se
   const foodNames = foods.map((foodId) => foodById.get(foodId)?.name ?? foodId);
   const phrase = makeOrderPhrase(sequence + Math.floor(now / 1000), foodNames);
   const instanceId = `guest-${sequence}-${now}`;
-  const expiresAt = now + profile.timeToLastDishMs + profile.patienceBufferMs;
-
-  const guest: ActiveGuest = {
+  const provisionalGuest: ActiveGuest = {
     instanceId,
     customer,
     orderNumber: sequence + 1,
@@ -825,10 +828,17 @@ function makeGuest(sequence: number, now: number, profile: DifficultyProfile, se
     foods,
     servedFoods: [],
     createdAt: now,
-    expiresAt,
+    serviceStartsAt: now,
+    expiresAt: now,
     seatIndex,
     heardOrder: false,
     phase: "entering",
+  };
+  const serviceStartsAt = now + getGuestRouteTransitionDuration(provisionalGuest);
+  const guest: ActiveGuest = {
+    ...provisionalGuest,
+    serviceStartsAt,
+    expiresAt: serviceStartsAt + profile.timeToLastDishMs + profile.patienceBufferMs,
   };
 
   const scheduledFoods: ScheduledFood[] = foods.map((foodId, index) => {
@@ -840,7 +850,7 @@ function makeGuest(sequence: number, now: number, profile: DifficultyProfile, se
 
     return {
       id: `scheduled-${instanceId}-${foodId}-${index}`,
-      dueAt: now + offset,
+      dueAt: serviceStartsAt + offset,
       foodId,
       targetGuestId: instanceId,
       lane: (sequence + index) % ORDER_LANES,
@@ -964,6 +974,7 @@ function CharacterActor({
         phase && `characterActor--${phase}`,
         `characterActor--${visual.direction}`,
         visual.walking && "characterActor--walking",
+        phase !== "seated" && visual.done && !visual.walking && "characterActor--routeDone",
         active && "characterActor--active",
       )}
       style={actorStyle}
@@ -1036,7 +1047,7 @@ function GuestTable({
   onSelect: () => void;
 }) {
   const patienceRatio = guest
-    ? clamp((guest.expiresAt - now) / (guest.expiresAt - guest.createdAt), 0, 1)
+    ? clamp((guest.expiresAt - now) / (guest.expiresAt - guest.serviceStartsAt), 0, 1)
     : 0;
   const seat = getSeatLayout(seatIndex);
   const tableStyle = {
@@ -1086,7 +1097,7 @@ function GuestTable({
           <span className="guestTable__name">{guest.customer.name}</span>
 
           <span className="guestSpeech">
-            <strong>{showOrder ? renderOrderPhrase(guest) : "..."}</strong>
+            <strong>{showOrder ? renderOrderPhrase(guest) : "Tap to hear order"}</strong>
           </span>
 
           <span
@@ -1939,7 +1950,10 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
 
     setActiveGuests((currentGuests) => [...currentGuests, guest]);
     setScheduledFoods((currentFoods) => [...currentFoods, ...guestFoods]);
-    setFeedback({ kind: "neutral", text: `${guest.customer.name} walked in and took a table.` });
+    setFeedback({
+      kind: "neutral",
+      text: `${guest.customer.name} is walking to table ${seatIndex + 1}. Get ready to listen.`,
+    });
   }, []);
 
   const resetGame = useCallback(() => {
@@ -1963,7 +1977,10 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     draggingDishRef.current = null;
     consumedDishIdsRef.current.clear();
     setDraggingDish(null);
-    setFeedback({ kind: "neutral", text: "Tap a seated guest, listen to the order, then serve dishes from the kitchen pass." });
+    setFeedback({
+      kind: "neutral",
+      text: `${firstGuest.guest.customer.name} is walking to table 1. Tap the table after they sit down to hear the order.`,
+    });
     setGameStatus("playing");
   }, []);
 
@@ -2285,17 +2302,26 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       return;
     }
 
-    if (!activeGuests.some((guest) => guest.phase === "entering" && now - guest.createdAt >= getGuestWalkDuration(guest))) {
+    const newlySeatedGuests = activeGuests.filter(
+      (guest) => guest.phase === "entering" && now >= guest.serviceStartsAt,
+    );
+
+    if (newlySeatedGuests.length === 0) {
       return;
     }
 
     setActiveGuests((currentGuests) =>
       currentGuests.map((guest) =>
-        guest.phase === "entering" && now - guest.createdAt >= getGuestWalkDuration(guest)
+        newlySeatedGuests.some((seatedGuest) => seatedGuest.instanceId === guest.instanceId)
           ? { ...guest, phase: "seated" }
           : guest,
       ),
     );
+    const seatedNames = formatList(newlySeatedGuests.map((guest) => guest.customer.name));
+    setFeedback({
+      kind: "neutral",
+      text: `${seatedNames} ${newlySeatedGuests.length === 1 ? "is" : "are"} seated. Tap a table to hear the order.`,
+    });
   }, [activeGuests, gameStatus, now]);
 
   useEffect(() => {
@@ -2503,7 +2529,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       (guest) =>
         guest.phase === "leaving" &&
         guest.leavingAt &&
-        now - guest.leavingAt > getGuestWalkDuration(guest) + LEAVING_GUEST_LINGER_MS,
+        now - guest.leavingAt > getGuestRouteTransitionDuration(guest) + LEAVING_GUEST_LINGER_MS,
     );
 
     if (leavingGuests.length === 0) {
