@@ -637,6 +637,10 @@ function getCityLocationName(locationId: LocationId) {
   return cityLocationById.get(locationId)?.name ?? locationId;
 }
 
+function getCityRoadKey(from: LocationId, to: LocationId) {
+  return [from, to].sort().join(":");
+}
+
 function getCityItemLabel(item: DeliveryItem, quantity: number) {
   if (quantity === 1) {
     return item.name;
@@ -1274,7 +1278,9 @@ function CityMap({
   onLocationClick: (locationId: LocationId) => void;
 }) {
   const pickupId = packagePicked ? null : mission.pickup;
-  const routeStops = new Set(path);
+  const usedRoads = new Set(
+    path.slice(1).map((locationId, index) => getCityRoadKey(path[index], locationId)),
+  );
   const dropoffLocation = cityLocationById.get(mission.dropoff) ?? CITY_LOCATIONS[0];
   const requiredStopLocation = mission.requiredStop ? cityLocationById.get(mission.requiredStop) : null;
 
@@ -1292,7 +1298,7 @@ function CityMap({
             return null;
           }
 
-          const roadWasUsed = routeStops.has(fromId) && routeStops.has(toId);
+          const roadWasUsed = usedRoads.has(getCityRoadKey(fromId, toId));
           return (
             <span
               className={cx("cityRoad", roadWasUsed && "cityRoad--used")}
@@ -1385,7 +1391,7 @@ function CityMap({
   );
 }
 
-function TinyCityDeliveryGame() {
+function TinyCityDeliveryGame({ onExit }: { onExit: () => void }) {
   const [gameStatus, setGameStatus] = useState<GameStatus>("ready");
   const [missionIndex, setMissionIndex] = useState(0);
   const [currentLocationId, setCurrentLocationId] = useState<LocationId>("depot");
@@ -1554,7 +1560,13 @@ function TinyCityDeliveryGame() {
   const handleCityLocationClick = useCallback(
     (locationId: LocationId) => {
       if (gameStatus !== "playing") {
-        setFeedback({ kind: "neutral", text: "Start the first delivery." });
+        const text =
+          gameStatus === "paused"
+            ? "Resume the route to keep moving."
+            : gameStatus === "ended"
+              ? "Start a new route to make more deliveries."
+              : "Start the first delivery.";
+        setFeedback({ kind: "neutral", text });
         return;
       }
 
@@ -1649,6 +1661,9 @@ function TinyCityDeliveryGame() {
           </div>
 
           <div className="topActions">
+            <button className="iconButton" type="button" onClick={onExit} aria-label="Back to game portal">
+              <Home size={18} />
+            </button>
             <button className="primaryButton" type="button" onClick={toggleCityGameStatus}>
               {gameStatus === "playing" ? <Pause size={18} /> : <Play size={18} />}
               <span>
@@ -1774,7 +1789,7 @@ function TinyCityDeliveryGame() {
   );
 }
 
-function RestaurantGame() {
+function RestaurantGame({ onExit }: { onExit: () => void }) {
   const [gameStatus, setGameStatus] = useState<GameStatus>("ready");
   const [now, setNow] = useState(Date.now());
   const [activeGuests, setActiveGuests] = useState<ActiveGuest[]>([]);
@@ -1788,7 +1803,7 @@ function RestaurantGame() {
   const [waiterTile, setWaiterTile] = useState<TilePoint>(WAITER_HOME_TILE);
   const [waiterRoute, setWaiterRoute] = useState<WaiterRoute | null>(null);
   const [pendingOrderGuestId, setPendingOrderGuestId] = useState<string | null>(null);
-  const [, setFeedback] = useState<Feedback>({
+  const [feedback, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a guest to take an order.",
   });
@@ -2455,16 +2470,30 @@ function RestaurantGame() {
 
       <main className="mainSurface">
         <section className="gameHud" aria-label="Dinner service stats">
+          <button className="gameHud__portalButton" type="button" onClick={onExit} aria-label="Back to game portal">
+            <Home size={17} />
+            <span>Games</span>
+          </button>
           <StatPill icon={<Star size={17} />} label="Score" value={score} />
           <StatPill icon={<Check size={17} />} label="Orders" value={`${served}/${TARGET_SERVES}`} />
           <StatPill icon={<Gauge size={17} />} label="Level" value={difficulty.level} />
         </section>
 
-        {gameStatus === "ended" && (
+        {gameStatus === "ended" ? (
           <section className={cx("resultBanner", isShiftWon ? "resultBanner--win" : "resultBanner--lost")}>
-            <strong>{isShiftWon ? "Dinner service complete" : "Service closed"}</strong>
-            <span>{isShiftWon ? "All target orders were served." : "The dining room has stopped seating guests."}</span>
+            <span>
+              <strong>{isShiftWon ? "Dinner service complete" : "Service closed"}</strong>
+              <span>{isShiftWon ? "All target orders were served." : "The dining room has stopped seating guests."}</span>
+            </span>
+            <button className="primaryButton" type="button" onClick={resetGame}>
+              <RotateCcw size={18} />
+              New Shift
+            </button>
           </section>
+        ) : (
+          <div className={cx("dinerFeedback", `feedbackBar--${feedback.kind}`)} role="status" aria-live="polite">
+            {feedback.text}
+          </div>
         )}
 
         <section className="gameGrid">
@@ -2513,7 +2542,7 @@ function GamePortal({ onPlay }: { onPlay: (path: string) => void }) {
             <ChefHat size={30} />
           </div>
           <div>
-            <p className="eyebrow">Game portal</p>
+            <p className="eyebrow">Mini-game portal</p>
             <h1>Table Talk Games</h1>
           </div>
         </div>
@@ -2577,6 +2606,15 @@ function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  useEffect(() => {
+    document.title =
+      path === GAME_PATH
+        ? `${GAME_TITLE} | Table Talk Games`
+        : path === TINY_CITY_PATH
+          ? `${TINY_CITY_TITLE} | Table Talk Games`
+          : "Table Talk Games";
+  }, [path]);
+
   const navigateToGame = useCallback((nextPath: string) => {
     const normalizedNextPath = normalizePath(nextPath);
 
@@ -2588,11 +2626,11 @@ function App() {
   }, []);
 
   if (path === GAME_PATH) {
-    return <RestaurantGame />;
+    return <RestaurantGame onExit={() => navigateToGame("/")} />;
   }
 
   if (path === TINY_CITY_PATH) {
-    return <TinyCityDeliveryGame />;
+    return <TinyCityDeliveryGame onExit={() => navigateToGame("/")} />;
   }
 
   return <GamePortal onPlay={navigateToGame} />;

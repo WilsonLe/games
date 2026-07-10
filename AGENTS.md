@@ -1,5 +1,5 @@
 ---
-description: "Project-wide Hunter root for the Table Talk Games React/Vite game portal."
+description: "Project-wide Hunter root for the Table Talk Games React/Vite mini-game portal."
 references:
   - "README.md"
   - "docs/README.md"
@@ -7,39 +7,51 @@ references:
 
 # Table Talk Games Hunter Root
 
-This root is the startup entry point for future Codex sessions in this repo.
+This file is the startup entry point for future coding sessions in this repository.
 
 ## Future Session Protocol
 
-- If the Hunter MCP tools are exposed, start by calling `hunter_graph_get_root` with
-  `rootPath` set to the project root.
-- Use child `description` fields to choose the smallest relevant docs for the task.
-- If Hunter MCP tools are not exposed, say that directly, then read this file and the referenced
-  Markdown files manually.
-- For non-trivial multi-step work, create or update Hunter process state before editing and keep
-  durable todos under `.hunter/`.
-- If project instructions change, run Hunter graph validation before finishing.
+- If Hunter graph tools are exposed, start with `hunter_graph_get_root`; its current tool contract
+  takes no project-root argument.
+- Use visible child descriptions and `hunter_skill_load_plan` to load only the smallest relevant
+  instructions for the task.
+- If Hunter tools are unavailable, say so directly, then read this file and its referenced Markdown
+  files manually.
+- For non-trivial work, use `hunter_todo_update` for the high-level workstream and
+  `hunter_process_update` for ordered implementation and validation steps. Do not hand-edit runtime
+  Hunter state files.
+- If project instruction or graph Markdown changes, run Hunter graph validation when that tool is
+  available. Otherwise validate frontmatter and referenced paths locally and report that the graph
+  validator was unavailable.
 
 ## Checkout Discipline
 
-- Keep this main repository checkout on the `main` branch.
-- Do not check out feature branches directly in this repository root.
-- For branch work, create a sibling worktree under `../.worktrees/` and do the checkout there.
-- Do not create project worktrees or temporary clones under `/private/tmp` for this repo.
+- Keep the primary repository checkout on `main`.
+- Do not check out feature branches directly in the primary checkout.
+- For manually created branch work, use the repository's sibling `../.worktrees/` area.
+- A worktree created and owned by the active coding harness (for example, Paseo) may remain in that
+  harness's managed worktree root; do not move or recreate it merely to match the manual convention.
+- Do not create project worktrees or temporary clones under `/private/tmp`.
 
 ## Product Context
 
+- The root route, `/`, is a usable two-game mini-game portal, not a marketing landing page and not a
+  direct launch into either game.
 - The shipped games are Table Talk Diner and Tiny City Delivery.
-- Table Talk Diner is a client-only React/Vite food-serving arcade game for practicing practical
-  English orders.
+- Table Talk Diner is a food-serving arcade game for practical English orders.
 - Tiny City Delivery is a map-routing game for English prepositions, place words, and quantities.
-- The app is asset-rich: sprites, background art, cursor art, Web Audio feedback, and browser speech
-  synthesis are part of the product experience.
-- The first screen should stay the usable game experience, not a landing page.
+- Both game routes must provide a clear way back to the portal.
+- The app is client-only and asset-rich: imported art, a custom cursor, Web Audio feedback, and
+  browser speech synthesis are part of the product experience.
+- Preserve the portal as the first usable screen when changing routing or startup behavior.
 
 ## Verification Rules
 
-- Run `npm run build` for source, dependency, asset import, or package metadata changes.
+- Run `npm run build` after source, dependency, asset import, or package metadata changes.
 - Run `git diff --check` before handing work back.
-- For layout, animation, or asset changes, inspect the running app at desktop and mobile widths when
-  practical.
+- For routing changes, verify `/`, both `/games/...` paths, browser back/forward, and portal-return
+  controls.
+- For layout, animation, or asset changes, inspect the running portal and both games at desktop and
+  mobile widths when practical.
+- For docs or instructions, validate local Markdown references and confirm implementation claims
+  against source.

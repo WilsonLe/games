@@ -1,5 +1,5 @@
 ---
-description: "Player-facing Table Talk Diner gameplay, controls, serving rules, and outcomes."
+description: "Player-facing portal, Table Talk Diner, and Tiny City Delivery controls, rules, scoring, and outcomes."
 references: []
 ---
 
@@ -7,142 +7,148 @@ references: []
 
 [Docs index](./README.md) | [Repo README](../README.md)
 
-This guide describes current player-facing behavior implemented in `src/App.tsx`.
+## Mini-Game Portal
+
+The root route is a two-card game chooser. Select either card to launch its game. Normal clicks stay
+inside the single-page app; modified clicks retain normal link behavior. Both games include a home
+button that returns to `/`, and browser back/forward also works.
+
+# Table Talk Diner
 
 ## Objective
 
-Complete `24` guest orders. A wrong table or expired guest resets the happy-guest combo, but the
-current diner implementation does not track lives or end the shift from misses.
+Complete 24 guest orders. Wrong tables and expired guests reset the happy-guest combo, but the diner
+has no lives or loss condition.
 
-## Main Screen
+## Screen Areas
 
 | Area | Purpose |
 | --- | --- |
-| Game HUD | Shows score, completed orders, and level. |
-| Restaurant stage | Shows the top-down floor, walk tiles, guest tables, waiter sprite, and kitchen station. |
-| Guest tables | Show each guest, speech bubble, requested-food chips, patience bar, and seconds remaining. |
-| Kitchen pass | Shows draggable dish buttons in two lane offsets. |
-| Drag preview | Follows the pointer while a dish is being dragged. |
-| Result banner | Appears after the target order count is reached. |
+| HUD | Portal button, score, completed orders, and level. |
+| Status toast | Visible neutral/good/bad gameplay feedback with `role="status"`. |
+| Restaurant stage | Floor tiles, door, guest tables, customer actors, and waiter. |
+| Kitchen station | Dishes available for service and a visual pass-lifetime indicator. |
+| Result banner | Completion message and `New Shift` button after 24 orders. |
 
-## Controls
+## Starting And Taking Orders
 
-| Control | Current behavior |
+`RestaurantGame` starts automatically and creates one entering guest. A second guest may spawn from
+about 900ms after reset while the level-1 two-guest limit has room.
+
+Entering tables ignore pointer input. Once seated:
+
+1. Select a guest table.
+2. The waiter follows the tile route to that table.
+3. After the waiter arrives, the guest's written order and food chips appear.
+4. Speech synthesis attempts a greeting followed by the order phrase.
+5. Selecting the table again repeats the waiter/order flow.
+
+Before an order is heard, its bubble shows `...`. Dropping a dish there keeps the dish available and
+asks the player to take the order first.
+
+## Serving Controls
+
+| Control | Behavior |
 | --- | --- |
-| Initial route load | `RestaurantGame` calls `resetGame`, creates the first level-1 guest, and starts play. |
-| Guest table click/tap | Selects that guest, sends the waiter along a tile route to the table, then marks the order as heard and speaks a greeting plus the order phrase after the waiter arrives. |
-| Dish pointer drag | Starts a custom drag preview and asks the player to serve the dish to the correct guest. |
-| Native HTML drag/drop | Supports dragging a dish button to a guest table through browser drag events. |
-| Dish keyboard `Enter` or `Space` | Attempts to serve the dish to the currently selected guest. |
+| Pointer drag | Press a dish, move the custom preview over a table, and release. |
+| Native drag/drop | Browser drag events also carry a dish ID to a table. |
+| Keyboard | Focus a dish and press `Enter` or `Space`; it is served to the selected guest. |
+| Drop outside a table | The dish remains available and the status toast explains where to drag it. |
 
-## Initial Shift
-
-`resetGame` runs on mount and creates the first guest:
-
-| Guest sequence | Spawn timestamp | Source |
-| --- | --- | --- |
-| `0` | Current start time | First active guest. |
-| `1+` | Earliest next spawn is current start time plus `900ms`, then `difficulty.guestIntervalMs` after each later spawn. | `addGuest` through the guest-spawning effect while below `difficulty.maxGuests`. |
-
-The game resets score, completed orders, happy-guest combo, belt foods, scheduled foods, drag state,
-guest sequence, food sequence, consumed dish IDs, waiter tile/route state, pending order reveal, and
-feedback state. No guest is selected until the player clicks or taps a guest table.
-
-## Guest And Waiter Movement
-
-Guests and the waiter use tile coordinates from `SEAT_LAYOUT`, `DINER_DOOR_TILE`,
-`WAITER_HOME_TILE`, and `WALK_TILES`.
-
-| Movement | Current behavior |
-| --- | --- |
-| Guest entry | `getGuestVisual` follows `buildTileRoute(DINER_DOOR_TILE, seat.customer)` until `getGuestWalkDuration` completes, then the guest phase becomes `seated`. |
-| Guest leaving | Completed or expired guests reverse their entry route and are removed after their walk duration plus `LEAVING_GUEST_LINGER_MS`. |
-| Waiter route | `handleGuestSelect` snaps the current waiter visual to a tile, builds a route to `seat.waiter`, and stores it in `waiterRoute`. |
-| Order reveal | When the waiter route finishes, `pendingOrderGuestId` is set. `revealGuestOrder` runs only after the target guest is not leaving and no longer entering. |
-
-Dropping a dish before a guest has heard the order leaves the dish available and asks the player to
-take that guest's order first.
-
-## Serving Rules
-
-Food matching is resolved in `handleFoodDrop`.
+## Serving Outcomes
 
 | Situation | Outcome |
 | --- | --- |
-| Game is not `playing` | Feedback state says `The diner is getting ready.` Dish is not served. |
-| Dish is dropped outside a guest table | Feedback state asks the player to drag the dish to the guest who ordered it. Dish remains available. |
-| Dish is dropped on a guest whose order has not been heard | Feedback/TTS asks the player to take that guest's order first. Dish remains available. |
-| Dish is dropped on a guest who still needs that food | Dish is removed and served to that guest. |
-| Dish is dropped on a guest who does not need that food | Dish is removed, wrong sound/TTS plays, and the happy-guest combo resets. |
+| Guest still needs the dish | Dish is removed, checklist updates, score increases, and correct feedback plays. |
+| Dish completes the order | Guest leaves, completed orders and combo increase, owned leftovers are removed, and completion feedback plays. |
+| Guest does not need the dish | Dish is removed, wrong feedback plays, and combo resets. |
+| Guest has not given the order | Dish remains, and the game asks the player to take the order. |
+| Guest expires | Guest leaves, owned scheduled/visible food is removed, and combo resets. |
 
-Important: visible decoy dishes can still complete an order if the player drops them on a guest who
-needs that food. The `targetGuestId` field is now used for scheduled/recycled dish ownership, not for
-cross-guest serve priority.
+A decoy can satisfy an order when its food matches. `targetGuestId` governs dish lifecycle, not which
+table may receive it.
 
-## Correct Food
+## Diner Timing And Progress
 
-On a correct dish drop:
+- Patience starts at guest creation, including entry time.
+- The table renders an accessible progress bar, not a numeric seconds label.
+- Ordered dishes appear over the guest's last-dish timing window.
+- Missed ordered dishes recycle while the owning guest still needs them.
+- Decoys disappear when their pass lifetime ends.
+- Every 4 completed orders advances a level, up to level 6.
+- Higher levels allow more guests, eventually increase order size from 2 to 3, and adjust pacing.
 
-1. The belt item is removed.
-2. The matching guest receives that `foodId` in `servedFoods`.
-3. Score increases using the base, remaining-time, level, and happy-guest combo bonuses.
-4. Feedback state becomes `good`.
-5. Speech synthesis announces the served food or completed order.
-6. Web Audio plays `correct` or `complete`.
+## Diner Score And Completion
 
-If the guest order is not complete, the guest card remains and its food chip becomes served.
+Each correct dish awards 35 base points, remaining whole seconds, and `level * 5`. Completing a
+consecutive happy guest can also add `(combo - 1) * 15`.
 
-If the order is complete, the guest enters a leaving phase, `served` increments, the happy-guest
-combo increments, remaining scheduled and visible foods for that guest are removed, and the game may
-schedule a later replacement guest.
+At 24 completed orders, timers stop, `Dinner service complete` appears, and `New Shift` resets all
+diner state. The portal button remains available throughout. There is no mid-shift pause/reset.
 
-## Wrong Table And Expiration
+# Tiny City Delivery
 
-| Problem | Current behavior |
+## Objective
+
+Complete 10 delivery tickets before making 5 invalid-road or required-stop mistakes.
+
+## Starting And Controls
+
+Tiny City opens in `ready` state. Use `Start Route` to begin. The controls are:
+
+| Control | Behavior |
 | --- | --- |
-| Wrong table | Removes the dish, plays the `wrong` sound, speaks `{guest} did not order ...`, and resets the happy-guest combo. |
-| Guest expiration | Marks the guest leaving, removes matching scheduled/belt foods, plays the `wrong` sound, and resets the happy-guest combo. |
+| Map location | Move there only when a road directly connects it to the current stop. |
+| Current pickup stop | Pick up cargo when it is not already in the basket. |
+| Speaker button | Repeat the current delivery instruction through speech synthesis. |
+| Pause/Resume | Block or restore map movement; no countdown needs timestamp adjustment. |
+| Reset | Start again from mission 1 with zero score, deliveries, streak, and mistakes. |
+| Home | Return to the two-game portal. |
 
-The current diner source has no miss counter and no loss transition. `gameStatus` becomes `ended`
-only when `served >= TARGET_SERVES`.
+## Reading A Delivery Ticket
 
-## Guest Patience
+Each ticket provides:
 
-Each guest receives:
+- a spoken/written phrase;
+- cargo and quantity;
+- pickup and target locations;
+- a spatial relation label;
+- focus-word chips;
+- an optional required stop such as the bridge.
 
-```text
-expiresAt = createdAt + profile.timeToLastDishMs + profile.patienceBufferMs
-```
+Cargo whose pickup is the depot begins in the basket. Other cargo is picked up automatically when
+the courier reaches the pickup, or by clicking the current pickup location.
 
-`GuestTable` displays:
+## City Movement Outcomes
 
-| UI | Source |
+| Situation | Outcome |
 | --- | --- |
-| Patience bar width | Remaining time divided by total guest lifetime. |
-| Seconds remaining | `formatTime(guest.expiresAt - now)`. |
-| Speech bubble | Hidden as `Tap to order` until `guest.heardOrder` or the guest is selected. |
+| Click adjacent stop | Courier moves, the stop is appended to the path, and that exact road is highlighted. |
+| Click non-adjacent stop | One mistake, streak reset, wrong tone/speech, no movement. |
+| Visit another valid stop before pickup | Allowed; feedback points back to the pickup. |
+| Visit another valid stop with cargo | Allowed; feedback repeats the spatial clue. |
+| Reach dropoff without cargo | No delivery; feedback points to the pickup. |
+| Reach dropoff without required stop | One mistake and guidance to visit that stop first. |
+| Reach valid dropoff | Delivery, score, and streak increase; the next ticket loads. |
 
-## Kitchen Pass Behavior
+The game does not treat every detour or non-target stop as a mistake. Only invalid road choices and a
+missing required stop at delivery call `addCityMistake`.
 
-| Food type | Source | End-of-belt behavior |
-| --- | --- | --- |
-| Ordered dish | `ScheduledFood` created by `makeGuest` | Recycles if its target guest still needs it after the dish lifetime ends. |
-| Decoy dish | `makeDecoyFood` | Disappears after its dish lifetime ends. |
+## City Score And Completion
 
-`KitchenStation` renders visible `BeltFood` rows as draggable dish buttons inside `.dishRail`.
-`--dish-life` is derived from `(now - spawnedAt) / travelMs` and drives the small timer bar on each
-dish. Lane classes still use `.beltFood--lane0` and `.beltFood--lane1`.
+Each delivery awards its mission reward plus:
 
-## Completion Conditions
+- `max(0, 8 - roads used) * 4` clean-route points;
+- `max(0, next streak - 1) * 12` streak points.
 
-| Condition | Result banner |
-| --- | --- |
-| `served >= TARGET_SERVES` | `Dinner service complete`; text says all target orders were served. |
+The displayed level increases every 2 deliveries and is capped at 5. `Lives` shows
+`5 - mistakes`.
 
-The diner route currently has no visible pause/reset/new-shift controls after completion.
+After 10 deliveries, the route ends in a win. At 5 mistakes, it ends with `Route closed`. In either
+case, the main button becomes `New Route`, and the reset button also starts over.
 
-## Feedback State
+## Audio Availability
 
-`RestaurantGame` still maintains `Feedback` state and updates it for neutral, good, and bad events,
-but the current diner JSX does not render a `.feedbackBar`. Tiny City Delivery still renders a
-visible feedback bar with `role="status"`.
+The games remain visually playable when browser speech or Web Audio is unavailable. The explicit
+listen controls report speech unavailability; some automatic sound attempts fail silently because
+browser APIs and autoplay policies vary.

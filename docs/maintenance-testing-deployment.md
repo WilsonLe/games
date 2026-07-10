@@ -1,5 +1,5 @@
 ---
-description: "Maintenance recipes, manual smoke tests, build verification, and deployment notes."
+description: "Maintenance recipes, two-game browser smoke tests, build verification, and static deployment notes."
 references: []
 ---
 
@@ -7,167 +7,168 @@ references: []
 
 [Docs index](./README.md) | [Repo README](../README.md)
 
-## Maintenance Recipes
+## Common Change Recipes
 
-### Add A New Food
+### Change Portal Routing
+
+1. Update route constants and `App` path branches together.
+2. Keep portal cards as real anchors.
+3. Preserve modified-click behavior in `handleGameLinkClick`.
+4. Update document-title logic and every route table in docs.
+5. Verify root, direct game URLs, browser back/forward, and both home buttons.
+6. Document static-host fallback requirements for any new deep path.
+
+### Add A Diner Food
 
 1. Add `src/assets/sprites/food-{id}.png`.
-2. Import it at the top of `src/App.tsx`.
-3. Add `{id}` to the `FoodId` union.
-4. Add `{ id: "{id}", name: "{display name}" }` to `FOODS`.
-5. Add `{id}: importedSpriteUrl` to `foodArtById`.
-6. Confirm `difficultyForLevel` never returns an `orderSize` greater than `FOODS.length`.
-7. Update [Assets Guide](./assets.md).
-8. Run `npm run build` and `git diff --check`.
+2. Update `FoodId`, the import, `FOODS`, and `foodArtById`.
+3. Confirm `difficultyForLevel().orderSize <= FOODS.length`.
+4. Update `docs/assets.md`.
+5. Build and smoke-test food rendering in the portal/game where applicable.
 
-### Add A New Customer
+### Add A Diner Customer
 
-1. Add or regenerate the customer row in `src/assets/sprites/generated/customer-fullbody-sheet.png`.
-2. If needed for portal/legacy preview use, add `src/assets/sprites/customer-{id}.png` and import it
-   at the top of `src/App.tsx`.
-3. Add `{id}` to `CustomerProfile["id"]`.
-4. Add `{ id: "{id}", name: "{display name}" }` to `CUSTOMERS`.
-5. Add `{id}: "{row position}"` to `customerSpriteRowById`.
-6. Update [Assets Guide](./assets.md).
-7. Run `npm run build` and `git diff --check`.
+1. Add/regenerate the row in `sprites/generated/customer-fullbody-sheet.png`.
+2. Update `CustomerProfile`, `CUSTOMERS`, and `customerSpriteRowById`.
+3. Add a still image only if the portal or another component imports it.
+4. Verify all movement states and update `docs/assets.md`.
 
-### Change Order Difficulty
-
-Start with these symbols in `src/App.tsx`:
+### Tune Diner Difficulty
 
 | Symbol | Effect |
 | --- | --- |
-| `TARGET_SERVES` | Orders needed to win. Also affects derived `MAX_LEVEL`. |
-| `ORDERS_PER_LEVEL` | Completed orders per level. |
-| `HAPPY_GUEST_COMBO_BONUS` | Points added by consecutive happy-guest completions. |
-| `FIRST_DISH_DELAY_MS` | Earliest ordered dish spawn delay. |
-| `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement guest pacing after order completion. |
-| `GUEST_STEP_MS` | Guest tile-route segment duration for entering and leaving. |
-| `WAITER_STEP_MS` | Waiter tile-route segment duration after selecting a guest. |
-| `LEAVING_GUEST_LINGER_MS` | Extra time after a leaving guest finishes the reverse route before removal. |
-| `ORDER_LANES` | Logical kitchen-pass lane offset count for ordered/decoy timing. Check current rendering before changing it. |
-| `difficultyForLevel` | Main level scaling formula. |
+| `TARGET_SERVES`, `ORDERS_PER_LEVEL` | Completion target and level progression. |
+| `HAPPY_GUEST_COMBO_BONUS` | Consecutive completed-guest bonus. |
+| `FIRST_DISH_DELAY_MS` | First ordered dish timing. |
+| `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement pacing. |
+| `GUEST_STEP_MS`, `WAITER_STEP_MS` | Tile movement speed. |
+| `LEAVING_GUEST_LINGER_MS` | Post-exit cleanup. |
+| `ORDER_LANES` | Lane selection/lift; requires matching CSS support. |
+| `difficultyForLevel` | Capacity, order size, dish timing, decoys, and patience. |
 
-If changing `ORDER_LANES`, update `KitchenStation` rendering and CSS classes such as `.beltFood--lane0` and `.beltFood--lane1`.
+Test scheduled spawn, blocked-lane retry (`650ms`), recycle, expiration, replacement guests, scoring,
+and completion after changes.
 
-If changing `orderSize`, keep it at or below `FOODS.length`; `selectFoods` looks for unique foods and would not finish if asked for more unique foods than exist.
+### Change Tiny City Data
 
-### Adjust Timers
+- Location: update `LocationId`, `CITY_LOCATIONS`, `CITY_ROADS`, and affected missions.
+- Road: keep `CITY_ROADS` undirected through `cityNeighbors`; inspect visual geometry.
+- Mission: align phrase, pickup, dropoff, item, quantity, relation, focus words, reward, and optional
+  required stop.
+- Item: update `DeliveryItemId`, `CITY_ITEMS`, and any mission references.
 
-| Timer | Where |
+Test pickup at the depot and elsewhere, invalid roads, detours, required stops, score, win, loss,
+pause guidance, and exact edge highlighting.
+
+### Change Shared Layout
+
+Before editing `.mainSurface`, `.gameGrid`, `.resultBanner`, `.sceneBackdrop`, or `.appShell`, inspect
+both game routes. Diner full-viewport overrides must remain scoped with
+`.appShell:not(.appShell--city)` so Tiny City keeps its grid and scroll behavior.
+
+### Replace Art Or Cursor
+
+Replace files in place when possible, verify crop/sheet alignment and mobile framing, then run the
+build so Vite validates imports. For cursor changes, verify the `7 6` hotspot.
+
+## Browser Smoke Tests
+
+Run `npm run dev`, then inspect the console throughout.
+
+### Portal And Routing
+
+| Test | Expected |
 | --- | --- |
-| Guest spawn interval | `difficultyForLevel().guestIntervalMs` and `nextGuestAtRef`. |
-| Decoy spawn interval | `difficultyForLevel().decoyIntervalMs` and `nextDecoyAtRef`. |
-| Dish lifetime/pass timing | `difficultyForLevel().beltTravelMs`. |
-| Dish spacing | `difficultyForLevel().timeToLastDishMs`, `dishGapMs`, and `makeGuest`. |
-| Expiration | `timeToLastDishMs + patienceBufferMs`. |
-| Guest walk duration | `getGuestWalkDuration`, derived from the seat route length and `GUEST_STEP_MS`. |
-| Waiter-to-table route duration | `buildTileRoute` plus `WAITER_STEP_MS`. |
-| Lane retry delay | Hard-coded `650ms` delays in scheduled spawn and decoy retry logic. |
+| `/` | Header says mini-game portal and exactly two playable cards render. |
+| Diner card | URL and title change; diner starts. |
+| City card | URL and title change; city opens ready. |
+| Home buttons | Return to `/` without reload. |
+| Back/forward | Restores portal/game views and titles. |
+| Direct `/games/...` load | Works in Vite; production host also needs SPA fallback. |
+| Unknown path | Portal renders and URL stays unchanged. |
 
-After timer changes, manually test guest spawning, dish spawning/recycling, expiration, and Tiny City
-pause/resume if the shared status flow is touched.
+### Table Talk Diner
 
-### Replace Generated Art
-
-| Asset | Safest replacement path |
+| Test | Expected |
 | --- | --- |
-| Kitchen background | Replace `src/assets/game-kitchen-bg.png`, then check desktop and mobile framing. |
-| Portal chef preview | Replace `src/assets/player-chef.png`, preserving transparent background if possible. |
-| Food sprites | Replace individual `src/assets/sprites/food-*.png` files. |
-| Customer full-body sheet | Replace `src/assets/sprites/generated/customer-fullbody-sheet.png` and verify row mapping. |
-| Waiter full-body sheet | Replace `src/assets/sprites/generated/waiter-fullbody-sheet.png` and verify animation frames. |
-| Legacy/reference sprite sheet | Replace `src/assets/conveyor-kitchen-sprite-sheet.png` only if refreshing unused reference art. |
-| Cursor | Replace `src/assets/game-cursor.svg` and adjust hotspot coordinates in `--game-cursor` if needed. |
+| Initial load | One guest enters; score 0, orders 0/24, level 1. |
+| Guest selection | After seating, waiter walks to table, then order text/TTS appears. |
+| Correct dish | Dish disappears, chip updates, score rises, and visible good feedback appears. |
+| Drop before order | Dish remains and status asks player to take the order. |
+| Drop outside | Dish remains and status explains where to serve it. |
+| Wrong table | Dish disappears and combo resets with bad feedback. |
+| Expiration | Guest leaves and owned dishes are cleaned up. |
+| Keyboard service | `Enter`/`Space` serves to selected table. |
+| Win | At 24 orders, completion banner and `New Shift` appear. |
+| New Shift | All diner counters and runtime state reset. |
 
-Run `npm run build` after replacing assets so Vite validates imports and emits optimized asset files.
+### Tiny City Delivery
 
-### Tune Sounds
-
-Sound effects are generated in `playSound` through calls to `scheduleTone`.
-
-| Sound | Tune here |
+| Test | Expected |
 | --- | --- |
-| Correct dish | `kind === "correct"` branch. |
-| Completed order | `kind === "complete"` branch. |
-| Wrong table or expired guest | Final branch in `playSound`. |
+| Initial load | Ready state with Start Route and no movement until start. |
+| Valid adjacent move | Courier/path advances and only the traversed edge highlights. |
+| Invalid move | No movement, one life lost, streak reset. |
+| Pickup | Basket updates at the configured pickup. |
+| Valid detour | Allowed with guidance; no mistake. |
+| Delivery | Score/drops/streak update and next ticket loads. |
+| Pause click | Map does not move and feedback says to resume. |
+| Five mistakes | Route closes. |
+| Ten deliveries | City route completes. |
+| New/reset route | State returns to mission 1 at the depot. |
 
-Keep volumes modest. Current tones use gain values around `0.055` to `0.08`.
+### Viewports
 
-## Manual Smoke Tests
+Check at least:
 
-Run these in a browser through `npm run dev` after gameplay changes.
+- desktop above `1360px`;
+- around `980px`;
+- around `560px`;
+- 320–380px width;
+- a short mobile viewport around 620px height.
 
-| Test | Expected result |
-| --- | --- |
-| Initial load | Portal renders both game choices, preview art, and no console errors. |
-| Initial diner route | One guest begins walking in, no guest is selected, score is `0`, orders are `0/24`, and level is `1`; another guest can spawn shortly after while under the level max. |
-| Guest table tap | Guest becomes selected, the waiter walks to that guest's table, then the speech bubble shows the order and order audio attempts to play. |
-| Correct dish drag | Dish disappears, guest chip is marked served, score increases, and feedback/sound state is good. |
-| Complete order | Guest walks back toward the door, orders count increments, combo may increase, completion sound/TTS attempts to play. |
-| Wrong table | Dish disappears, wrong sound/TTS attempts to play, and the happy-guest combo resets internally. |
-| Guest expiration | Waiting too long sends the guest leaving toward the door, removes targeted dishes, and resets the combo internally. |
-| Win | After `24` completed orders, result banner shows `Dinner service complete`. |
-| Responsive layout | Check around desktop, `1360px`, `980px`, and `560px` widths. |
-| Console | No React errors, missing asset errors, or unhandled audio exceptions. |
+Verify portal scrolling, diner HUD/status/table overlap, Tiny City document scrolling, map readability,
+and no clipped controls.
 
 ## Command Verification
 
-For docs-only changes, run:
+Docs-only:
 
 ```bash
 git diff --check
 ```
 
-For source, import, package metadata, or asset changes, run:
+Source, imports, dependencies, assets, or package metadata:
 
 ```bash
+npm ci          # when dependencies are missing or suspect
 npm run build
 git diff --check
 ```
 
-There is no test script in `package.json` today.
+No automated test script exists today.
 
-## Browser Checks
+## Documentation Validation
 
-| Check | Why |
-| --- | --- |
-| Chrome or Chromium desktop | Vite dev target and common Web Audio/SpeechSynthesis behavior. |
-| Narrow mobile viewport | Kitchen pass dimensions and background framing change below `560px`. |
-| Console while clicking audio controls | Browser audio policies can vary. |
-| Hard refresh after build preview | Verifies static assets resolve from the built bundle. |
+After Markdown or `AGENTS.md` changes:
 
-## Deployment Notes
+1. verify every frontmatter `references` path exists;
+2. verify local Markdown links resolve;
+3. search for stale constants and route claims;
+4. use Hunter graph validation when exposed;
+5. report the tool as unavailable when it is not exposed rather than claiming it ran.
 
-| Topic | Current repo state |
-| --- | --- |
-| Repository URL | `https://github.com/WilsonLe/games.git` |
-| Current branch | `main` |
-| Build output | `dist/` from `npm run build`. |
-| Static hosting | Any static host that can serve Vite output from `dist/` should work. |
-| Deployment config | No provider-specific config is present. |
-| CI | No GitHub Actions or other CI config is present. |
+## Deployment
 
-## What To Commit
+- Output: `dist/` from `npm run build`.
+- Hosting: any static host that can serve Vite output.
+- Required rewrite: send `/games/table-talk-diner` and `/games/tiny-city-delivery` requests to
+  `index.html` for direct loads/refreshes.
+- Base path: current links assume hosting at `/`; a subpath deployment requires coordinated Vite and
+  route changes.
+- Provider config and CI: none in this repository.
 
-Commit source and documentation changes:
+## Commit Boundaries
 
-| Commit | Do not commit |
-| --- | --- |
-| `src/**` source and assets | `node_modules/` |
-| `docs/**` | `dist/` |
-| `README.md` | `.DS_Store` |
-| `package.json` and `package-lock.json` when dependencies change | `*.local` files |
-
-The current `.gitignore` ignores `node_modules`, `dist`, `.DS_Store`, and `*.local`.
-
-## Known Limitations
-
-| Limitation | Current impact |
-| --- | --- |
-| No automated tests | Gameplay must be smoke-tested manually. |
-| No CI | Build checks are local unless a future workflow is added. |
-| Browser-native TTS | Voices, timing, and availability vary by browser and OS. |
-| Browser-native Web Audio | Playback can be gesture-gated or unavailable. |
-| No persistence | Score and progress reset on reload or new route/shift. |
-| No asset generation metadata | Final images are committed, but prompts/source process are not documented in the repo. |
+Commit source, assets, docs, and package metadata that belong to the task. Do not commit
+`node_modules/`, `dist/`, local `.pi/` Hunter state, `.DS_Store`, or `*.local` files.

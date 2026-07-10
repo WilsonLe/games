@@ -1,5 +1,5 @@
 ---
-description: "Documentation index and Hunter graph hub for Table Talk Games."
+description: "Documentation index and Hunter graph hub for the Table Talk Games mini-game portal."
 references:
   - "docs/start-here.md"
   - "docs/project-overview.md"
@@ -19,59 +19,57 @@ references:
 
 [Repo README](../README.md)
 
-This docs set is for future maintainers and future Codex sessions. It describes only the game/app behavior present in the current code and assets.
+This documentation describes the current two-game portal, both game implementations, runtime assets,
+and repository workflow.
 
 ## Read Order
 
-| Start here | Use this when |
+| Guide | Use it when |
 | --- | --- |
-| [Start Here](./start-here.md) | You need the fastest orientation before changing anything. |
-| [Project Overview](./project-overview.md) | You need the product, tech stack, local setup, and repo map. |
-| [Game Architecture](./architecture.md) | You need to understand React state, timers, order generation, scoring, levels, and game status flow. |
-| [Gameplay Guide](./gameplay.md) | You need to verify or adjust player-facing behavior. |
-| [Assets Guide](./assets.md) | You need to add or replace sprites, background art, the chef, or cursor. |
-| [Audio, UI, and Styling](./audio-ui-styling.md) | You need TTS, sound, scene layering, animation, responsive layout, or CSS guidance. |
-| [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md) | You need recipes, smoke tests, build checks, GitHub notes, or deployment expectations. |
-| [Hunter Workflow](./hunter/hunter-workflow.md) | You need future-session workflow, process/todo rules, or Hunter fallback behavior. |
-| [Table Talk Diner Hunter Notes](./hunter/table-talk-diner.md) | You need food-serving game implementation guidance. |
-| [Tiny City Hunter Notes](./hunter/tiny-city-delivery.md) | You need map-routing game implementation guidance. |
+| [Start Here](./start-here.md) | You need the fastest source and risk orientation. |
+| [Project Overview](./project-overview.md) | You need scope, routes, stack, setup, or the repo map. |
+| [Game Architecture](./architecture.md) | You need routing, React state, effects, timing, generation, scoring, or status flows. |
+| [Gameplay Guide](./gameplay.md) | You need player-facing controls and rules for the portal or either game. |
+| [Assets Guide](./assets.md) | You need to add, replace, or inspect art. |
+| [Audio, UI, and Styling](./audio-ui-styling.md) | You need speech, tones, layout, selector scope, animation, or responsive guidance. |
+| [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md) | You need change recipes, browser smoke tests, build checks, or static hosting notes. |
+| [Hunter Workflow](./hunter/hunter-workflow.md) | You need Hunter skill, process, todo, or validation workflow. |
+| [Repo Workflow](./hunter/repo-workflow.md) | You need checkout, command, or change-boundary guidance. |
+| [Table Talk Diner Notes](./hunter/table-talk-diner.md) | You are changing diner gameplay. |
+| [Tiny City Delivery Notes](./hunter/tiny-city-delivery.md) | You are changing city gameplay. |
+| [Assets and Visual QA](./hunter/assets-and-visual-qa.md) | You are changing layouts or art. |
 
 ## Source Anchors
 
 | File | Role |
 | --- | --- |
-| `src/App.tsx` | All game data, components, state, order generation, timers, scoring, audio helpers, and render tree. |
-| `src/styles.css` | Global CSS variables, game scene layers, component styling, food/customer art containers, animations, and responsive rules. |
-| `src/main.tsx` | React entry point, `StrictMode`, app mount, and CSS import. |
-| `src/assets/` | Runtime image and cursor assets. |
-| `package.json` | npm scripts and dependency versions. |
+| `index.html` | Document metadata, root node, and Vite entry. |
+| `src/main.tsx` | React `StrictMode` mount and CSS import. |
+| `src/App.tsx` | Portal, History API paths, both games, state, effects, scoring, speech, and tones. |
+| `src/styles.css` | Portal, diner, city, assets, animation, and breakpoints. |
+| `src/assets/` | Runtime PNG and SVG assets. |
+| `package.json` | npm scripts and dependency ranges. |
+| `AGENTS.md` | Project-wide coding-session instructions. |
 
-## Documentation Checklist
+## Coverage
 
-| Area | Status |
+The docs cover:
+
+- the root mini-game portal and both game routes;
+- direct-link/static-host fallback requirements;
+- both gameplay models and completion conditions;
+- React state, effects, timers, generation, scoring, and audio;
+- asset inventories and replacement recipes;
+- shared CSS risks and diner-only selector scoping;
+- desktop/mobile smoke tests and command verification;
+- Hunter startup, durable process/todo use, worktree discipline, and validation fallback.
+
+## Known Repository Gaps
+
+| Gap | Current status |
 | --- | --- |
-| Project overview and current game scope | Documented in [Project Overview](./project-overview.md). |
-| Local setup, scripts, and Node/npm assumptions | Documented in [Project Overview](./project-overview.md) and [README](../README.md). |
-| React component/state architecture | Documented in [Game Architecture](./architecture.md). |
-| Main data structures and inventories | Documented in [Game Architecture](./architecture.md) and [Assets Guide](./assets.md). |
-| Timers, status flow, order generation, levels, scoring, combo, and completion | Documented in [Game Architecture](./architecture.md). |
-| Gameplay controls and serve outcomes | Documented in [Gameplay Guide](./gameplay.md). |
-| Customer, food, background, player, cursor assets | Documented in [Assets Guide](./assets.md). |
-| Speech synthesis and sound effects | Documented in [Audio, UI, and Styling](./audio-ui-styling.md). |
-| 2D scene layers, animations, responsive layout, custom cursor | Documented in [Audio, UI, and Styling](./audio-ui-styling.md). |
-| Styling organization and visual rules to preserve | Documented in [Audio, UI, and Styling](./audio-ui-styling.md). |
-| Maintenance recipes | Documented in [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md). |
-| Manual testing and build verification | Documented in [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md). |
-| Deployment and GitHub notes | Documented in [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md). |
-| Future-session orientation | Documented in [Start Here](./start-here.md). |
-| Hunter graph and process workflow | Documented in [Hunter Workflow](./hunter/hunter-workflow.md). |
-
-## Known Documentation Gaps
-
-| Gap | Why it remains |
-| --- | --- |
-| No automated test reference | The repo does not contain test tooling or test files. |
-| No CI workflow reference | The repo does not contain GitHub Actions or other CI config. |
-| No deployment provider specifics | The repo has a Vite static build but no provider config. |
-| No generated-art prompts or source process | The repo stores final image files, but no generation prompt metadata or script. |
-| No browser support matrix | The code uses browser APIs directly, but no project browser policy is present. |
+| Automated tests | No runner, test script, or test files. |
+| CI | No GitHub Actions or other CI configuration. |
+| Deployment provider | No provider-specific configuration; static-host SPA fallback must be configured externally. |
+| Browser support policy | Browser-native audio APIs are used without a formal support matrix. |
+| Generated-art provenance | Final image files are present, but prompt/source metadata is not. |

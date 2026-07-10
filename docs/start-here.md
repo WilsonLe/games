@@ -1,5 +1,5 @@
 ---
-description: "Fast orientation for future sessions opening the repo with no prior thread context."
+description: "Fast orientation for future sessions opening the two-game portal with no prior context."
 references: []
 ---
 
@@ -7,79 +7,86 @@ references: []
 
 [Docs index](./README.md) | [Repo README](../README.md)
 
-Use this when opening the repo with no prior thread context.
-
 ## Fast Path
 
-1. Read `README.md` for setup and the docs map.
-2. Open `src/App.tsx`. The game is intentionally concentrated there.
-3. Scan these symbols first:
+1. Read `AGENTS.md` and `README.md`.
+2. Confirm the checkout root, branch, worktree, remote default branch, and working-tree status.
+3. Open `src/App.tsx`; portal routing and both games intentionally live in this file.
+4. Scan the source anchors below.
+5. Open `src/styles.css`, paying special attention to the diner-only selector scope near
+   `/* Top-down restaurant game stage */`.
+6. Check `src/assets/` before changing imports or filenames.
+7. Run the appropriate checks before delivery.
+
+## Source Anchors
 
 | Symbol | Why it matters |
 | --- | --- |
-| `FOODS`, `FoodId`, `foodArtById` | Food inventory and sprite mapping. |
-| `CUSTOMERS`, `CustomerProfile`, `customerSpriteRowById` | Guest inventory and generated sprite-sheet row mapping. |
-| `TARGET_SERVES`, `ORDERS_PER_LEVEL`, `HAPPY_GUEST_COMBO_BONUS` | Main Table Talk Diner balancing constants. |
-| `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `WALK_TILES` | Tile-grid positions for the diner door, waiter, guest tables, and walk markers. |
-| `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS`, `TARGET_CITY_DELIVERIES` | Tiny City Delivery map, route, mission, and target data. |
-| `difficultyForLevel` | Level scaling and timer math. |
-| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Tile-route interpolation and direction selection for guests and waiter. |
-| `selectFoods`, `makeGuest`, `makeDecoyFood` | Deterministic order and dish generation. |
-| `RestaurantGame`, `TinyCityDeliveryGame`, `GamePortal`, `App` | Route-level game selection and top-level render paths. |
-| `handleGuestSelect`, `revealGuestOrder` | Waiter-to-table order flow and speech trigger. |
-| `handleFoodDrop` | Drag/drop serve resolution, scoring, combo completion, and wrong-table handling. |
+| `GAME_PATH`, `TINY_CITY_PATH`, `normalizePath`, `App` | Client-side path selection, history updates, document titles, and portal fallback. |
+| `GamePortal` | Root two-game chooser and preview cards. |
+| `FOODS`, `foodArtById` | Diner food inventory and image mapping. |
+| `CUSTOMERS`, `customerSpriteRowById` | Guest inventory and generated sheet rows. |
+| `TARGET_SERVES`, `ORDERS_PER_LEVEL`, `difficultyForLevel` | Diner progression and pacing. |
+| `DINER_DOOR_TILE`, `WAITER_HOME_TILE`, `SEAT_LAYOUT`, `WALK_TILES` | Diner actor and table coordinates. |
+| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Diner route interpolation. |
+| `makeGuest`, `makeDecoyFood`, `chooseSpawnLane` | Diner guest and dish generation. |
+| `handleGuestSelect`, `revealGuestOrder`, `handleFoodDrop` | Diner order-taking and serving decisions. |
+| `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS` | Tiny City map, road graph, and lesson content. |
+| `TinyCityDeliveryGame`, `handleCityLocationClick`, `completeCityMission` | Tiny City state, movement, scoring, and completion. |
+| `getCityRoadKey`, `CityMap` | Exact traversed-edge highlighting and map rendering. |
 
-4. Open `src/styles.css` for layout and visual behavior.
-5. Check `src/assets/` before changing imports or filenames.
-6. Run `npm run build` for code changes, and always run `git diff --check` before handing work back.
+## Product Shape
 
-## What This App Is
+- `/` is the two-game mini-game portal.
+- `/games/table-talk-diner` launches Table Talk Diner.
+- `/games/tiny-city-delivery` launches Tiny City Delivery.
+- In-app navigation uses the History API without a router package.
+- Unknown paths render the portal without replacing the address.
+- Both games have a portal-return control.
 
-`Table Talk Diner` is a single-screen 2D arcade game. Guests ask for English food orders and the
-player drags the right dish from the kitchen pass to the matching table before patience timers
-expire.
-
-`Tiny City Delivery` is a map-routing game where the player follows delivery instructions using
-English place words, quantities, and prepositions.
-
-The current app is a portal shell with client-side path selection for the two games. There is no
-backend, persistence, multiplayer, automated tests, or CI configuration in the repo.
+The app has no backend, accounts, saved progress, analytics, automated tests, CI workflow, or
+provider-specific deployment configuration.
 
 ## Where To Change Things
 
 | Task | Start in |
 | --- | --- |
-| Add a food | `src/App.tsx` food types/data/imports, then `src/assets/sprites/`. |
-| Add a customer | `src/App.tsx` customer types/data/imports, then `src/assets/sprites/`. |
-| Tune difficulty | `difficultyForLevel` and nearby constants in `src/App.tsx`. |
-| Change scoring or wrong-table rules | `handleFoodDrop`, `resetCombo`, and completion branches in `src/App.tsx`. |
-| Change layout or animation | `src/styles.css`. |
-| Replace art | `src/assets/`, matching imports in `src/App.tsx` or URLs in `src/styles.css`. |
-| Tune audio | `speak`, `playSound`, and `scheduleTone` in `src/App.tsx`. |
-| Change Tiny City locations or routes | `CITY_LOCATIONS`, `CITY_ROADS`, and `CITY_MISSIONS` in `src/App.tsx`. |
+| Change portal cards or path behavior | `GamePortal`, `App`, and portal styles. |
+| Add a diner food or guest | Types/data/imports in `src/App.tsx`, then `src/assets/`. |
+| Tune diner difficulty | Named constants and `difficultyForLevel`. |
+| Change serving or scoring | `handleFoodDrop`, `resetCombo`, and completion branches. |
+| Change city locations or roads | `LocationId`, `CITY_LOCATIONS`, and `CITY_ROADS`. |
+| Add or alter city missions | `CITY_MISSIONS`; keep phrase and structured fields aligned. |
+| Change layout or animation | `src/styles.css`; preserve diner-only selector scoping. |
+| Tune speech or tones | `speak`, both `playSound` callbacks, and `scheduleTone`. |
 
 ## High-Risk Gotchas
 
 | Gotcha | Detail |
 | --- | --- |
-| `targetGuestId` is recycling metadata, not a serving lock | Serving is decided by the guest table that receives the drop. |
-| `selectFoods` assumes enough unique foods | Do not let `orderSize` exceed `FOODS.length`; the loop looks for unique food IDs. |
-| Diner has no pause UI | Pause/resume timestamp shifting exists for Tiny City, not the current diner route. |
-| Audio depends on browser APIs | Speech and Web Audio may be unavailable or gesture-gated. |
-| Guest selection is movement-gated | Tapping a guest selects them immediately, but `revealGuestOrder` waits for the waiter route to finish and for the guest to be seated. |
-| CSS owns most visual behavior | Tile placement variables, waiter/customer sprite frames, dish wobble, cursor, and breakpoints are CSS-heavy. |
+| Static deep links need fallback routing | Hosts must serve `index.html` for both `/games/...` paths. |
+| Diner and city share generic class names | Diner full-viewport overrides must stay under `.appShell:not(.appShell--city)` when they touch `.mainSurface`, `.gameGrid`, `.resultBanner`, or `.sceneBackdrop`. |
+| `targetGuestId` is dish lifecycle metadata | The table receiving a drop decides service; a decoy can satisfy a matching request. |
+| `selectFoods` requires enough unique foods | Never allow `orderSize > FOODS.length`. |
+| Diner has no mid-shift pause | Tiny City has ready/play/pause/end controls; Diner starts automatically and only offers a new shift after completion. |
+| Audio is browser-dependent | Speech and Web Audio may be absent or gesture-gated. |
+| Diner selection is movement-gated | Entering tables ignore pointer input; after selection, the order is revealed only once the waiter arrives and the guest is seated. |
+| Road highlighting is edge-based | Keep consecutive-path logic; checking only whether both stops appear in the path produces false highlights. |
 
-## Best First Verification
+## Verification
 
-For a docs-only change:
+Docs-only:
 
 ```bash
 git diff --check
 ```
 
-For any source, dependency, asset import, or package metadata change:
+Source, dependency, asset, or package changes:
 
 ```bash
 npm run build
 git diff --check
 ```
+
+Use [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md) for browser smoke
+tests covering the portal and both games.
