@@ -2417,6 +2417,10 @@ h2 {
   width: 0;
   height: 0;
   pointer-events: none;
+  transition:
+    top var(--actor-position-transition-ms, 100ms) linear,
+    left var(--actor-position-transition-ms, 100ms) linear;
+  will-change: top, left;
 }
 
 .characterSprite {
@@ -2539,7 +2543,7 @@ h2 {
 }
 
 .characterActor--walking .characterSprite__sheet {
-  animation: characterWalkFrames 480ms step-end infinite;
+  animation: characterWalkFrames 720ms step-end infinite;
 }
 
 @keyframes beltRoll {
@@ -3494,6 +3498,10 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .characterActor {
+    transition: none;
+  }
+
   .characterActor--walking .characterSprite,
   .characterActor--walking .characterSprite__shadow,
   .characterActor--walking .characterSprite__sheet {

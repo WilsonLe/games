@@ -35,6 +35,6 @@ Also verify:
 
 - portal and game home controls;
 - kitchen, player, customer, food, and cursor assets;
-- dish entry/bob/exit, discrete guest/waiter tile movement and directional frame loops, city pickup pulse, and courier motion;
+- dish entry/bob/exit, linear guest/waiter tile-route movement and directional frame loops, city pickup pulse, and courier motion;
 - no console errors or missing assets;
 - exact traversed-road highlighting, including routes that revisit stops.

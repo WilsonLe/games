@@ -43,7 +43,7 @@ references: []
 | `HAPPY_GUEST_COMBO_BONUS` | Consecutive completed-guest bonus. |
 | `FIRST_DISH_DELAY_MS` | First ordered dish timing. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement pacing. |
-| `CHARACTER_STEP_MS` | Shared guest/waiter discrete tile-step speed. |
+| `DINER_CLOCK_MS`, `CHARACTER_STEP_MS` | Shared route sampling interval and linearly interpolated guest/waiter travel time per tile. |
 | `LEAVING_GUEST_LINGER_MS` | Post-exit guest cleanup. |
 | `DISH_EXIT_MS` | Serving-line exit-animation cleanup delay. |
 | `GREETING_PATIENCE_BONUS_MS`, `SERVED_DISH_PATIENCE_BONUS_MS` | Patience rewarded by positive interactions. |
@@ -97,9 +97,9 @@ Run `npm run dev`, then inspect the console throughout.
 | Test | Expected |
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1. |
-| Guest selection | After seating, waiter steps across whole tiles, then order text/TTS appears and patience rises. |
-| Character walk cycles | Waiter and all six customers loop four distinct frames in south, north, east, and mirrored-west movement; they return to front idle without flicker or size jitter. |
-| Reduced motion | With reduced motion enabled, gait/step/shadow loops freeze while required whole-tile route updates continue. |
+| Guest selection | After seating, the waiter moves linearly across the tile route, then order text/TTS appears and patience rises. |
+| Character travel and walk cycles | Waiter and all six customers move smoothly at `360ms` per tile, advance four distinct frames at `180ms` per frame in south, north, east, and mirrored-west movement, and return to front idle without flicker or size jitter. |
+| Reduced motion | With reduced motion enabled, position transitions and gait/step/shadow loops stop while required route-position updates continue. |
 | Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
 | Drop before order | Dish remains and status asks player to take the order. |
 | Drop outside | Dish remains and status explains where to serve it. |

@@ -10,7 +10,7 @@ references: []
 - The game starts automatically with one entering guest.
 - Four sparse tables are rendered before service and remain after guests leave; incoming guests are
   assigned to an available table.
-- A seated table selection sends the waiter there in discrete tile steps; the order is revealed and
+- A seated table selection sends the waiter smoothly along the tile route; the order is revealed and
   spoken after arrival, and the greeting adds a small patience reward.
 - Correct dishes advance the checklist, animate off the pass, and add patience; wrong-table drops and
   expiration reset the combo.
@@ -42,7 +42,7 @@ references: []
 ## Verify
 
 Initial guest/second spawn, all four tables visible before and after occupancy, responsive floor
-coverage, integer-only guest/waiter tile steps, all direction frames/mirroring, greeting and
-correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service,
+coverage, linear guest/waiter route travel, all direction frames/mirroring and `180ms` frame cadence,
+greeting and correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service,
 decoy match, drop outside, unheard guest, wrong table, expiration, recycling, keyboard service, win,
 New Shift, portal return, desktop, and mobile.

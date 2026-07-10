@@ -59,7 +59,7 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | --- | --- |
 | `FoodId`, `Food` | Supported food IDs and labels. |
 | `CustomerProfile` | Guest IDs and names. |
-| `TilePoint`, `WalkDirection`, `CharacterVisual` | Discrete tile positions, facing, walking, and route-completion state. |
+| `TilePoint`, `WalkDirection`, `CharacterVisual` | Route tiles plus interpolated actor positions, facing, walking, and route-completion state. |
 | `SeatLayout` | Table, customer, waiter, and speech-bubble positions. |
 | `DifficultyProfile` | Per-level capacity and timing values. |
 | `ActiveGuest` | Guest order, service, timing, seat, hearing, and movement state. |
@@ -117,7 +117,8 @@ The diner starts automatically. It has no mid-shift pause or reset control. Comp
 | `HAPPY_GUEST_COMBO_BONUS` | 15 | Bonus multiplier step for consecutive completed guests. |
 | `FIRST_DISH_DELAY_MS` | 1800 | Earliest ordered-dish spawn. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | 3000 | Replacement delay when the next spawn is already due. |
-| `CHARACTER_STEP_MS` | 360 | Shared guest/waiter route time per discrete tile step. |
+| `DINER_CLOCK_MS` | 100 | Gameplay and route-render sampling interval. |
+| `CHARACTER_STEP_MS` | 360 | Shared guest/waiter route time per tile, with linearly interpolated rendering between tiles. |
 | `LEAVING_GUEST_LINGER_MS` | 350 | Removal delay after a reverse exit route. |
 | `DISH_EXIT_MS` | 360 | Time retained for a dish's serving-line exit animation. |
 | `GREETING_PATIENCE_BONUS_MS` | 1500 | Patience added after the waiter greets/reveals an order. |
@@ -148,10 +149,11 @@ orders it is half that time.
   expiration, and schedules each ordered food from 1800ms through `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
-- `buildTileRoute` routes actors through the diner aisle; `getRouteVisual` selects one whole route
-  tile at a time and derives facing from the current segment.
-- The 100ms clock advances discrete guest/waiter steps and drives route completion, spawning, dish
-  recycling, expiration, and leaving-guest removal.
+- `buildTileRoute` routes actors through the diner aisle; `getRouteVisual` linearly interpolates
+  between each pair of route tiles and derives facing from the current segment.
+- The 100ms clock samples guest/waiter route progress, and a matching linear CSS transition bridges
+  samples smoothly. The same clock drives route completion, spawning, dish recycling, expiration,
+  and leaving-guest removal.
 - Ordered food recycles if its owning guest still needs it; decoys animate off at the end of the pass.
 - Removed dishes stay in `beltFoods` with `leavingAt` through `DISH_EXIT_MS`, then a timeout removes
   them after the serving-line exit animation.
