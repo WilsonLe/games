@@ -1,0 +1,11 @@
+{
+  "task": "Refresh Table Talk Games setup docs",
+  "status": "completed",
+  "requirements": [
+    "Document the current drag-to-serve diner gameplay instead of stale click-to-serve behavior.",
+    "Document full-body customer and waiter sprite-sheet assets and current sprite mapping symbols.",
+    "Keep the Hunter graph reachable from AGENTS.md and docs/README.md.",
+    "Run docs-appropriate verification before handing work back."
+  ],
+  "current_step": "Completed. Documentation matches the current drag-to-serve diner source; graph validation and docs-only verification passed."
+}

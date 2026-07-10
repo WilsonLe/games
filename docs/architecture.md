@@ -26,8 +26,9 @@ All types below live in `src/App.tsx`.
 | `CustomerProfile` | Customer catalog row with `id` and display `name`. |
 | `DifficultyProfile` | Derived per-level limits and timer values. |
 | `ActiveGuest` | Runtime guest instance, order foods, served foods, phrase, timestamps, and level. |
-| `ScheduledFood` | Future ordered food waiting to spawn on the belt. |
-| `BeltFood` | Visible conveyor food button, including target guest, lane, spawn time, and travel time. |
+| `ScheduledFood` | Future ordered food waiting to spawn on the kitchen pass. |
+| `BeltFood` | Visible kitchen-pass dish button, including target guest, lane, spawn time, and travel time. |
+| `DraggingDish` | Active pointer/native drag state for the dish preview. |
 | `Feedback` | Status text and visual kind: `neutral`, `good`, or `bad`. |
 | `GameStatus` | `ready`, `playing`, `paused`, or `ended`. |
 | `SoundKind` | `correct`, `complete`, or `wrong`. |
@@ -39,19 +40,23 @@ All types below live in `src/App.tsx`.
 | `FOODS` | Food catalog used for order generation and labels. |
 | `foodArtById` | Maps each `FoodId` to an imported PNG sprite. |
 | `CUSTOMERS` | Customer profile rotation. Note: customer ID `mai` displays as `Mia`. |
-| `customerSpriteById` | Maps each customer ID to an imported PNG sprite. |
+| `customerSpriteRowById` | Maps each customer ID to a row in `customer-fullbody-sheet.png`. |
+| `customerFullbodySheetUrl` | Generated full-body customer sprite sheet used by `CustomerSprite`. |
+| `waiterFullbodySheetUrl` | Generated full-body waiter sprite sheet used by `PlayerSprite`. |
 | `foodById` | Lookup map derived from `FOODS`. |
 
 ## Components
 
 | Component | Role |
 | --- | --- |
-| `App` | Top-level game engine, state owner, effects owner, and render tree. |
-| `GuestCard` | Guest order card, order replay button, food checklist, patience timer, selected state. |
-| `ConveyorBelt` | Belt panel and visible clickable `BeltFood` items. |
-| `EnginePanel` | Difficulty readout and generated sprite sheet preview. |
+| `App` | Top-level route chooser for the portal and game routes. |
+| `RestaurantGame` | Table Talk Diner engine, state owner, effects owner, and render tree. |
+| `RestaurantStage` | Top-down diner floor, guest tables, kitchen station, drag preview, and waiter sprite. |
+| `GuestTable` | Guest table button, speech bubble, food chips, patience timer, selected/drop state. |
+| `KitchenStation` | Kitchen pass and visible draggable `BeltFood` dish buttons. |
+| `PlayerSprite` | Generated full-body waiter sprite sheet wrapper. |
 | `FoodArt` | Image wrapper for a food sprite. |
-| `CustomerSprite` | Image wrapper for a customer sprite. |
+| `CustomerSprite` | Generated full-body customer sprite sheet wrapper. |
 | `StatPill` | Reusable stat display in the score strip. |
 
 ## State And Refs
@@ -62,57 +67,52 @@ All types below live in `src/App.tsx`.
 | --- | --- | --- |
 | `gameStatus` | `GameStatus` | Controls ready/play/pause/end behavior. |
 | `now` | number | Clock value updated every `100ms` while playing. |
-| `activeGuests` | `ActiveGuest[]` | Guest cards currently in the game. |
+| `activeGuests` | `ActiveGuest[]` | Guests currently seated, entering, or leaving. |
 | `selectedGuestId` | `string | null` | Preferred guest for matching visible food. |
 | `scheduledFoods` | `ScheduledFood[]` | Ordered foods waiting for their due time. |
-| `beltFoods` | `BeltFood[]` | Foods currently visible on the conveyor. |
+| `beltFoods` | `BeltFood[]` | Dishes currently visible on the kitchen pass. |
 | `score` | number | Total points. |
 | `served` | number | Completed guest orders. |
-| `streak` | number | Consecutive correct food clicks. |
-| `misses` | number | Wrong serves or expired guests. |
-| `feedback` | `Feedback` | Status message and color state. |
+| `combo` | number | Consecutive happy guests completed without a wrong table or expired guest. |
+| `draggingDish` | `DraggingDish | null` | Current custom pointer drag preview state. |
+| `feedback` | `Feedback` | Status message and color state; maintained for diner logic but not currently rendered by diner JSX. |
 | `guestSequenceRef` | ref number | Monotonic guest sequence for deterministic rotation and IDs. |
 | `foodSequenceRef` | ref number | Monotonic food sequence for decoys/recycles/IDs. |
 | `nextGuestAtRef` | ref number | Next allowed guest spawn time. |
 | `nextDecoyAtRef` | ref number | Next allowed decoy spawn time. |
-| `pauseStartedRef` | ref number/null | Wall-clock time when pause began. |
 | `audioContextRef` | ref `AudioContext`/null | Lazily created Web Audio context. |
+| `draggingDishRef` | ref `DraggingDish | null` | Current drag state used by global pointer handlers. |
+| `consumedDishIdsRef` | ref `Set<string>` | Prevents a dish from being served twice through duplicate drop events. |
 
 ## Status Flow
 
 ```mermaid
 flowchart LR
-  Ready["ready"] -->|"Start Shift / resetGame"| Playing["playing"]
-  Playing -->|"Pause"| Paused["paused"]
-  Paused -->|"Resume / timestamp shift"| Playing
+  Ready["ready"] -->|"mount / resetGame"| Playing["playing"]
   Playing -->|"served >= TARGET_SERVES"| Ended["ended"]
-  Playing -->|"misses >= MAX_MISSES"| Ended
-  Ended -->|"New Shift / resetGame"| Playing
-  Playing -->|"Reset"| Playing
-  Paused -->|"Reset"| Playing
 ```
 
 | Status | UI button label | Behavior |
 | --- | --- | --- |
-| `ready` | `Start Shift` | `resetGame` seeds two level-1 guests and starts play. |
-| `playing` | `Pause` | Timers and generation effects run. |
-| `paused` | `Resume` | `resumeGame` shifts timestamps by the paused duration. |
-| `ended` | `New Shift` | Result banner appears; starting again calls `resetGame`. |
+| `ready` | Not rendered in diner | `resetGame` runs on mount, seeds two level-1 guests, and starts play. |
+| `playing` | Not rendered in diner | Timers, guest spawning, dish spawning, drag/drop, expiration, and scoring effects run. |
+| `ended` | Not rendered in diner | Result banner appears after `served >= TARGET_SERVES`. |
 
-The reset icon always calls `resetGame`.
+`GameStatus` is shared with Tiny City Delivery, but Table Talk Diner currently does not expose
+pause/resume/reset controls in its route UI.
 
 ## Gameplay Constants
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
 | `TARGET_SERVES` | `24` | Completed guest orders required to win. |
-| `MAX_MISSES` | `5` | Misses that end the shift. |
 | `ORDERS_PER_LEVEL` | `4` | Completed orders per level. |
 | `MAX_LEVEL` | `6` | Derived from `Math.ceil(TARGET_SERVES / ORDERS_PER_LEVEL)`. |
-| `STREAK_BONUS_PER_HIT` | `8` | Added per streak step after the first hit. |
+| `HAPPY_GUEST_COMBO_BONUS` | `15` | Added per completed happy-guest combo step after the first completed guest. |
 | `FIRST_DISH_DELAY_MS` | `1800` | Delay before first ordered dish can spawn. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | `3000` | Minimum delay before spawning after a completed order when needed. |
-| `ORDER_LANES` | `2` | Conveyor lanes. |
+| `LEAVING_GUEST_VISIBLE_MS` | `2200` | How long completed/expired guests remain visible while leaving. |
+| `ORDER_LANES` | `2` | Kitchen-pass lane offsets. |
 
 ## Difficulty Table
 
@@ -133,11 +133,13 @@ Values are derived by `difficultyForLevel(level)`.
 | --- | --- |
 | `levelForServed(served)` | `floor(served / ORDERS_PER_LEVEL) + 1`, clamped to `1..MAX_LEVEL`. |
 | `selectFoods(sequence, count, level)` | Deterministically chooses unique foods from `FOODS` using cursor `(sequence * 3 + level) % FOODS.length`, advancing by `3`. |
-| `makeGuest(sequence, now, profile)` | Picks `CUSTOMERS[sequence % CUSTOMERS.length]`, selects foods, builds phrase `Could I please have ...?`, creates `ActiveGuest`, and schedules each ordered food. |
+| `makeGuest(sequence, now, profile)` | Picks `CUSTOMERS[sequence % CUSTOMERS.length]`, selects foods, builds a phrase through `makeOrderPhrase`, creates `ActiveGuest`, and schedules each ordered food. |
 | `makeDecoyFood(sequence, now, profile)` | Creates untargeted belt food from `(sequence * 5 + profile.level) % FOODS.length`. |
 | `chooseSpawnLane(preferredLane, currentFoods, now)` | Uses the preferred lane or the other lane if all existing foods in that lane have moved past `24%` progress; returns `null` when blocked. |
 
-`targetGuestId` helps priority, but it is not a strict lock. In `handleFoodClick`, food goes first to its owning guest if that guest still needs it, then to the selected guest if possible, then to the first active guest who needs that food. This means a decoy can still count if a guest needs that food.
+`targetGuestId` is used to recycle/remove scheduled dishes for their owning guest. Serving is decided
+by the guest table passed to `handleFoodDrop`, so a decoy can still count if the player drops it on a
+guest who needs that food.
 
 ## Timers And Effects
 
@@ -146,30 +148,29 @@ Values are derived by `difficultyForLevel(level)`.
 | Clock | `gameStatus === "playing"` | Updates `now` every `100ms`. |
 | Guest and decoy spawning | Playing, `now` changes | Adds guests while under `difficulty.maxGuests`; adds decoys on `nextDecoyAtRef` if a lane is clear. |
 | Scheduled food spawning | Playing, scheduled foods due | Converts due `ScheduledFood` entries into `BeltFood`; blocked lanes delay the food by `650ms`. |
-| Belt cleanup and recycle | Playing, belt foods move | Removes food after travel. Targeted food recycles if its target guest still needs it; decoys disappear. |
-| Guest expiration | Playing, guests expire | Removes expired guests and their targeted foods, clears selection if needed, and calls `addMiss`. |
-| Selection repair | Active guests change | Selects the first active guest if the previous selection no longer exists. |
+| Belt cleanup and recycle | Playing, belt foods age past `travelMs` | Removes food after travel. Targeted food recycles if its target guest still needs it; decoys disappear. |
+| Guest expiration | Playing, guests expire | Marks expired guests leaving, removes their targeted foods, clears selection if needed, plays `wrong`, and resets combo. |
+| Selection repair | Active guests change | Clears the selected guest if the previous selection no longer exists. |
 | Cleanup | Unmount | Closes the audio context and cancels speech synthesis. |
 
-## Serving, Scoring, And Lives
+## Serving, Scoring, And Completion
 
 | Event | Result |
 | --- | --- |
-| Correct food, order not complete | Food is removed, guest checklist updates, score increases, streak increases, `correct` sound plays. |
-| Correct food completes order | Guest is removed, `served` increments, scheduled leftovers for that guest are removed, `complete` sound plays. |
-| No guest needs clicked food | Food is removed, `misses` increments, streak resets, `wrong` sound plays. |
-| Guest expires | Guest and targeted foods are removed, `misses` increments, streak resets. |
-| `misses >= MAX_MISSES` | `gameStatus` becomes `ended`; result banner says `Kitchen closed`. |
-| `served >= TARGET_SERVES` | `gameStatus` becomes `ended`; result banner says `Shift complete`. |
+| Correct food, order not complete | Food is removed, guest checklist updates, score increases, and `correct` sound plays. |
+| Correct food completes order | Guest enters leaving phase, `served` increments, `combo` increments, scheduled/visible leftovers for that guest are removed, and `complete` sound plays. |
+| Dish dropped on wrong table | Food is removed, `combo` resets, and `wrong` sound plays. |
+| Guest expires | Guest enters leaving phase, targeted foods are removed, `combo` resets, and `wrong` sound plays. |
+| `served >= TARGET_SERVES` | `gameStatus` becomes `ended`; result banner says `Dinner service complete`. |
 
-Per correct food click:
+Per correct dish drop:
 
 ```text
-nextStreak = streak + 1
 timeBonus = max(0, ceil((matchingGuest.expiresAt - Date.now()) / 1000))
 levelBonus = difficulty.level * 5
-streakBonus = max(0, nextStreak - 1) * STREAK_BONUS_PER_HIT
-earned = 35 + timeBonus + levelBonus + streakBonus
+nextCombo = completedGuest ? combo + 1 : combo
+comboBonus = completedGuest ? max(0, nextCombo - 1) * HAPPY_GUEST_COMBO_BONUS : 0
+earned = 35 + timeBonus + levelBonus + comboBonus
 ```
 
 The displayed `Orders` stat is completed guest orders, not individual dishes.
