@@ -97,7 +97,7 @@ Run `npm run dev`, then inspect the console throughout.
 
 | Test | Expected |
 | --- | --- |
-| Initial load | One guest enters; score 0, orders 0/24, level 1. |
+| Initial load | One guest enters; score 0, orders 0/24, level 1, and six kitchen-pass slots are visible. |
 | Guest selection | After seating, the full customer/table area reveals and speaks the order immediately; selecting another customer replaces unfinished speech, and earlier orders remain visible. |
 | Character travel and walk cycles | All six customers move smoothly at `360ms` per tile, advance four distinct frames at `180ms` per frame in south, north, east, and mirrored-west movement, and return to front idle without flicker or size jitter. |
 | Reduced motion | With reduced motion enabled, position transitions and gait/step/shadow loops stop while required route-position updates continue. |
@@ -106,6 +106,7 @@ Run `npm run dev`, then inspect the console throughout.
 | Drop outside | Dish remains and status explains where to serve it. |
 | Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and bad feedback appears. |
 | Expiration | Guest leaves and owned dishes animate off before cleanup. |
+| Pass capacity | At most six dishes occupy the pass; additional ordered dishes retry and decoys wait until a slot opens. |
 | Keyboard service | `Enter`/`Space` serves to selected table. |
 | Win | At 24 orders, completion banner and `New Shift` appear. |
 | New Shift | All diner counters and runtime state reset. |
