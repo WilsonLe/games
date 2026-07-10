@@ -1,5 +1,5 @@
 ---
-description: "Documentation index and Hunter graph hub for the Table Talk Games mini-game portal."
+description: "Documentation index and Hunter graph hub for the Lingo Game mini-game portal."
 references:
   - "docs/start-here.md"
   - "docs/project-overview.md"
@@ -10,8 +10,8 @@ references:
   - "docs/maintenance-testing-deployment.md"
   - "docs/hunter/hunter-workflow.md"
   - "docs/hunter/repo-workflow.md"
-  - "docs/hunter/table-talk-diner.md"
-  - "docs/hunter/tiny-city-delivery.md"
+  - "docs/hunter/dish-wish.md"
+  - "docs/hunter/drop-hop.md"
   - "docs/hunter/assets-and-visual-qa.md"
 ---
 
@@ -35,8 +35,8 @@ and repository workflow.
 | [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md) | You need change recipes, browser smoke tests, build checks, or static hosting notes. |
 | [Hunter Workflow](./hunter/hunter-workflow.md) | You need Hunter skill, process, todo, or validation workflow. |
 | [Repo Workflow](./hunter/repo-workflow.md) | You need checkout, command, or change-boundary guidance. |
-| [Table Talk Diner Notes](./hunter/table-talk-diner.md) | You are changing diner gameplay. |
-| [Tiny City Delivery Notes](./hunter/tiny-city-delivery.md) | You are changing city gameplay. |
+| [Dish Wish Notes](./hunter/dish-wish.md) | You are changing diner gameplay. |
+| [Drop Hop Notes](./hunter/drop-hop.md) | You are changing city gameplay. |
 | [Assets and Visual QA](./hunter/assets-and-visual-qa.md) | You are changing layouts or art. |
 
 ## Source Anchors

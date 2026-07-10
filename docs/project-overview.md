@@ -9,14 +9,14 @@ references: []
 
 ## Current App
 
-Table Talk Games is a browser-only React/Vite mini-game portal. The root is the playable game
-chooser, with two shipped games:
+Lingo Game is a browser-only React/Vite mini-game portal. The root is the playable game chooser,
+with two shipped games:
 
-- **Table Talk Diner** — guests request food in spoken and written English; the player takes orders
-  and drags matching dishes from the kitchen pass to each table.
-- **Tiny City Delivery** — the player follows delivery tickets across a road map using place names,
-  quantities, and spatial language such as `behind`, `between`, `over`, `next to`, `inside`,
-  `outside`, and `across`.
+- **Dish Wish** — guests request food in spoken and written English; the player takes orders and
+  drags matching dishes from the kitchen pass to each table.
+- **Drop Hop** — the player follows delivery tickets across a road map using place names, quantities,
+  and spatial language such as `behind`, `between`, `over`, `next to`, `inside`, `outside`, and
+  `across`.
 
 This is not a marketing site. The portal cards launch a game immediately, and both games provide a
 return-to-portal control.
@@ -26,17 +26,19 @@ return-to-portal control.
 | Path | Behavior |
 | --- | --- |
 | `/` | Renders `GamePortal`. |
-| `/games/table-talk-diner` | Renders `RestaurantGame`. |
-| `/games/tiny-city-delivery` | Renders `TinyCityDeliveryGame`. |
+| `/games/dish-wish` | Canonical Dish Wish route; renders `RestaurantGame`. |
+| `/games/drop-hop` | Canonical Drop Hop route; renders `DropHopGame`. |
+| `/games/table-talk-diner` | Legacy alias; replaces the URL with `/games/dish-wish`. |
+| `/games/tiny-city-delivery` | Legacy alias; replaces the URL with `/games/drop-hop`. |
 | Other paths | Render `GamePortal` while leaving the current address unchanged. |
 
-`App` normalizes trailing slashes, intercepts ordinary primary-button card clicks, writes paths with
-`history.pushState`, listens for `popstate`, and updates `document.title`. Modified clicks retain
-normal anchor behavior.
+`App` normalizes trailing slashes, canonicalizes legacy routes with `history.replaceState`,
+intercepts ordinary primary-button card clicks, writes navigations with `history.pushState`, listens
+for `popstate`, and updates `document.title`. Modified clicks retain normal anchor behavior.
 
 ## Gameplay At A Glance
 
-| Area | Table Talk Diner | Tiny City Delivery |
+| Area | Dish Wish | Drop Hop |
 | --- | --- | --- |
 | Goal | Complete 24 guest orders. | Complete 10 deliveries before 5 mistakes. |
 | Primary input | Select a table, then drag or keyboard-serve dishes. | Click adjacent map locations. |

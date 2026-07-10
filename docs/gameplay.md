@@ -1,5 +1,5 @@
 ---
-description: "Player-facing portal, Table Talk Diner, and Tiny City Delivery controls, rules, scoring, and outcomes."
+description: "Player-facing portal, Dish Wish, and Drop Hop controls, rules, scoring, and outcomes."
 references: []
 ---
 
@@ -13,7 +13,7 @@ The root route is a two-card game chooser. Select either card to launch its game
 inside the single-page app; modified clicks retain normal link behavior. Both games include a home
 button that returns to `/`, and browser back/forward also works.
 
-# Table Talk Diner
+# Dish Wish
 
 ## Objective
 
@@ -91,7 +91,7 @@ consecutive happy guest can also add `(combo - 1) * 15`.
 At 24 completed orders, timers stop, `Dinner service complete` appears, and `New Shift` resets all
 diner state. The portal button remains available throughout. There is no mid-shift pause/reset.
 
-# Tiny City Delivery
+# Drop Hop
 
 ## Objective
 
@@ -99,7 +99,7 @@ Complete 10 delivery tickets before making 5 invalid-road or required-stop mista
 
 ## Starting And Controls
 
-Tiny City opens in `ready` state. Use `Start Route` to begin. The controls are:
+Drop Hop opens in `ready` state. Use `Start Route` to begin. The controls are:
 
 | Control | Behavior |
 | --- | --- |

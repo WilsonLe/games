@@ -9,6 +9,7 @@ import {
   Flame,
   Gauge,
   Home,
+  Languages,
   Mail,
   MapPin,
   Navigation,
@@ -316,16 +317,33 @@ const DISH_EXIT_MS = 360;
 const GREETING_PATIENCE_BONUS_MS = 1_500;
 const SERVED_DISH_PATIENCE_BONUS_MS = 2_000;
 const ORDER_LANES = 2;
-const GAME_TITLE = "Table Talk Diner";
-const GAME_PATH = "/games/table-talk-diner";
-const TINY_CITY_TITLE = "Tiny City Delivery";
-const TINY_CITY_PATH = "/games/tiny-city-delivery";
+const PORTAL_TITLE = "Lingo Game";
+const DISH_WISH_TITLE = "Dish Wish";
+const DISH_WISH_PATH = "/games/dish-wish";
+const DROP_HOP_TITLE = "Drop Hop";
+const DROP_HOP_PATH = "/games/drop-hop";
+const LEGACY_DISH_WISH_PATH = "/games/table-talk-diner";
+const LEGACY_DROP_HOP_PATH = "/games/tiny-city-delivery";
 const TARGET_CITY_DELIVERIES = 10;
 const MAX_CITY_MISTAKES = 5;
 const CITY_STREAK_BONUS = 12;
 
 function normalizePath(path: string) {
   return path.replace(/\/+$/, "") || "/";
+}
+
+function canonicalizePath(path: string) {
+  const normalizedPath = normalizePath(path);
+
+  if (normalizedPath === LEGACY_DISH_WISH_PATH) {
+    return DISH_WISH_PATH;
+  }
+
+  if (normalizedPath === LEGACY_DROP_HOP_PATH) {
+    return DROP_HOP_PATH;
+  }
+
+  return normalizedPath;
 }
 
 const ORDER_TEMPLATES: Array<(items: string) => string> = [
@@ -1321,7 +1339,7 @@ function CityMap({
   const requiredStopLocation = mission.requiredStop ? cityLocationById.get(mission.requiredStop) : null;
 
   return (
-    <section className="cityMapPanel" aria-label="Tiny City map">
+    <section className="cityMapPanel" aria-label="Drop Hop map">
       <div className="cityMap">
         <div className="cityRiver" aria-hidden="true" />
         <div className="cityRiver cityRiver--lower" aria-hidden="true" />
@@ -1427,7 +1445,7 @@ function CityMap({
   );
 }
 
-function TinyCityDeliveryGame({ onExit }: { onExit: () => void }) {
+function DropHopGame({ onExit }: { onExit: () => void }) {
   const [gameStatus, setGameStatus] = useState<GameStatus>("ready");
   const [missionIndex, setMissionIndex] = useState(0);
   const [currentLocationId, setCurrentLocationId] = useState<LocationId>("depot");
@@ -1519,7 +1537,7 @@ function TinyCityDeliveryGame({ onExit }: { onExit: () => void }) {
 
   const pauseCityGame = useCallback(() => {
     setGameStatus("paused");
-    setFeedback({ kind: "neutral", text: "Tiny City is paused." });
+    setFeedback({ kind: "neutral", text: "Drop Hop is paused." });
   }, []);
 
   const resumeCityGame = useCallback(() => {
@@ -1693,7 +1711,7 @@ function TinyCityDeliveryGame({ onExit }: { onExit: () => void }) {
         <header className="topBar">
           <div>
             <p className="eyebrow">Tiny town simulator</p>
-            <h1>Tiny City Delivery</h1>
+            <h1>{DROP_HOP_TITLE}</h1>
           </div>
 
           <div className="topActions">
@@ -1712,7 +1730,7 @@ function TinyCityDeliveryGame({ onExit }: { onExit: () => void }) {
                       : "New Route"}
               </span>
             </button>
-            <button className="iconButton" type="button" onClick={resetCityGame} aria-label="Reset Tiny City">
+            <button className="iconButton" type="button" onClick={resetCityGame} aria-label="Reset Drop Hop">
               <RotateCcw size={18} />
             </button>
           </div>
@@ -2618,16 +2636,16 @@ function GamePortal({ onPlay }: { onPlay: (path: string) => void }) {
       <section className="portalDashboard" aria-label="Game selection">
         <div className="portalHeader">
           <div className="portalMark">
-            <ChefHat size={30} />
+            <Languages size={30} />
           </div>
           <div>
             <p className="eyebrow">Mini-game portal</p>
-            <h1>Table Talk Games</h1>
+            <h1>{PORTAL_TITLE}</h1>
           </div>
         </div>
 
         <div className="portalGames">
-          <a className="gameTile" href={GAME_PATH} onClick={(event) => handleGameLinkClick(event, GAME_PATH)}>
+          <a className="gameTile" href={DISH_WISH_PATH} onClick={(event) => handleGameLinkClick(event, DISH_WISH_PATH)}>
             <span className="gameTile__thumb">
               <img src={gameKitchenBgUrl} alt="" draggable="false" />
               <span className="gameTile__sprites" aria-hidden="true">
@@ -2637,7 +2655,7 @@ function GamePortal({ onPlay }: { onPlay: (path: string) => void }) {
               </span>
             </span>
             <span className="gameTile__body">
-              <span className="gameTile__title">{GAME_TITLE}</span>
+              <span className="gameTile__title">{DISH_WISH_TITLE}</span>
               <span className="gameTile__meta">Restaurant simulator for English food orders</span>
               <span className="gameTile__cta">
                 <Play size={18} />
@@ -2646,7 +2664,7 @@ function GamePortal({ onPlay }: { onPlay: (path: string) => void }) {
             </span>
           </a>
 
-          <a className="gameTile gameTile--city" href={TINY_CITY_PATH} onClick={(event) => handleGameLinkClick(event, TINY_CITY_PATH)}>
+          <a className="gameTile gameTile--city" href={DROP_HOP_PATH} onClick={(event) => handleGameLinkClick(event, DROP_HOP_PATH)}>
             <span className="gameTile__thumb gameTile__thumb--city">
               <span className="gameTile__cityPreview" aria-hidden="true">
                 <span className="cityPreviewRoad cityPreviewRoad--one" />
@@ -2661,7 +2679,7 @@ function GamePortal({ onPlay }: { onPlay: (path: string) => void }) {
               </span>
             </span>
             <span className="gameTile__body">
-              <span className="gameTile__title">{TINY_CITY_TITLE}</span>
+              <span className="gameTile__title">{DROP_HOP_TITLE}</span>
               <span className="gameTile__meta">Delivery simulator for prepositions, directions, and quantities</span>
               <span className="gameTile__cta">
                 <Play size={18} />
@@ -2676,40 +2694,50 @@ function GamePortal({ onPlay }: { onPlay: (path: string) => void }) {
 }
 
 function App() {
-  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+  const [path, setPath] = useState(() => canonicalizePath(window.location.pathname));
 
   useEffect(() => {
-    const handlePopState = () => setPath(normalizePath(window.location.pathname));
+    const syncPathFromLocation = () => {
+      const normalizedPath = normalizePath(window.location.pathname);
+      const canonicalPath = canonicalizePath(normalizedPath);
 
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+      if (canonicalPath !== normalizedPath) {
+        window.history.replaceState(window.history.state, "", canonicalPath);
+      }
+
+      setPath(canonicalPath);
+    };
+
+    syncPathFromLocation();
+    window.addEventListener("popstate", syncPathFromLocation);
+    return () => window.removeEventListener("popstate", syncPathFromLocation);
   }, []);
 
   useEffect(() => {
     document.title =
-      path === GAME_PATH
-        ? `${GAME_TITLE} | Table Talk Games`
-        : path === TINY_CITY_PATH
-          ? `${TINY_CITY_TITLE} | Table Talk Games`
-          : "Table Talk Games";
+      path === DISH_WISH_PATH
+        ? `${DISH_WISH_TITLE} | ${PORTAL_TITLE}`
+        : path === DROP_HOP_PATH
+          ? `${DROP_HOP_TITLE} | ${PORTAL_TITLE}`
+          : PORTAL_TITLE;
   }, [path]);
 
   const navigateToGame = useCallback((nextPath: string) => {
-    const normalizedNextPath = normalizePath(nextPath);
+    const canonicalPath = canonicalizePath(nextPath);
 
-    if (normalizePath(window.location.pathname) !== normalizedNextPath) {
-      window.history.pushState(null, "", normalizedNextPath);
+    if (normalizePath(window.location.pathname) !== canonicalPath) {
+      window.history.pushState(null, "", canonicalPath);
     }
 
-    setPath(normalizedNextPath);
+    setPath(canonicalPath);
   }, []);
 
-  if (path === GAME_PATH) {
+  if (path === DISH_WISH_PATH) {
     return <RestaurantGame onExit={() => navigateToGame("/")} />;
   }
 
-  if (path === TINY_CITY_PATH) {
-    return <TinyCityDeliveryGame onExit={() => navigateToGame("/")} />;
+  if (path === DROP_HOP_PATH) {
+    return <DropHopGame onExit={() => navigateToGame("/")} />;
   }
 
   return <GamePortal onPlay={navigateToGame} />;

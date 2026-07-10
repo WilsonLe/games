@@ -45,7 +45,7 @@ There is no test script.
 
 ## Cross-Game CSS Rule
 
-Diner and Tiny City share `.appShell`, `.mainSurface`, `.gameGrid`, and `.resultBanner`. Full-screen
+Dish Wish and Drop Hop share `.appShell`, `.mainSurface`, `.gameGrid`, and `.resultBanner`. Full-screen
 diner overrides must be qualified under `.appShell:not(.appShell--city)`. Verify both games after
 changing any shared selector.
 

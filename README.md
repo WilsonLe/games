@@ -1,15 +1,14 @@
 ---
-description: "Public project overview, setup, routes, and documentation map for Table Talk Games."
+description: "Public project overview, setup, routes, and documentation map for Lingo Game."
 references: []
 ---
 
-# Table Talk Games
+# Lingo Game
 
-Table Talk Games is a client-only React/Vite mini-game portal with two playable English-learning
-games:
+Lingo Game is a client-only React/Vite mini-game portal with two playable English-learning games:
 
-- **Table Talk Diner** — a food-serving arcade game for listening to practical English orders.
-- **Tiny City Delivery** — a map-routing game for place words, prepositions, and quantities.
+- **Dish Wish** — a food-serving arcade game for listening to practical English orders.
+- **Drop Hop** — a map-routing game for place words, prepositions, and quantities.
 
 The root URL is the game chooser. Each game has its own client-side path and a control that returns to
 the portal. React state, CSS animation, imported image assets, browser speech synthesis, and Web
@@ -43,13 +42,15 @@ gameplay or layout changes.
 | Path | Screen |
 | --- | --- |
 | `/` | Two-game mini-game portal. |
-| `/games/table-talk-diner` | Table Talk Diner. |
-| `/games/tiny-city-delivery` | Tiny City Delivery. |
+| `/games/dish-wish` | Dish Wish canonical route. |
+| `/games/drop-hop` | Drop Hop canonical route. |
+| `/games/table-talk-diner` | Legacy Dish Wish alias; replaced with `/games/dish-wish` client-side. |
+| `/games/tiny-city-delivery` | Legacy Drop Hop alias; replaced with `/games/drop-hop` client-side. |
 | Any other path | Portal fallback; the unknown URL is not rewritten. |
 
-Routing uses `window.history.pushState` and `popstate`, not a router dependency. A static deployment
-must send direct requests for both `/games/...` paths to `index.html`; otherwise direct-link refreshes
-can return a host-level 404 even though in-app navigation works.
+Routing uses `window.history.pushState`, `replaceState`, and `popstate`, not a router dependency. A
+static deployment must send direct requests for every documented `/games/...` path to `index.html`;
+otherwise direct-link refreshes can return a host-level 404 even though in-app navigation works.
 
 ## Documentation
 

@@ -51,7 +51,7 @@ references: []
 Test scheduled spawn, blocked-lane retry (`650ms`), recycle, expiration, replacement guests, scoring,
 and completion after changes.
 
-### Change Tiny City Data
+### Change Drop Hop Data
 
 - Location: update `LocationId`, `CITY_LOCATIONS`, `CITY_ROADS`, and affected missions.
 - Road: keep `CITY_ROADS` undirected through `cityNeighbors`; inspect visual geometry.
@@ -66,7 +66,7 @@ pause guidance, and exact edge highlighting.
 
 Before editing `.mainSurface`, `.gameGrid`, `.resultBanner`, `.sceneBackdrop`, or `.appShell`, inspect
 both game routes. Diner full-viewport overrides must remain scoped with
-`.appShell:not(.appShell--city)` so Tiny City keeps its grid and scroll behavior.
+`.appShell:not(.appShell--city)` so Drop Hop keeps its grid and scroll behavior.
 
 ### Replace Art Or Cursor
 
@@ -82,14 +82,15 @@ Run `npm run dev`, then inspect the console throughout.
 | Test | Expected |
 | --- | --- |
 | `/` | Header says mini-game portal and exactly two playable cards render. |
-| Diner card | URL and title change; diner starts. |
-| City card | URL and title change; city opens ready. |
+| Dish Wish card | URL and title change; diner starts. |
+| Drop Hop card | URL and title change; city opens ready. |
 | Home buttons | Return to `/` without reload. |
 | Back/forward | Restores portal/game views and titles. |
-| Direct `/games/...` load | Works in Vite; production host also needs SPA fallback. |
+| Direct canonical route | `/games/dish-wish` and `/games/drop-hop` work in Vite; production also needs SPA fallback. |
+| Direct legacy route | Old paths launch the matching game and replace the address with its canonical route. |
 | Unknown path | Portal renders and URL stays unchanged. |
 
-### Table Talk Diner
+### Dish Wish
 
 | Test | Expected |
 | --- | --- |
@@ -104,7 +105,7 @@ Run `npm run dev`, then inspect the console throughout.
 | Win | At 24 orders, completion banner and `New Shift` appear. |
 | New Shift | All diner counters and runtime state reset. |
 
-### Tiny City Delivery
+### Drop Hop
 
 | Test | Expected |
 | --- | --- |
@@ -129,7 +130,7 @@ Check at least:
 - 320–380px width;
 - a short mobile viewport around 620px height.
 
-Verify portal scrolling, diner HUD/status/table overlap, Tiny City document scrolling, map readability,
+Verify portal scrolling, diner HUD/status/table overlap, Drop Hop document scrolling, map readability,
 and no clipped controls.
 
 ## Command Verification
@@ -166,8 +167,9 @@ After Markdown or `AGENTS.md` changes:
 
 - Output: `dist/` from `npm run build`.
 - Hosting: any static host that can serve Vite output.
-- Required rewrite: send `/games/table-talk-diner` and `/games/tiny-city-delivery` requests to
-  `index.html` for direct loads/refreshes.
+- Required rewrite: send the canonical `/games/dish-wish` and `/games/drop-hop` paths, plus legacy
+  aliases `/games/table-talk-diner` and `/games/tiny-city-delivery`, to `index.html` for direct
+  loads/refreshes.
 - Base path: current links assume hosting at `/`; a subpath deployment requires coordinated Vite and
   route changes.
 - Provider config and CI: none in this repository.
