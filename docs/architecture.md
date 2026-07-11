@@ -66,9 +66,9 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `CustomerProfile` | Guest IDs and names. |
 | `TilePoint`, `WalkDirection`, `CharacterVisual` | Route tiles plus interpolated customer positions, facing, walking, and route-completion state. |
 | `SeatLayout` | Table/customer positions, seated facing direction, and speech-bubble offsets. |
-| `DifficultyProfile` | Per-level capacity and timing values. |
-| `ActiveGuest` | Guest order, service, timing, seat, hearing, and movement state. |
-| `ScheduledFood` | Ordered food waiting for its spawn time. |
+| `DifficultyProfile` | Per-level capacity, timing, decoy onset, and pacing values. |
+| `ActiveGuest` | Guest order, service, timing, seat, hearing, retry-practice, and movement state. |
+| `ScheduledFood` | Ordered food waiting for its deterministic ready time and actual spawn time. |
 | `BeltFood` | Visible dish, stable pass-slot index, and lifecycle metadata. |
 | `DishWishSnapshot` | Presentation-only guest, dish, slot, route, patience, selection, and status values sent to Phaser. |
 
@@ -88,11 +88,15 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `gameStatus`, `now` | Diner lifecycle and 100ms gameplay clock. |
 | `activeGuests` | Entering, seated, and leaving guests. |
 | `selectedGuestId` | Current table used by keyboard service. |
+| `guidedGuestId`, `introOrderComplete` | First-order onboarding state that keeps the opening order untimed until it is served correctly. |
 | `scheduledFoods`, `beltFoods` | Future and visible dishes. |
 | `score`, `served`, `combo` | Progress and scoring. |
-| `feedback` | Screen-reader diner status announcements; narration text is not visually rendered. |
-| `dishWishSnapshot` | Immutable scene view derived from React state on each render sample. |
-| sequence/timer refs | Unique IDs and next guest/decoy times. |
+| `servedEcho` | Brief visible reinforcement card for the latest correctly served food word. |
+| `feedback` | Shared diner status text used by the screen-reader live region and the visible helper panel. |
+| `missedRecap` | Brief visible/accessibility recap of missed vocabulary and the queued retry word. |
+| `dishWishSnapshot` | Immutable scene view derived from React state on each render sample, including intro highlight metadata plus practice/supply cues. |
+| sequence/timer refs | Unique IDs plus next guest/decoy times. |
+| practice refs | Bounded later-order retry queue and per-food repeat counts. |
 | `consumedDishIdsRef` | Duplicate-drop protection. |
 | `audioContextRef` | Lazily created diner Web Audio context. |
 
@@ -105,8 +109,9 @@ flowchart LR
   Ended -->|New Shift| Playing
 ```
 
-The diner starts automatically. It has no mid-shift pause or reset control. Completion displays a
-`New Shift` action. The portal button is available throughout.
+The diner starts automatically. It has no mid-shift pause or reset control. The opening order is a
+special untimed guided step inside `playing`; after that first correct serve, ordinary guest timing
+continues normally. Completion displays a `New Shift` action. The portal button is available throughout.
 
 ## Constants
 
@@ -125,37 +130,48 @@ The diner starts automatically. It has no mid-shift pause or reset control. Comp
 | `WRONG_DISH_PATIENCE_BASE_MS` | 2500 | Level-1 patience removed by an incorrect dish. |
 | `WRONG_DISH_PATIENCE_PER_LEVEL_MS` | 500 | Additional wrong-dish patience loss for each level above 1. |
 | `SERVED_DISH_PATIENCE_BONUS_MS` | 2000 | Patience added after each correct dish. |
+| `SUPPLY_DELAY_RETRY_MS` | 650 | Retry cadence and matching patience compensation when a due requested dish is blocked. |
+| `MISSED_RECAP_MS` | 5500 | How long the missed-word recap stays visible. |
+| `MAX_PRACTICE_REPEATS_PER_FOOD` | 2 | Bound on deliberate later-order repetition for the same food word. |
 | `ORDER_LANES` | 2 | Logical dish lane/lift choices. |
 | `DISH_PASS_CAPACITY` | 6 | Maximum number of visible dishes occupying the kitchen pass. |
 
 ## Difficulty
 
-| Level | Orders | Max guests | Order size | Last-dish time | Guest interval | Belt life | Decoy interval | Patience buffer |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 2 | 1 | 1 | 1800ms | 6600ms | 14000ms | 5200ms | 14000ms |
-| 2 | 3 | 2 | 2 | 7000ms | 6000ms | 13300ms | 4600ms | 13500ms |
-| 3 | 4 | 2 | 2 | 8500ms | 5400ms | 12600ms | 4100ms | 13000ms |
-| 4 | 4 | 3 | 3 | 10000ms | 4800ms | 11900ms | 3600ms | 12500ms |
-| 5 | 5 | 3 | 3 | 11500ms | 4200ms | 11200ms | 3100ms | 12000ms |
-| 6 | 6 | 4 | 3 | 13000ms | 3600ms | 10500ms | 2600ms | 11500ms |
+| Level | Orders | Max guests | Order size | Last-dish time | Guest interval | Belt life | First decoy | Decoy interval | Patience buffer |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 4 | 1 | 1 | 1800ms | 7600ms | 15000ms | 12000ms | 9000ms | 15000ms |
+| 2 | 4 | 1 | 1 | 1800ms | 7000ms | 14400ms | 9000ms | 7400ms | 14500ms |
+| 3 | 4 | 1 | 2 | 5200ms | 6800ms | 13800ms | 7600ms | 6800ms | 14500ms |
+| 4 | 4 | 2 | 2 | 6200ms | 6000ms | 13100ms | 6200ms | 5600ms | 13800ms |
+| 5 | 4 | 2 | 2 | 7600ms | 5200ms | 12200ms | 5200ms | 4700ms | 13200ms |
+| 6 | 4 | 3 | 3 | 9200ms | 4400ms | 11200ms | 4300ms | 3800ms | 12600ms |
 
 For one-item orders, the only dish arrives at `FIRST_DISH_DELAY_MS`; `dishGapMs` matches that delay
 when recycling a missed dish. For two-item orders `dishGapMs` equals last-dish time; for three-item
-orders it is half that time.
+orders it is half that time. The mastery curve now separates challenge levers: one-item listening,
+then gentle decoys, then two-item memory, then concurrency, then faster two-item play, and finally a
+three-item finale with more traffic.
 
 ## Generation And Effects
 
-- `selectFoods` deterministically selects unique foods for a sequence and level.
+- `selectFoods` deterministically selects unique foods for a sequence and level, with an optional
+  forced practice word from the missed-order retry queue.
+- Level 1 phrases always use the stable `I'd like …, please.` frame; later levels rotate through the
+  broader polite template set.
 - `chooseAvailableSeatIndex` reserves one of the four persistent table positions, including while a
   departing guest is still walking out, so two guests cannot occupy the same table.
-- `makeGuest` rotates customer profiles, assigns the available table, creates the phrase, and derives
-  `serviceStartsAt` from the entry route plus its final render sample. Patience and ordered-food due
-  times then start at seating, from 1800ms through `timeToLastDishMs`.
+- `makeGuest` rotates customer profiles, assigns the available table, creates the phrase, records any
+  deliberate practice-repeat word, and derives `serviceStartsAt` from the entry route plus its final
+  render sample. Patience and ordered-food ready/due times then start at seating, from 1800ms through
+  `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
 - The pass exposes six stable dish slots. Removing a dish leaves its slot blank, the other dishes keep
   their positions, and the next eligible dish claims the first available blank. Ordered dishes retry
-  after `650ms` and decoys wait when all six slots are occupied.
+  after `650ms`; if a due requested dish is blocked by pass capacity or lane gating, the owning guest
+  receives matching patience compensation so expiration cannot happen solely because the game withheld
+  the needed item. Decoys wait when all six slots are occupied.
 - `buildTileRoute` uses breadth-first search across the 10 × 5 floor while treating every table tile as
   blocked, so customers take a shortest collision-free path to and from their configured table edge.
 - The 100ms clock samples customer route progress. Persistent Phaser sprites use short linear tweens
@@ -166,10 +182,17 @@ orders it is half that time.
 - Removed dishes stay in `beltFoods` with `leavingAt` through `DISH_EXIT_MS`, then a timeout removes
   them after the serving-line exit animation.
 - `revealGuestOrder` immediately reveals and speaks a seated guest's order without changing patience.
+  During the opening guided order it also updates the visible helper copy toward the matching dish.
   Because `speak` cancels the current utterance, selecting another customer switches speech
-  immediately while earlier revealed orders remain visible.
-- Each correct dish adds 2000ms before the updated guest is committed. An incorrect dish remains
-  available and removes 2500–5000ms of that guest's patience according to level.
+  immediately while earlier revealed orders remain visible. Revealed orders also show `Practice again`
+  and `Coming next`/`On the pass` hints when applicable.
+- The helper panel renders the current sentence, picture + lowercase word cards, replay buttons, and a
+  one-second served-word echo without changing the core timing or scoring rules.
+- The guided first order is exempt from expiration and wrong-dish patience loss until it is served
+  correctly. Each later correct dish adds 2000ms before the updated guest is committed. An incorrect
+  dish remains available and removes 2500–5000ms of that guest's patience according to level.
+- When a guest expires, React shows a brief missed-word recap with food art/labels and queues at least
+  one missed food for bounded later repetition, capped per food to avoid infinite retry loops.
 
 `targetGuestId` controls scheduled/visible dish cleanup and recycling. It is not a serving lock: the
 drop target table and `needsFood` decide whether a dish is correct.
@@ -186,8 +209,9 @@ earned = 35 + timeBonus + levelBonus + comboBonus
 ```
 
 The time bonus is calculated before the correct-dish patience extension. Incorrect dishes stay on
-the pass and reduce only the receiving guest's patience; score and combo are unchanged. Expired
-guests leave, animate owned dishes off, and reset the combo. There is no miss count or diner loss
+the pass and reduce only the receiving guest's patience; score and combo are unchanged, except that
+the untimed guided opener skips that penalty. Expired guests leave, animate owned dishes off, reset
+the combo, show a short recap, and queue bounded later practice. There is no miss count or diner loss
 state.
 
 # Drop Hop

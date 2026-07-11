@@ -41,6 +41,9 @@ export type DishWishGuestView = {
   phrase: string;
   foods: DishWishFoodId[];
   servedFoods: DishWishFoodId[];
+  practiceHint: string | null;
+  supplyHint: string | null;
+  patiencePaused: boolean;
   patienceRatio: number;
   visual: {
     col: number;
@@ -66,6 +69,12 @@ export type DishWishSnapshot = {
   selectedGuestId: string | null;
   guests: DishWishGuestView[];
   foods: DishWishFoodView[];
+  guide: {
+    step: "wait" | "select" | "serve";
+    guestId: string;
+    seatIndex: number;
+    targetFoodId: DishWishFoodId | null;
+  } | null;
   beltTravelLabel: string;
 };
 
@@ -90,6 +99,7 @@ type GuestSpriteEntry = {
 
 type FoodEntry = {
   container: Phaser.GameObjects.Container;
+  cue: Phaser.GameObjects.Ellipse;
   art: Phaser.GameObjects.Image;
   life: Phaser.GameObjects.Rectangle;
   label: Phaser.GameObjects.Text;
@@ -462,11 +472,24 @@ export class DishWishScene extends Phaser.Scene {
     layer.removeAll(true);
     const layout = this.getLayout();
     const isDropTarget = this.draggingFoodId !== null;
+    const guide = snapshot.guide;
+    const guidePulse = 0.45 + ((Math.sin(this.time.now / 220) + 1) / 2) * 0.4;
+
+    if (guide?.step === "serve") {
+      const width = this.scale.width;
+      const kitchenHeight = layout.top - 6;
+      const passY = Math.max(68, kitchenHeight * 0.57);
+      const passHeight = clamp(kitchenHeight * 0.42, 74, 112);
+      const passCue = this.add.rectangle(width / 2, passY, width - 28, passHeight + 18, 0xf1b83f, 0.16 + guidePulse * 0.12);
+      passCue.setStrokeStyle(4, 0xfff5ba, 0.78);
+      layer.add(passCue);
+    }
 
     TABLE_TILES.forEach((tile, seatIndex) => {
       const point = this.gridPoint(tile.col, tile.row, layout);
       const guest = snapshot.guests.find((candidate) => candidate.seatIndex === seatIndex);
       const selected = guest?.id === snapshot.selectedGuestId;
+      const guidedSeat = guide?.seatIndex === seatIndex;
       const radius = clamp(layout.tile * 0.58, 25, layout.mobile ? 42 : 58);
       const container = this.add.container(point.x, point.y);
       const table = this.add.graphics();
@@ -485,10 +508,28 @@ export class DishWishScene extends Phaser.Scene {
       });
       container.add(table);
 
+      if (guidedSeat) {
+        const guideRing = this.add.circle(0, 0, radius + clamp(layout.tile * 0.26, 12, 18));
+        guideRing.setStrokeStyle(4, guide?.step === "serve" ? 0xfff5ba : 0xf1b83f, guidePulse);
+        guideRing.setFillStyle(guide?.step === "wait" ? 0x2d6fa8 : 0xf1b83f, guide?.step === "wait" ? 0.08 : 0.1 + guidePulse * 0.08);
+        container.addAt(guideRing, 0);
+
+        const guideLabel = this.add.text(0, -radius - 16, guide?.step === "serve" ? "2 Serve" : "1 Hear", {
+          color: "#17312d",
+          fontFamily: "system-ui, sans-serif",
+          fontSize: `${clamp(layout.tile * 0.16, 9, 13)}px`,
+          fontStyle: "bold",
+          backgroundColor: "#fff0b8",
+          padding: { x: 6, y: 4 },
+        });
+        guideLabel.setOrigin(0.5, 1);
+        container.add(guideLabel);
+      }
+
       if (guest) {
         if (guest.phase === "seated") {
           const bubbleText = guest.heardOrder
-            ? `${guest.phrase}\n${formatFoodProgress(guest)}`
+            ? `${guest.phrase}\n${formatFoodProgress(guest)}${guest.practiceHint ? `\n${guest.practiceHint}` : ""}${guest.supplyHint ? `\n${guest.supplyHint}` : ""}`
             : "?";
           const bubbleWidth = clamp(layout.tile * (layout.mobile ? 3.1 : 3.6), 112, 270);
           const bubble = this.add.text(0, -radius - 12, bubbleText, {
@@ -507,9 +548,23 @@ export class DishWishScene extends Phaser.Scene {
           const barWidth = radius * 1.35;
           const barBack = this.add.rectangle(0, radius * 0.78, barWidth, 8, 0x17312d, 0.42);
           const patienceWidth = Math.max(1, barWidth * clamp(guest.patienceRatio, 0, 1));
-          const bar = this.add.rectangle(-barWidth / 2, radius * 0.78, patienceWidth, 8, guest.patienceRatio < 0.3 ? 0xd85b4b : 0x58aa69);
+          const barColor = guest.patiencePaused ? 0x2d6fa8 : guest.patienceRatio < 0.3 ? 0xd85b4b : 0x58aa69;
+          const bar = this.add.rectangle(-barWidth / 2, radius * 0.78, patienceWidth, 8, barColor);
           bar.setOrigin(0, 0.5);
           container.add([barBack, bar]);
+
+          if (guest.patiencePaused) {
+            const practiceLabel = this.add.text(0, radius * 0.56, "practice", {
+              color: "#17312d",
+              fontFamily: "system-ui, sans-serif",
+              fontSize: `${clamp(layout.tile * 0.14, 8, 11)}px`,
+              fontStyle: "bold",
+              backgroundColor: "#d9ecff",
+              padding: { x: 5, y: 2 },
+            });
+            practiceLabel.setOrigin(0.5, 1);
+            container.add(practiceLabel);
+          }
 
           container.setSize(radius * 2.2, radius * 2.2);
           container.setInteractive(
@@ -621,6 +676,8 @@ export class DishWishScene extends Phaser.Scene {
       if (!entry || entry.foodId !== food.foodId) {
         entry?.container.destroy(true);
         const container = this.add.container(0, 0);
+        const cue = this.add.ellipse(0, 8, clamp(slotWidth * 0.9, 52, 108), clamp(slotWidth * 0.62, 34, 70), 0xf1b83f, 0);
+        cue.setStrokeStyle(3, 0xfff5ba, 0);
         const plate = this.add.ellipse(0, 8, clamp(slotWidth * 0.74, 42, 92), clamp(slotWidth * 0.48, 28, 58), 0xfff5dc, 1);
         plate.setStrokeStyle(3, 0x17312d);
         const art = this.add.image(0, 0, `dish-food-${food.foodId}`);
@@ -636,7 +693,7 @@ export class DishWishScene extends Phaser.Scene {
         const lifeBack = this.add.rectangle(0, clamp(slotWidth * 0.39, 32, 48), clamp(slotWidth * 0.65, 38, 78), 6, 0x17312d, 0.35);
         const life = this.add.rectangle(-lifeBack.width / 2, lifeBack.y, lifeBack.width, 6, 0x58aa69, 1);
         life.setOrigin(0, 0.5);
-        container.add([plate, art, label, lifeBack, life]);
+        container.add([cue, plate, art, label, lifeBack, life]);
         container.setSize(clamp(slotWidth * 0.82, 48, 100), clamp(kitchenHeight * 0.36, 58, 92));
         container.setInteractive(
           new Phaser.Geom.Rectangle(-container.width / 2, -container.height / 2, container.width, container.height),
@@ -647,12 +704,14 @@ export class DishWishScene extends Phaser.Scene {
         container.setData("food-instance-id", food.id);
         this.input.setDraggable(container, true);
         layer.add(container);
-        entry = { container, art, life, label, foodId: food.foodId };
+        entry = { container, cue, art, life, label, foodId: food.foodId };
         this.foodEntries.set(food.id, entry);
       }
 
       const homeX = 16 + slotWidth * (food.slot + 0.5);
       const homeY = passY + (food.lane === 0 ? -7 : 8);
+      const isGuideTarget = snapshot.guide?.step === "serve" && snapshot.guide.targetFoodId === food.foodId && !food.leaving;
+      const cueAlpha = isGuideTarget ? 0.18 + ((Math.sin(this.time.now / 220) + 1) / 2) * 0.16 : 0;
       entry.container.setData("home-y", homeY);
       entry.container.setData("bob-phase", (food.slot / 6) * Math.PI * 2);
       entry.container.setData("bob-amplitude", clamp(slotWidth * 0.045, 3, 6));
@@ -677,8 +736,12 @@ export class DishWishScene extends Phaser.Scene {
       const artSize = clamp(slotWidth * 0.47, 30, 62);
       const texture = this.textures.get(`dish-food-${food.foodId}`).getSourceImage() as HTMLImageElement;
       const ratio = texture.width > 0 && texture.height > 0 ? texture.width / texture.height : 1;
+      entry.container.setScale(isGuideTarget ? 1.03 : 1);
+      entry.cue.setFillStyle(0xf1b83f, cueAlpha);
+      entry.cue.setStrokeStyle(3, 0xfff5ba, isGuideTarget ? 0.84 : 0);
       entry.art.setDisplaySize(artSize * ratio, artSize);
       entry.label.setText(FOOD_NAMES[food.foodId]);
+      entry.label.setStyle({ backgroundColor: isGuideTarget ? "#fff0b8" : "#fffdf8" });
       const maxLifeWidth = clamp(slotWidth * 0.65, 38, 78);
       entry.life.setDisplaySize(Math.max(1, maxLifeWidth * (1 - clamp(food.progress, 0, 1))), 6);
       entry.life.setFillStyle(food.progress > 0.75 ? 0xd85b4b : 0x58aa69);
