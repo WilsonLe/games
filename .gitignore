@@ -1,5 +1,6 @@
 node_modules
 dist
 .pi/
+.hunter/artifacts/
 .DS_Store
 *.local
