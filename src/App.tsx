@@ -151,6 +151,11 @@ type ServedEcho = {
   guestName: string;
 };
 
+type LevelTransition = {
+  level: number;
+  message: string;
+};
+
 type GameStatus = "ready" | "playing" | "paused" | "ended";
 type SoundKind = "correct" | "complete" | "wrong";
 type AudioContextWindow = Window & {
@@ -806,6 +811,62 @@ function difficultyForLevel(level: number): DifficultyProfile {
   };
 }
 
+function getLevelTransitionMessage(previousLevel: number, nextLevel: number) {
+  const previousProfile = DINER_LEVELS[previousLevel - 1];
+  const nextProfile = DINER_LEVELS[nextLevel - 1];
+  const changes: string[] = [];
+
+  if (!previousProfile || !nextProfile) {
+    return `Level ${nextLevel}! Keep listening carefully as the diner changes pace.`;
+  }
+
+  if (previousLevel === 1 && nextLevel > 1) {
+    changes.push("orders use more English sentence patterns");
+  }
+
+  if (nextProfile.orderSize > previousProfile.orderSize) {
+    changes.push(`orders can ask for ${nextProfile.orderSize} dishes`);
+  }
+
+  if (nextProfile.maxGuests > previousProfile.maxGuests) {
+    changes.push(`up to ${nextProfile.maxGuests} guests can order at once`);
+  }
+
+  if (previousLevel === 1 && nextProfile.firstDecoyDelayMs < previousProfile.firstDecoyDelayMs) {
+    changes.push("extra dishes appear sooner");
+  }
+
+  if (
+    nextProfile.guestIntervalMs < previousProfile.guestIntervalMs &&
+    nextProfile.orderSize === previousProfile.orderSize &&
+    nextProfile.maxGuests === previousProfile.maxGuests &&
+    changes.length < 2
+  ) {
+    changes.push("guests arrive faster");
+  }
+
+  if (nextProfile.beltTravelMs < previousProfile.beltTravelMs && changes.length < 2) {
+    changes.push("dishes leave the pass sooner");
+  }
+
+  if (nextProfile.firstDecoyDelayMs < previousProfile.firstDecoyDelayMs && changes.length < 2) {
+    changes.push("extra dishes appear sooner");
+  }
+
+  if (nextProfile.decoyIntervalMs < previousProfile.decoyIntervalMs && changes.length < 2) {
+    changes.push("extra dishes show up more often");
+  }
+
+  if (nextProfile.patienceBufferMs < previousProfile.patienceBufferMs && changes.length === 0) {
+    changes.push("guests wait a little less");
+  }
+
+  const summary = formatList(changes.length > 0 ? changes : ["the diner changes pace"]);
+  const sentence = summary.charAt(0).toUpperCase() + summary.slice(1);
+
+  return `Level ${nextLevel}! ${sentence}.`;
+}
+
 function selectFoods(sequence: number, count: number, level: number, practiceFoodId?: FoodId | null) {
   const foods: FoodId[] = [];
 
@@ -975,6 +1036,48 @@ function chooseSpawnLane(preferredLane: number, currentFoods: BeltFood[], now: n
   return null;
 }
 
+// Mirrors the ordered-food effect without mutating refs so expiration can be decided
+// after any same-sample blocked-supply compensation that effect will grant.
+function getPendingSupplyCompensationByGuestId(
+  scheduledFoods: ScheduledFood[],
+  beltFoods: BeltFood[],
+  profile: DifficultyProfile,
+  now: number,
+) {
+  const simulatedBeltFoods = [...beltFoods];
+  const compensationByGuestId = new Map<string, number>();
+
+  scheduledFoods
+    .filter((food) => food.dueAt <= now)
+    .forEach((food) => {
+      const slot = chooseAvailableDishSlot(simulatedBeltFoods);
+      const lane = slot === null ? null : chooseSpawnLane(food.lane, simulatedBeltFoods, now);
+
+      if (slot === null || lane === null) {
+        if (food.targetGuestId) {
+          compensationByGuestId.set(
+            food.targetGuestId,
+            Math.max(compensationByGuestId.get(food.targetGuestId) ?? 0, SUPPLY_DELAY_RETRY_MS),
+          );
+        }
+
+        return;
+      }
+
+      simulatedBeltFoods.push({
+        id: `pending-${food.id}`,
+        foodId: food.foodId,
+        targetGuestId: food.targetGuestId,
+        lane,
+        slot,
+        spawnedAt: now,
+        travelMs: profile.beltTravelMs,
+      });
+    });
+
+  return compensationByGuestId;
+}
+
 function speak(text: string, rate = 0.9) {
   if (!("speechSynthesis" in window)) {
     return false;
@@ -1083,6 +1186,19 @@ function choosePracticeFoodId(missedFoods: FoodId[], orderNumber: number, practi
 
 function isGuestComplete(guest: ActiveGuest) {
   return guest.foods.every((foodId) => !needsFood(guest, foodId));
+}
+
+function isGuestExpirationDue(
+  guest: ActiveGuest,
+  now: number,
+  guidedGuestId: string | null,
+  introOrderComplete: boolean,
+) {
+  return (
+    guest.phase !== "leaving" &&
+    guest.expiresAt <= now &&
+    !(guest.instanceId === guidedGuestId && !introOrderComplete)
+  );
 }
 
 function FoodArt({ id }: { id: FoodId }) {
@@ -1555,6 +1671,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const [guidedGuestId, setGuidedGuestId] = useState<string | null>(null);
   const [introOrderComplete, setIntroOrderComplete] = useState(false);
   const [servedEcho, setServedEcho] = useState<ServedEcho | null>(null);
+  const [levelTransition, setLevelTransition] = useState<LevelTransition | null>(null);
+  const [levelTransitionFocused, setLevelTransitionFocused] = useState(false);
+  const [compactHelpOpen, setCompactHelpOpen] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a seated guest to hear an order.",
@@ -1603,6 +1722,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const orderPanelGuest = selectedGuest?.heardOrder ? selectedGuest : guidedGuest?.heardOrder ? guidedGuest : null;
 
   const activeGuestCount = activeGuests.filter((guest) => guest.phase !== "leaving").length;
+  const hasGuestExpirationDue = activeGuests.some((guest) =>
+    isGuestExpirationDue(guest, now, guidedGuestId, introOrderComplete),
+  );
   const isShiftWon = served >= TARGET_SERVES;
 
   const playSound = useCallback((kind: SoundKind) => {
@@ -1697,6 +1819,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     setServed(0);
     setCombo(0);
     setServedEcho(null);
+    setLevelTransition(null);
+    setLevelTransitionFocused(false);
+    setCompactHelpOpen(false);
     setMissedRecap(null);
     consumedDishIdsRef.current.clear();
     practiceQueueRef.current = [];
@@ -1739,6 +1864,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     const guidedFoodId = isGuidedFirstOrder ? getNextRequiredFood(guest) : null;
     const guidedFoodName = guidedFoodId ? getFoodName(guidedFoodId) : "the matching dish";
 
+    setCompactHelpOpen(false);
     setActiveGuests((currentGuests) =>
       currentGuests.map((currentGuest) =>
         currentGuest.instanceId === guest.instanceId
@@ -1857,18 +1983,26 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         servedFoods: [...droppedGuest.servedFoods, food.foodId],
       };
       const completedGuest = isGuestComplete(nextMatchingGuest) ? nextMatchingGuest : null;
+      const nextServed = completedGuest ? served + 1 : served;
+      const shiftComplete = Boolean(completedGuest && nextServed >= TARGET_SERVES);
       const nextCombo = completedGuest ? combo + 1 : combo;
       const comboBonus = completedGuest ? Math.max(0, nextCombo - 1) * HAPPY_GUEST_COMBO_BONUS : 0;
       const earned = 35 + timeBonus + levelBonus + comboBonus;
       const earnedLabel = formatEarnedPoints(earned, comboBonus);
       const completedAt = Date.now();
-      const nextGuests: ActiveGuest[] = activeGuests.map((guest) =>
-        guest.instanceId === droppedGuest.instanceId
-          ? completedGuest
+      const nextGuests: ActiveGuest[] = activeGuests.map((guest) => {
+        if (guest.instanceId === droppedGuest.instanceId) {
+          return completedGuest
             ? { ...nextMatchingGuest, phase: "leaving" as const, leavingAt: completedAt }
-            : nextMatchingGuest
-          : guest,
-      );
+            : nextMatchingGuest;
+        }
+
+        if (shiftComplete && guest.phase !== "leaving") {
+          return { ...guest, phase: "leaving" as const, leavingAt: completedAt };
+        }
+
+        return guest;
+      });
 
       setActiveGuests(nextGuests);
 
@@ -1878,20 +2012,46 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       }
 
       if (completedGuest) {
-        const nextServed = served + 1;
+        const nextLevel = levelForServed(nextServed);
         const happyLine = HAPPY_GUEST_LINES[(completedGuest.orderNumber + nextServed) % HAPPY_GUEST_LINES.length];
         setServed(nextServed);
-        setScheduledFoods((currentFoods) =>
-          currentFoods.filter((scheduledFood) => scheduledFood.targetGuestId !== completedGuest?.instanceId),
-        );
-        setBeltFoods((currentFoods) =>
-          currentFoods.map((currentFood) =>
-            currentFood.targetGuestId === completedGuest.instanceId
-              ? { ...currentFood, leavingAt: currentFood.leavingAt ?? completedAt }
-              : currentFood,
-          ),
-        );
-        setSelectedGuestId((currentSelected) => (currentSelected === completedGuest.instanceId ? null : currentSelected));
+
+        if (nextLevel > difficulty.level) {
+          setLevelTransitionFocused(false);
+          setLevelTransition({
+            level: nextLevel,
+            message: getLevelTransitionMessage(difficulty.level, nextLevel),
+          });
+        }
+
+        if (shiftComplete) {
+          setScheduledFoods([]);
+          setBeltFoods((currentFoods) =>
+            currentFoods.map((currentFood) => ({
+              ...currentFood,
+              leavingAt: currentFood.leavingAt ?? completedAt,
+            })),
+          );
+          setSelectedGuestId(null);
+          setGuidedGuestId(null);
+          setIntroOrderComplete(true);
+          setLevelTransition(null);
+          setLevelTransitionFocused(false);
+          setCompactHelpOpen(false);
+        } else {
+          setScheduledFoods((currentFoods) =>
+            currentFoods.filter((scheduledFood) => scheduledFood.targetGuestId !== completedGuest.instanceId),
+          );
+          setBeltFoods((currentFoods) =>
+            currentFoods.map((currentFood) =>
+              currentFood.targetGuestId === completedGuest.instanceId
+                ? { ...currentFood, leavingAt: currentFood.leavingAt ?? completedAt }
+                : currentFood,
+            ),
+          );
+          setSelectedGuestId((currentSelected) => (currentSelected === completedGuest.instanceId ? null : currentSelected));
+        }
+
         if (isGuidedFirstOrder) {
           setIntroOrderComplete(true);
           setGuidedGuestId(null);
@@ -1901,17 +2061,17 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         }
         setFeedback({
           kind: "good",
-          text:
-            nextServed >= TARGET_SERVES
-              ? `Dinner service complete. ${earnedLabel}`
-              : isGuidedFirstOrder
-                ? `Great job. You served ${foodName}. The next guests will be timed. ${earnedLabel}`
-                : `${completedGuest.customer.name} leaves happy. ${earnedLabel}`,
+          text: shiftComplete
+            ? `Dinner service complete. ${earnedLabel}`
+            : isGuidedFirstOrder
+              ? `Great job. You served ${foodName}. The next guests will be timed. ${earnedLabel}`
+              : `${completedGuest.customer.name} leaves happy. ${earnedLabel}`,
         });
         playSound("complete");
-        speak(nextServed >= TARGET_SERVES ? "Dinner service complete. All guests are happy." : happyLine, 1);
+        speak(shiftComplete ? "Dinner service complete. All guests are happy." : happyLine, 1);
 
-        if (nextServed >= TARGET_SERVES) {
+        if (shiftComplete) {
+          setMissedRecap(null);
           setGameStatus("ended");
         }
       } else {
@@ -1943,6 +2103,20 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
 
     return () => window.clearTimeout(timeout);
   }, [servedEcho]);
+
+  useEffect(() => {
+    if (!levelTransition || levelTransitionFocused) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setLevelTransition((currentTransition) =>
+        currentTransition?.level === levelTransition.level ? null : currentTransition,
+      );
+    }, 4_000);
+
+    return () => window.clearTimeout(timeout);
+  }, [levelTransition, levelTransitionFocused]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -1984,7 +2158,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   }, [activeGuests, gameStatus, guidedGuestId, introOrderComplete, now]);
 
   useEffect(() => {
-    if (gameStatus !== "playing") {
+    if (gameStatus !== "playing" || missedRecap || hasGuestExpirationDue) {
       return;
     }
 
@@ -1996,7 +2170,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         nextGuestAtRef.current = now + difficulty.guestIntervalMs;
       }
     }
-  }, [activeGuestCount, activeGuests, addGuest, difficulty, gameStatus, now, served]);
+  }, [activeGuestCount, activeGuests, addGuest, difficulty, gameStatus, hasGuestExpirationDue, missedRecap, now, served]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -2173,12 +2347,20 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       return;
     }
 
-    const expiredGuests = activeGuests.filter(
-      (guest) =>
-        guest.phase !== "leaving" &&
-        guest.expiresAt <= now &&
-        !(guest.instanceId === guidedGuestId && !introOrderComplete),
+    const pendingSupplyCompensationByGuestId = getPendingSupplyCompensationByGuestId(
+      scheduledFoods,
+      beltFoods,
+      difficulty,
+      now,
     );
+    const expiredGuests = activeGuests.filter((guest) => {
+      const pendingCompensationMs = pendingSupplyCompensationByGuestId.get(guest.instanceId) ?? 0;
+      const compensatedGuest = pendingCompensationMs > 0
+        ? { ...guest, expiresAt: guest.expiresAt + pendingCompensationMs }
+        : guest;
+
+      return isGuestExpirationDue(compensatedGuest, now, guidedGuestId, introOrderComplete);
+    });
 
     if (expiredGuests.length === 0) {
       return;
@@ -2205,6 +2387,8 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       expiredGuests.some((guest) => guest.instanceId === currentSelected) ? null : currentSelected,
     );
 
+    // Queue bounded practice for every expired guest, but keep the recap card
+    // focused on the first guest so the visible recovery copy stays short.
     const recapGuest = expiredGuests[0];
     let recapResult = { missedFoods: getMissingFoods(recapGuest), practiceFoodId: null as FoodId | null };
 
@@ -2230,7 +2414,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         ? `${recapGuest.customer.name} left before the last dish. Missed ${formatList(missedFoodNames)}. ${getFoodName(recapResult.practiceFoodId)} will come back later.`
         : `${recapGuest.customer.name} left before the last dish. Missed ${formatList(missedFoodNames)}.`,
     );
-  }, [activeGuests, gameStatus, guidedGuestId, introOrderComplete, now, playSound, queuePracticeRetry, resetCombo]);
+  }, [activeGuests, beltFoods, difficulty, gameStatus, guidedGuestId, introOrderComplete, now, playSound, queuePracticeRetry, resetCombo, scheduledFoods]);
 
   useEffect(() => {
     if (selectedGuestId && activeGuests.some((guest) => guest.instanceId === selectedGuestId && guest.phase !== "leaving")) {
@@ -2253,24 +2437,35 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   }, [missedRecap]);
 
   useEffect(() => {
-    const leavingGuests = activeGuests.filter(
-      (guest) =>
-        guest.phase === "leaving" &&
-        guest.leavingAt &&
-        now - guest.leavingAt > getGuestRouteTransitionDuration(guest) + LEAVING_GUEST_LINGER_MS,
-    );
+    const nextLeavingCleanupAt = activeGuests.reduce((earliest, guest) => {
+      if (guest.phase !== "leaving" || !guest.leavingAt) {
+        return earliest;
+      }
 
-    if (leavingGuests.length === 0) {
-      return;
+      return Math.min(
+        earliest,
+        guest.leavingAt + getGuestRouteTransitionDuration(guest) + LEAVING_GUEST_LINGER_MS,
+      );
+    }, Number.POSITIVE_INFINITY);
+
+    if (!Number.isFinite(nextLeavingCleanupAt)) {
+      return undefined;
     }
 
-    setActiveGuests((currentGuests) =>
-      currentGuests.filter(
-        (guest) =>
-          !leavingGuests.some((leavingGuest) => leavingGuest.instanceId === guest.instanceId),
-      ),
-    );
-  }, [activeGuests, now]);
+    const timeout = window.setTimeout(() => {
+      const cleanupAt = Date.now();
+      setActiveGuests((currentGuests) =>
+        currentGuests.filter(
+          (guest) =>
+            guest.phase !== "leaving" ||
+            !guest.leavingAt ||
+            cleanupAt - guest.leavingAt <= getGuestRouteTransitionDuration(guest) + LEAVING_GUEST_LINGER_MS,
+        ),
+      );
+    }, Math.max(0, nextLeavingCleanupAt - Date.now()));
+
+    return () => window.clearTimeout(timeout);
+  }, [activeGuests]);
 
   useEffect(() => {
     resetGame();
@@ -2406,6 +2601,33 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
               {feedback.text}
             </p>
 
+            {levelTransition ? (
+              <aside
+                className="dishWishLevelUp"
+                aria-label={`Reached level ${levelTransition.level}`}
+                onFocus={() => setLevelTransitionFocused(true)}
+                onBlur={(event) => {
+                  const nextFocus = event.relatedTarget;
+
+                  if (!(nextFocus instanceof Node) || !event.currentTarget.contains(nextFocus)) {
+                    setLevelTransitionFocused(false);
+                  }
+                }}
+              >
+                <p role="status" aria-live="polite">{levelTransition.message}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLevelTransition(null);
+                    setLevelTransitionFocused(false);
+                  }}
+                  aria-label="Dismiss level message"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              </aside>
+            ) : null}
+
             <section className="dishWishCoach" aria-label="Dish Wish learning help">
               {introStep && guidedGuest ? (
                 <article className="dishWishCoach__panel dishWishCoach__panel--guide">
@@ -2453,26 +2675,49 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
                 </article>
               ) : null}
 
-              <article className="dishWishCoach__panel dishWishCoach__panel--order">
-                <div className="dishWishCoach__panelHeader">
-                  <div>
-                    <p className="dishWishCoach__eyebrow">Order support</p>
-                    <h2>{orderPanelGuest ? `Table ${orderPanelGuest.seatIndex + 1}` : "How to play"}</h2>
+              {introOrderComplete && !orderPanelGuest ? (
+                <details
+                  className="dishWishCoach__panel dishWishCoach__panel--compact"
+                  open={compactHelpOpen}
+                  onToggle={(event) => setCompactHelpOpen(event.currentTarget.open)}
+                >
+                  <summary>
+                    <span>
+                      <BookOpen size={17} aria-hidden="true" />
+                      How to play
+                    </span>
+                    <small>{compactHelpOpen ? "Close help" : "Open help"}</small>
+                  </summary>
+                  <div className="dishWishCoach__compactBody">
+                    <p className="dishWishCoach__hint">
+                      Tap a seated table to hear the order, then serve the matching dish.
+                    </p>
+                    <p className={cx("dishWishCoach__status", `dishWishCoach__status--${feedback.kind}`)}>
+                      {feedback.text}
+                    </p>
                   </div>
-                  {orderPanelGuest ? (
-                    <button
-                      className="dishWishCoach__audioButton"
-                      type="button"
-                      onClick={() => replayGuestPhrase(orderPanelGuest)}
-                      aria-label="Replay this order"
-                    >
-                      <Volume2 size={16} />
-                      Hear again
-                    </button>
-                  ) : null}
-                </div>
+                </details>
+              ) : (
+                <article className="dishWishCoach__panel dishWishCoach__panel--order">
+                  <div className="dishWishCoach__panelHeader">
+                    <div>
+                      <p className="dishWishCoach__eyebrow">Order support</p>
+                      <h2>{orderPanelGuest ? `Table ${orderPanelGuest.seatIndex + 1}` : "How to play"}</h2>
+                    </div>
+                    {orderPanelGuest ? (
+                      <button
+                        className="dishWishCoach__audioButton"
+                        type="button"
+                        onClick={() => replayGuestPhrase(orderPanelGuest)}
+                        aria-label="Replay this order"
+                      >
+                        <Volume2 size={16} />
+                        Hear again
+                      </button>
+                    ) : null}
+                  </div>
 
-                {orderPanelGuest ? (
+                  {orderPanelGuest ? (
                   <>
                     <p className="dishWishCoach__phrase">{renderOrderPhrase(orderPanelGuest)}</p>
                     <div className="dishWishWordCards" aria-label="Target food words">
@@ -2509,10 +2754,11 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
                       ? "The first guest is walking to the table."
                       : "Tap a seated table to hear the order, then serve the matching dish."}
                   </p>
-                )}
+                  )}
 
-                <p className={cx("dishWishCoach__status", `dishWishCoach__status--${feedback.kind}`)}>{feedback.text}</p>
-              </article>
+                  <p className={cx("dishWishCoach__status", `dishWishCoach__status--${feedback.kind}`)}>{feedback.text}</p>
+                </article>
+              )}
 
               {servedEcho ? (
                 <article className="dishWishCoach__panel dishWishCoach__panel--echo">
@@ -2539,7 +2785,12 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         )}
 
         {missedRecap ? (
-          <section className="missedRecap" role="status" aria-live="polite" aria-label={`Missed order recap for ${missedRecap.guestName}`}>
+          <section
+            className={cx("missedRecap", levelTransition ? "missedRecap--withLevel" : undefined)}
+            role="status"
+            aria-live="polite"
+            aria-label={`Missed order recap for ${missedRecap.guestName}`}
+          >
             <div className="missedRecap__copy">
               <strong>Missed words</strong>
               <span>

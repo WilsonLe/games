@@ -111,8 +111,9 @@ Run `npm run dev`, then inspect the console throughout.
 | Test | Expected |
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1, and six kitchen-pass slots are visible. Patience and ordered-food timing wait until seating, and the first seated guest shows the visible guided helper and cannot expire before the first correct serve. |
-| Level pacing | Levels 1-2 stay at one guest with one-item orders, level 3 is the first two-item level, level 4 is the first concurrent-guest level, and level 6 is the first three-item level. |
+| Level pacing | Levels 1-2 stay at one guest with one-item orders, level 3 is the first two-item level, level 4 is the first concurrent-guest level, and level 6 is the first three-item level. Complete four orders normally and verify the brief level-2 message announces more English sentence patterns and earlier extra dishes, can be dismissed, and changes no timer, score, or control. |
 | Guest selection | After seating, the full customer/table area reveals and speaks the order immediately; level 1 uses the stable `I'd like …, please.` frame, the helper panel shows highlighted word cards/replay buttons, and selecting another customer replaces unfinished speech while earlier revealed orders remain visible. |
+| Learning support disclosure | Complete the untimed opener with keyboard controls. With no heard active order, `How to play` is compact and expands/collapses by keyboard or pointer; hearing an order restores phrase, word cards, replay, status, and correction support. Served-word echo and missed recap remain reachable without making the disclosure permanently large. |
 | Character travel and walk cycles | All six Phaser sprites take collision-free routes around table tiles, move smoothly at `360ms` per tile, advance four distinct frames near `120ms` per frame in dedicated south, north, east, and west rows, and settle on the configured table-facing row. |
 | Reduced motion | With reduced motion enabled, Phaser route tweens and walk loops stop while required route-position updates continue. |
 | Correct dish | Dish animates off, chip and patience update, score rises, correct audio feedback plays, and the helper briefly echoes the served picture/word with a replay control. |
@@ -120,11 +121,12 @@ Run `npm run dev`, then inspect the console throughout.
 | Drop outside | Dish remains and the screen-reader status announcement explains where to serve it. |
 | Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and wrong audio feedback plays; the untimed opening order gives guidance without a patience penalty. |
 | Supply fairness | When a due requested dish is blocked by pass capacity or lane gating, the revealed order shows `Coming next` until the dish appears and the guest does not lose patience solely because the game withheld supply. |
-| Expiration | Guest leaves and owned dishes animate off before cleanup; a visible missed-word recap appears with food art/labels, and at least one missed item later returns in a bounded `Practice again` order. |
+| Expiration | Guest leaves and owned dishes animate off before cleanup; a visible missed-word recap appears with food art/labels for 5.5 seconds, compacts at 375×812 without covering most of the stage, and at least one missed item later returns in a bounded `Practice again` order. If multiple guests expire together, source-review that all eligible retries queue while the recap copy stays first-guest-only. |
+| Recap/replacement fairness | While the expiration recap remains visible, no replacement guest starts entering and no replacement scheduled food is created. When it clears, one overdue replacement enters without a burst; its patience and ordered-food ready/due times start from its own seating time. Existing active guests keep normal timers, and existing blocked-supply retries still add only their matched `650ms` compensation before expiration is decided. |
 | Pass capacity | At most six dishes occupy stable slots; removing a middle dish leaves its slot blank, other dishes do not shift, the next eligible dish fills an available blank, additional ordered dishes retry, and decoys wait until a slot opens. |
 | Keyboard service | Tab into the focus-revealed native controls; guest activation selects/hears an order and dish activation serves to the selected table. Verify the opening guided order can be completed without pointer drag. |
-| Win | At 24 orders, completion banner and `New Shift` appear. |
-| New Shift | All diner counters and runtime state reset. |
+| Win | At 24 orders, completion banner and `New Shift` appear; no earlier recap remains visible or later clears replacement state, pending scheduled foods are empty, and active guests/visible foods are in or past leaving cleanup. |
+| New Shift | All diner counters, recap/timeout state, practice refs, guest schedule refs, scheduled foods, and seat occupancy reset. |
 
 ### Drop Hop
 
@@ -150,6 +152,11 @@ Check at least:
 - around `560px`;
 - 320–380px width;
 - a short mobile viewport around 620px height.
+
+At desktop, 700×900, 980×900, and 375×812, specifically collapse and expand Dish Wish `How to play`;
+verify the kitchen pass and an actionable table remain visible, controls remain focusable, simultaneous
+missed-word recap plus level message do not overlap or dominate the stage, and the level message does not
+block play or disappear while its dismiss control is focused.
 
 Verify portal scrolling, both game routes remain viewport-locked with no document scrolling, diner
 HUD/table overlap, Drop Hop map readability, canvas sizing, focus-revealed native controls,
