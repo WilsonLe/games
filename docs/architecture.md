@@ -60,11 +60,11 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `FoodId`, `Food` | Supported food IDs and labels. |
 | `CustomerProfile` | Guest IDs and names. |
 | `TilePoint`, `WalkDirection`, `CharacterVisual` | Route tiles plus interpolated customer positions, facing, walking, and route-completion state. |
-| `SeatLayout` | Table, customer, and speech-bubble positions. |
+| `SeatLayout` | Table/customer positions, seated facing direction, and speech-bubble offsets. |
 | `DifficultyProfile` | Per-level capacity and timing values. |
 | `ActiveGuest` | Guest order, service, timing, seat, hearing, and movement state. |
 | `ScheduledFood` | Ordered food waiting for its spawn time. |
-| `BeltFood` | Visible dish and lifecycle metadata. |
+| `BeltFood` | Visible dish, stable pass-slot index, and lifecycle metadata. |
 | `DraggingDish` | Current custom/native drag preview data. |
 
 ## Components
@@ -150,9 +150,12 @@ orders it is half that time.
   times then start at seating, from 1800ms through `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
-- The pass exposes six stable dish slots. Ordered dishes retry after `650ms` and decoys wait when all six slots are occupied.
-- `buildTileRoute` routes customers through the diner aisle; `getRouteVisual` linearly interpolates
-  between each pair of route tiles and derives facing from the current segment.
+- The pass exposes six stable dish slots. Removing a dish leaves its slot blank, the other cards keep
+  their positions, and the next eligible dish claims the first available blank. Ordered dishes retry
+  after `650ms` and decoys wait when all six slots are occupied.
+- `buildTileRoute` uses breadth-first search across the 10 × 5 floor while treating every table tile as
+  blocked. `getRouteVisual` linearly interpolates between each pair of route tiles and derives facing
+  from the current segment; seated guests use the facing direction configured for their table edge.
 - The 100ms clock samples customer route progress, and a matching linear CSS transition bridges
   samples smoothly. The gait remains active for the final transition sample before the guest becomes
   interactive. The same clock drives route completion, spawning, dish recycling, expiration, and

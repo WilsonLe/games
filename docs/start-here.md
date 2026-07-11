@@ -28,8 +28,8 @@ references: []
 | `CUSTOMERS`, `customerWalkSheetById` | Guest inventory and per-character directional walk sheets. |
 | `DINER_LEVELS`, `TARGET_SERVES`, `difficultyForLevel` | Diner progression and pacing. |
 | `DINER_DOOR_TILE`, `SEAT_LAYOUT`, `DINER_FLOOR_TILES` | Customer coordinates, four persistent tables, and the responsive 10 × 5 floor model. |
-| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Diner tile routes, interpolated customer positions, and directional actor state. |
-| `makeGuest`, `makeDecoyFood`, `chooseSpawnLane` | Diner guest and dish generation. |
+| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Collision-free diner tile routes, interpolated customer positions, and directional actor state. |
+| `makeGuest`, `makeDecoyFood`, `chooseAvailableDishSlot`, `chooseSpawnLane` | Diner guest and stable-slot dish generation. |
 | `handleGuestSelect`, `revealGuestOrder`, `handleFoodDrop` | Diner order-taking and serving decisions. |
 | `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS` | Drop Hop map, road graph, and lesson content. |
 | `DropHopGame`, `handleCityLocationClick`, `completeCityMission` | Drop Hop state, movement, scoring, and completion. |

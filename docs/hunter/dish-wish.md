@@ -10,7 +10,8 @@ references: []
 - The game starts automatically with one entering guest.
 - Four sparse tables are rendered before service and remain after guests leave; incoming guests are
   assigned to an available table.
-- Customers travel smoothly along their tile routes when entering and leaving.
+- Customers take shortest collision-free tile routes around table tiles when entering and leaving,
+  then sit at the configured left, right, bottom, or top edge facing the table.
 - Selecting a seated customer's table reveals and speaks the order immediately. Requested dish names
   are underlined inline; the bubble does not show reference dish images. Selecting another customer
   replaces unfinished speech, while every previously revealed order remains visible and serviceable.
@@ -25,7 +26,7 @@ references: []
 - Food/customer data and balancing constants: top of `src/App.tsx`.
 - Difficulty: `difficultyForLevel`.
 - Movement: `SEAT_LAYOUT`, `DINER_FLOOR_TILES`, `buildTileRoute`, `getRouteVisual`, `CharacterActor`.
-- Generation: `makeGuest`, `makeDecoyFood`, `chooseSpawnLane`.
+- Generation: `makeGuest`, `makeDecoyFood`, `chooseAvailableDishSlot`, `chooseSpawnLane`.
 - Order-taking: `handleGuestSelect` and `revealGuestOrder`.
 - Serving/scoring: `handleFoodDrop`.
 - Spawning/recycling/expiration: `RestaurantGame` effects.
@@ -44,9 +45,9 @@ references: []
 ## Verify
 
 Initial guest/second spawn, all four tables visible before and after occupancy, responsive floor
-coverage, linear guest route travel, all direction frames/mirroring and `180ms` frame cadence,
-immediate order reveal and speech switching, underlined dish names without order images, persistent
+coverage, collision-free guest route travel, all dedicated direction rows and `180ms` frame cadence,
+immediate order reveal and speech switching, underlined dish names without customer labels or order images, persistent
 revealed orders, correct-dish patience increases, dish entry/bob/exit, correct/partial/complete
 service, decoy match, drop outside, unheard
-guest, non-consuming incorrect-dish patience loss, expiration, recycling, keyboard service, win,
+guest, non-consuming incorrect-dish patience loss, stable dish slots after removal, expiration, recycling, keyboard service, win,
 New Shift, portal return, desktop, and mobile.
