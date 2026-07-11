@@ -88,11 +88,13 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `gameStatus`, `now` | Diner lifecycle and 100ms gameplay clock. |
 | `activeGuests` | Entering, seated, and leaving guests. |
 | `selectedGuestId` | Current table used by keyboard service. |
+| `guidedGuestId`, `introOrderComplete` | First-order onboarding state that keeps the opening order untimed until it is served correctly. |
 | `scheduledFoods`, `beltFoods` | Future and visible dishes. |
 | `score`, `served`, `combo` | Progress and scoring. |
-| `feedback` | Screen-reader diner status announcements; narration text is not visually rendered. |
+| `servedEcho` | Brief visible reinforcement card for the latest correctly served food word. |
+| `feedback` | Shared diner status text used by the screen-reader live region and the visible helper panel. |
 | `missedRecap` | Brief visible/accessibility recap of missed vocabulary and the queued retry word. |
-| `dishWishSnapshot` | Immutable scene view derived from React state on each render sample. |
+| `dishWishSnapshot` | Immutable scene view derived from React state on each render sample, including intro highlight metadata plus practice/supply cues. |
 | sequence/timer refs | Unique IDs plus next guest/decoy times. |
 | practice refs | Bounded later-order retry queue and per-food repeat counts. |
 | `consumedDishIdsRef` | Duplicate-drop protection. |
@@ -107,8 +109,9 @@ flowchart LR
   Ended -->|New Shift| Playing
 ```
 
-The diner starts automatically. It has no mid-shift pause or reset control. Completion displays a
-`New Shift` action. The portal button is available throughout.
+The diner starts automatically. It has no mid-shift pause or reset control. The opening order is a
+special untimed guided step inside `playing`; after that first correct serve, ordinary guest timing
+continues normally. Completion displays a `New Shift` action. The portal button is available throughout.
 
 ## Constants
 
@@ -154,6 +157,8 @@ three-item finale with more traffic.
 
 - `selectFoods` deterministically selects unique foods for a sequence and level, with an optional
   forced practice word from the missed-order retry queue.
+- Level 1 phrases always use the stable `I'd like …, please.` frame; later levels rotate through the
+  broader polite template set.
 - `chooseAvailableSeatIndex` reserves one of the four persistent table positions, including while a
   departing guest is still walking out, so two guests cannot occupy the same table.
 - `makeGuest` rotates customer profiles, assigns the available table, creates the phrase, records any
@@ -177,11 +182,15 @@ three-item finale with more traffic.
 - Removed dishes stay in `beltFoods` with `leavingAt` through `DISH_EXIT_MS`, then a timeout removes
   them after the serving-line exit animation.
 - `revealGuestOrder` immediately reveals and speaks a seated guest's order without changing patience.
+  During the opening guided order it also updates the visible helper copy toward the matching dish.
   Because `speak` cancels the current utterance, selecting another customer switches speech
   immediately while earlier revealed orders remain visible. Revealed orders also show `Practice again`
   and `Coming next`/`On the pass` hints when applicable.
-- Each correct dish adds 2000ms before the updated guest is committed. An incorrect dish remains
-  available and removes 2500–5000ms of that guest's patience according to level.
+- The helper panel renders the current sentence, picture + lowercase word cards, replay buttons, and a
+  one-second served-word echo without changing the core timing or scoring rules.
+- The guided first order is exempt from expiration and wrong-dish patience loss until it is served
+  correctly. Each later correct dish adds 2000ms before the updated guest is committed. An incorrect
+  dish remains available and removes 2500–5000ms of that guest's patience according to level.
 - When a guest expires, React shows a brief missed-word recap with food art/labels and queues at least
   one missed food for bounded later repetition, capped per food to avoid infinite retry loops.
 
@@ -200,9 +209,10 @@ earned = 35 + timeBonus + levelBonus + comboBonus
 ```
 
 The time bonus is calculated before the correct-dish patience extension. Incorrect dishes stay on
-the pass and reduce only the receiving guest's patience; score and combo are unchanged. Expired
-guests leave, animate owned dishes off, reset the combo, show a short recap, and queue bounded later
-practice. There is no miss count or diner loss state.
+the pass and reduce only the receiving guest's patience; score and combo are unchanged, except that
+the untimed guided opener skips that penalty. Expired guests leave, animate owned dishes off, reset
+the combo, show a short recap, and queue bounded later practice. There is no miss count or diner loss
+state.
 
 # Drop Hop
 
