@@ -975,6 +975,48 @@ function chooseSpawnLane(preferredLane: number, currentFoods: BeltFood[], now: n
   return null;
 }
 
+// Mirrors the ordered-food effect without mutating refs so expiration can be decided
+// after any same-sample blocked-supply compensation that effect will grant.
+function getPendingSupplyCompensationByGuestId(
+  scheduledFoods: ScheduledFood[],
+  beltFoods: BeltFood[],
+  profile: DifficultyProfile,
+  now: number,
+) {
+  const simulatedBeltFoods = [...beltFoods];
+  const compensationByGuestId = new Map<string, number>();
+
+  scheduledFoods
+    .filter((food) => food.dueAt <= now)
+    .forEach((food) => {
+      const slot = chooseAvailableDishSlot(simulatedBeltFoods);
+      const lane = slot === null ? null : chooseSpawnLane(food.lane, simulatedBeltFoods, now);
+
+      if (slot === null || lane === null) {
+        if (food.targetGuestId) {
+          compensationByGuestId.set(
+            food.targetGuestId,
+            Math.max(compensationByGuestId.get(food.targetGuestId) ?? 0, SUPPLY_DELAY_RETRY_MS),
+          );
+        }
+
+        return;
+      }
+
+      simulatedBeltFoods.push({
+        id: `pending-${food.id}`,
+        foodId: food.foodId,
+        targetGuestId: food.targetGuestId,
+        lane,
+        slot,
+        spawnedAt: now,
+        travelMs: profile.beltTravelMs,
+      });
+    });
+
+  return compensationByGuestId;
+}
+
 function speak(text: string, rate = 0.9) {
   if (!("speechSynthesis" in window)) {
     return false;
@@ -1083,6 +1125,19 @@ function choosePracticeFoodId(missedFoods: FoodId[], orderNumber: number, practi
 
 function isGuestComplete(guest: ActiveGuest) {
   return guest.foods.every((foodId) => !needsFood(guest, foodId));
+}
+
+function isGuestExpirationDue(
+  guest: ActiveGuest,
+  now: number,
+  guidedGuestId: string | null,
+  introOrderComplete: boolean,
+) {
+  return (
+    guest.phase !== "leaving" &&
+    guest.expiresAt <= now &&
+    !(guest.instanceId === guidedGuestId && !introOrderComplete)
+  );
 }
 
 function FoodArt({ id }: { id: FoodId }) {
@@ -1603,6 +1658,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const orderPanelGuest = selectedGuest?.heardOrder ? selectedGuest : guidedGuest?.heardOrder ? guidedGuest : null;
 
   const activeGuestCount = activeGuests.filter((guest) => guest.phase !== "leaving").length;
+  const hasGuestExpirationDue = activeGuests.some((guest) =>
+    isGuestExpirationDue(guest, now, guidedGuestId, introOrderComplete),
+  );
   const isShiftWon = served >= TARGET_SERVES;
 
   const playSound = useCallback((kind: SoundKind) => {
@@ -1857,18 +1915,26 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         servedFoods: [...droppedGuest.servedFoods, food.foodId],
       };
       const completedGuest = isGuestComplete(nextMatchingGuest) ? nextMatchingGuest : null;
+      const nextServed = completedGuest ? served + 1 : served;
+      const shiftComplete = Boolean(completedGuest && nextServed >= TARGET_SERVES);
       const nextCombo = completedGuest ? combo + 1 : combo;
       const comboBonus = completedGuest ? Math.max(0, nextCombo - 1) * HAPPY_GUEST_COMBO_BONUS : 0;
       const earned = 35 + timeBonus + levelBonus + comboBonus;
       const earnedLabel = formatEarnedPoints(earned, comboBonus);
       const completedAt = Date.now();
-      const nextGuests: ActiveGuest[] = activeGuests.map((guest) =>
-        guest.instanceId === droppedGuest.instanceId
-          ? completedGuest
+      const nextGuests: ActiveGuest[] = activeGuests.map((guest) => {
+        if (guest.instanceId === droppedGuest.instanceId) {
+          return completedGuest
             ? { ...nextMatchingGuest, phase: "leaving" as const, leavingAt: completedAt }
-            : nextMatchingGuest
-          : guest,
-      );
+            : nextMatchingGuest;
+        }
+
+        if (shiftComplete && guest.phase !== "leaving") {
+          return { ...guest, phase: "leaving" as const, leavingAt: completedAt };
+        }
+
+        return guest;
+      });
 
       setActiveGuests(nextGuests);
 
@@ -1878,20 +1944,34 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       }
 
       if (completedGuest) {
-        const nextServed = served + 1;
         const happyLine = HAPPY_GUEST_LINES[(completedGuest.orderNumber + nextServed) % HAPPY_GUEST_LINES.length];
         setServed(nextServed);
-        setScheduledFoods((currentFoods) =>
-          currentFoods.filter((scheduledFood) => scheduledFood.targetGuestId !== completedGuest?.instanceId),
-        );
-        setBeltFoods((currentFoods) =>
-          currentFoods.map((currentFood) =>
-            currentFood.targetGuestId === completedGuest.instanceId
-              ? { ...currentFood, leavingAt: currentFood.leavingAt ?? completedAt }
-              : currentFood,
-          ),
-        );
-        setSelectedGuestId((currentSelected) => (currentSelected === completedGuest.instanceId ? null : currentSelected));
+
+        if (shiftComplete) {
+          setScheduledFoods([]);
+          setBeltFoods((currentFoods) =>
+            currentFoods.map((currentFood) => ({
+              ...currentFood,
+              leavingAt: currentFood.leavingAt ?? completedAt,
+            })),
+          );
+          setSelectedGuestId(null);
+          setGuidedGuestId(null);
+          setIntroOrderComplete(true);
+        } else {
+          setScheduledFoods((currentFoods) =>
+            currentFoods.filter((scheduledFood) => scheduledFood.targetGuestId !== completedGuest.instanceId),
+          );
+          setBeltFoods((currentFoods) =>
+            currentFoods.map((currentFood) =>
+              currentFood.targetGuestId === completedGuest.instanceId
+                ? { ...currentFood, leavingAt: currentFood.leavingAt ?? completedAt }
+                : currentFood,
+            ),
+          );
+          setSelectedGuestId((currentSelected) => (currentSelected === completedGuest.instanceId ? null : currentSelected));
+        }
+
         if (isGuidedFirstOrder) {
           setIntroOrderComplete(true);
           setGuidedGuestId(null);
@@ -1901,17 +1981,17 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         }
         setFeedback({
           kind: "good",
-          text:
-            nextServed >= TARGET_SERVES
-              ? `Dinner service complete. ${earnedLabel}`
-              : isGuidedFirstOrder
-                ? `Great job. You served ${foodName}. The next guests will be timed. ${earnedLabel}`
-                : `${completedGuest.customer.name} leaves happy. ${earnedLabel}`,
+          text: shiftComplete
+            ? `Dinner service complete. ${earnedLabel}`
+            : isGuidedFirstOrder
+              ? `Great job. You served ${foodName}. The next guests will be timed. ${earnedLabel}`
+              : `${completedGuest.customer.name} leaves happy. ${earnedLabel}`,
         });
         playSound("complete");
-        speak(nextServed >= TARGET_SERVES ? "Dinner service complete. All guests are happy." : happyLine, 1);
+        speak(shiftComplete ? "Dinner service complete. All guests are happy." : happyLine, 1);
 
-        if (nextServed >= TARGET_SERVES) {
+        if (shiftComplete) {
+          setMissedRecap(null);
           setGameStatus("ended");
         }
       } else {
@@ -1984,7 +2064,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   }, [activeGuests, gameStatus, guidedGuestId, introOrderComplete, now]);
 
   useEffect(() => {
-    if (gameStatus !== "playing") {
+    if (gameStatus !== "playing" || missedRecap || hasGuestExpirationDue) {
       return;
     }
 
@@ -1996,7 +2076,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         nextGuestAtRef.current = now + difficulty.guestIntervalMs;
       }
     }
-  }, [activeGuestCount, activeGuests, addGuest, difficulty, gameStatus, now, served]);
+  }, [activeGuestCount, activeGuests, addGuest, difficulty, gameStatus, hasGuestExpirationDue, missedRecap, now, served]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -2173,12 +2253,20 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       return;
     }
 
-    const expiredGuests = activeGuests.filter(
-      (guest) =>
-        guest.phase !== "leaving" &&
-        guest.expiresAt <= now &&
-        !(guest.instanceId === guidedGuestId && !introOrderComplete),
+    const pendingSupplyCompensationByGuestId = getPendingSupplyCompensationByGuestId(
+      scheduledFoods,
+      beltFoods,
+      difficulty,
+      now,
     );
+    const expiredGuests = activeGuests.filter((guest) => {
+      const pendingCompensationMs = pendingSupplyCompensationByGuestId.get(guest.instanceId) ?? 0;
+      const compensatedGuest = pendingCompensationMs > 0
+        ? { ...guest, expiresAt: guest.expiresAt + pendingCompensationMs }
+        : guest;
+
+      return isGuestExpirationDue(compensatedGuest, now, guidedGuestId, introOrderComplete);
+    });
 
     if (expiredGuests.length === 0) {
       return;
@@ -2205,6 +2293,8 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       expiredGuests.some((guest) => guest.instanceId === currentSelected) ? null : currentSelected,
     );
 
+    // Queue bounded practice for every expired guest, but keep the recap card
+    // focused on the first guest so the visible recovery copy stays short.
     const recapGuest = expiredGuests[0];
     let recapResult = { missedFoods: getMissingFoods(recapGuest), practiceFoodId: null as FoodId | null };
 
@@ -2230,7 +2320,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         ? `${recapGuest.customer.name} left before the last dish. Missed ${formatList(missedFoodNames)}. ${getFoodName(recapResult.practiceFoodId)} will come back later.`
         : `${recapGuest.customer.name} left before the last dish. Missed ${formatList(missedFoodNames)}.`,
     );
-  }, [activeGuests, gameStatus, guidedGuestId, introOrderComplete, now, playSound, queuePracticeRetry, resetCombo]);
+  }, [activeGuests, beltFoods, difficulty, gameStatus, guidedGuestId, introOrderComplete, now, playSound, queuePracticeRetry, resetCombo, scheduledFoods]);
 
   useEffect(() => {
     if (selectedGuestId && activeGuests.some((guest) => guest.instanceId === selectedGuestId && guest.phase !== "leaving")) {
@@ -2253,24 +2343,35 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   }, [missedRecap]);
 
   useEffect(() => {
-    const leavingGuests = activeGuests.filter(
-      (guest) =>
-        guest.phase === "leaving" &&
-        guest.leavingAt &&
-        now - guest.leavingAt > getGuestRouteTransitionDuration(guest) + LEAVING_GUEST_LINGER_MS,
-    );
+    const nextLeavingCleanupAt = activeGuests.reduce((earliest, guest) => {
+      if (guest.phase !== "leaving" || !guest.leavingAt) {
+        return earliest;
+      }
 
-    if (leavingGuests.length === 0) {
-      return;
+      return Math.min(
+        earliest,
+        guest.leavingAt + getGuestRouteTransitionDuration(guest) + LEAVING_GUEST_LINGER_MS,
+      );
+    }, Number.POSITIVE_INFINITY);
+
+    if (!Number.isFinite(nextLeavingCleanupAt)) {
+      return undefined;
     }
 
-    setActiveGuests((currentGuests) =>
-      currentGuests.filter(
-        (guest) =>
-          !leavingGuests.some((leavingGuest) => leavingGuest.instanceId === guest.instanceId),
-      ),
-    );
-  }, [activeGuests, now]);
+    const timeout = window.setTimeout(() => {
+      const cleanupAt = Date.now();
+      setActiveGuests((currentGuests) =>
+        currentGuests.filter(
+          (guest) =>
+            guest.phase !== "leaving" ||
+            !guest.leavingAt ||
+            cleanupAt - guest.leavingAt <= getGuestRouteTransitionDuration(guest) + LEAVING_GUEST_LINGER_MS,
+        ),
+      );
+    }, Math.max(0, nextLeavingCleanupAt - Date.now()));
+
+    return () => window.clearTimeout(timeout);
+  }, [activeGuests]);
 
   useEffect(() => {
     resetGame();

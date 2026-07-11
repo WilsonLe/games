@@ -44,7 +44,16 @@ references: []
 - Treat `targetGuestId` as lifecycle metadata, not a serve lock.
 - Preserve the ordered-dish fairness invariant: if supply is blocked, retry cadence and patience
   compensation must stay matched so a guest cannot expire solely because the kitchen withheld the
-  needed item.
+  needed item. Expiration checks must account for same-sample pending supply compensation without
+  granting that compensation twice.
+- Preserve the recap/replacement invariant separately: an eligible expiration or active missed-word
+  recap inhibits guest creation. Once the recap clears, spawn at most one overdue replacement and
+  derive its seating, patience, and scheduled-food timestamps normally; do not also add recap-time
+  patience compensation. Already-active guests keep normal timers while a recap is visible.
+- Keep simultaneous expiration policy explicit: queue bounded practice retries for every expired
+  guest, but keep the visible recap focused on the first expired guest.
+- On final completion, clear pending scheduled food/recap state and settle active guests plus visible
+  pass food so no timed lifecycle is frozen behind the win banner.
 - Preserve Phaser pointer/touch drag service and the native focus-revealed keyboard controls.
 - Keep the first order untimed until the first correct serve; do not let the guided guest expire or lose patience during the teach-through.
 - Keep empty tables and tables with entering guests non-interactive, preserve table occupancy until a
@@ -54,4 +63,4 @@ references: []
 
 ## Verify
 
-Initial guest/second spawn, guided first-order highlight flow, untimed opener that survives waiting before the first serve, all four Phaser tables visible before and after occupancy, responsive floor coverage, collision-free route travel, all dedicated direction rows and approximate `120ms` frame cadence, immediate order reveal and speech switching, helper phrase/word cards, replay safety when speech is unavailable, served-word echo, persistent revealed orders, `Practice again` and `Coming next`/`On the pass` hints, correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service, decoy match, drop outside, unheard guest, non-consuming incorrect-dish intro guidance, stable dish slots after removal, fair blocked-supply retries, expiration recap, bounded later repetition, recycling, keyboard service, win, New Shift, portal return, desktop, and mobile.
+Initial guest/second spawn, guided first-order highlight flow, untimed opener that survives waiting before the first serve, all four Phaser tables visible before and after occupancy, responsive floor coverage, collision-free route travel, all dedicated direction rows and approximate `120ms` frame cadence, immediate order reveal and speech switching, helper phrase/word cards, replay safety when speech is unavailable, served-word echo, persistent revealed orders, `Practice again` and `Coming next`/`On the pass` hints, correct-dish patience increases, dish entry/bob/exit, correct/partial/complete service, decoy match, drop outside, unheard guest, non-consuming incorrect-dish intro guidance, stable dish slots after removal, fair blocked-supply retries, expiration recap with no replacement until it clears, a single normally timed replacement without stale scheduled food or seat duplication, bounded later repetition, recycling, keyboard service, win/recap cleanup, New Shift/timeout cleanup, portal return, desktop, and mobile.
