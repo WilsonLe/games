@@ -59,12 +59,13 @@ arcade-style repetition.
 | --- | --- |
 | Runtime | Client-only single-page app. |
 | Framework | React `18.3.1`. |
+| 2D renderer | Phaser `4.2.1`, lazy-loaded only on game routes; `AUTO` selects WebGL with Canvas fallback. |
 | Build tool | Vite 6 (`^6.4.3`; the lockfile resolves the patched `6.4.3` release). |
 | Language | TypeScript with project references and strict checking. |
 | Icons | `lucide-react`. |
 | Routing | Small History API implementation inside `App`; no router dependency. |
-| Styling | One global `src/styles.css` file with custom properties, responsive rules, and animations. |
-| Assets | Imported PNG art plus an SVG cursor under `src/assets/`. |
+| Styling | One global `src/styles.css` file for the portal, React HUD/panels, canvas sizing, focus controls, and responsive rules. |
+| Assets | Imported PNG art plus an SVG cursor under `src/assets/`; Phaser scenes preload game textures. |
 | Audio | `window.speechSynthesis` and `AudioContext`/`webkitAudioContext`. |
 | State | Component-local React hooks; there is no external store or persistence. |
 
@@ -98,8 +99,11 @@ npm audit
 | --- | --- |
 | `index.html` | HTML metadata, root node, and Vite module entry. |
 | `src/main.tsx` | Mounts `<App />` under `StrictMode` and imports CSS. |
-| `src/App.tsx` | Portal, path routing, both game engines, data, state, timing, scoring, speech, and tones. |
-| `src/styles.css` | Portal, diner, city, sprites, responsive behavior, and animation. |
+| `src/App.tsx` | Portal, path routing, game data/state, timing, scoring, speech, tones, and Phaser snapshots. |
+| `src/game-runtime/PhaserGameHost.tsx` | Shared responsive Phaser instance lifecycle. |
+| `src/games/dish-wish/` | Dish Wish React adapter and Phaser scene. |
+| `src/games/drop-hop/` | Drop Hop React adapter and Phaser scene. |
+| `src/styles.css` | Portal/HUD/page styles, canvas hosts, accessible fallback controls, and responsive behavior. |
 | `src/assets/` | Runtime background, character, food, and cursor assets. |
 | `docs/` | Maintainer and Hunter documentation. |
 | `dist/` | Ignored production build output. |

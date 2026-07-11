@@ -19,9 +19,10 @@ references: []
 - Map IDs/data: `LocationId`, `CITY_LOCATIONS`.
 - Movement graph: `CITY_ROADS`, `cityNeighbors`.
 - Lesson content: `CITY_ITEMS`, `CITY_MISSIONS`.
-- Edge highlighting: `getCityRoadKey` and the consecutive `path` pairs in `CityMap`.
+- Edge highlighting: `getCityRoadKey`, consecutive `path` pairs, and `DropHopSnapshot.usedRoadKeys`.
 - State, pause/reset, movement, scoring, and completion: `DropHopGame`.
-- Layout: `.cityGameGrid`, `.cityMap`, location/road/courier styles.
+- Rendering/input: `DropHopMap` adapter and `DropHopScene` Phaser map.
+- Page/canvas layout: `.cityGameGrid`, `.cityMapPanel--phaser`, and `.phaserStage--dropHop`.
 
 ## Risks
 
@@ -29,10 +30,10 @@ references: []
 - Update ID unions, location rows, roads, and missions together.
 - Do not replace consecutive-edge highlighting with a set of visited locations; that marks roads that
   were never traversed.
-- Keep map stops as native buttons.
+- Keep Phaser stop hit areas and the adapter's native keyboard/assistive-technology buttons aligned.
 - Keep diner-specific `.gameGrid` rules out of `.appShell--city`; Drop Hop has its own fixed-viewport
   grid and overflow rules.
-- Percentage coordinates and CSS road lengths require desktop/mobile visual checks.
+- Percentage coordinates and Phaser road geometry require desktop/mobile visual checks.
 
 ## Verify
 

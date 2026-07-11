@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, DragEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   BadgeCheck,
   Bike,
   BookOpen,
-  ChefHat,
   Check,
   Flame,
   Gauge,
@@ -12,26 +11,16 @@ import {
   Languages,
   Mail,
   MapPin,
-  Navigation,
   Package,
   Pause,
   Play,
   RotateCcw,
   Route,
-  School,
   Star,
-  Store,
-  Trees,
   Volume2,
   X,
 } from "lucide-react";
 import customerMaiUrl from "./assets/sprites/customer-mai.png";
-import customerBenWalkSheetUrl from "./assets/sprites/generated/walk/customer-ben-walk-sheet.png";
-import customerIvyWalkSheetUrl from "./assets/sprites/generated/walk/customer-ivy-walk-sheet.png";
-import customerLeoWalkSheetUrl from "./assets/sprites/generated/walk/customer-leo-walk-sheet.png";
-import customerMaiWalkSheetUrl from "./assets/sprites/generated/walk/customer-mai-walk-sheet.png";
-import customerNoraWalkSheetUrl from "./assets/sprites/generated/walk/customer-nora-walk-sheet.png";
-import customerSamWalkSheetUrl from "./assets/sprites/generated/walk/customer-sam-walk-sheet.png";
 import foodBreadUrl from "./assets/sprites/food-bread.png";
 import foodChickenUrl from "./assets/sprites/food-chicken.png";
 import foodEggUrl from "./assets/sprites/food-egg.png";
@@ -43,6 +32,18 @@ import foodSoupUrl from "./assets/sprites/food-soup.png";
 import foodTeaUrl from "./assets/sprites/food-tea.png";
 import gameKitchenBgUrl from "./assets/game-kitchen-bg.png";
 import playerChefUrl from "./assets/player-chef.png";
+import type { DishWishSnapshot } from "./games/dish-wish/DishWishScene";
+import type { DropHopSnapshot } from "./games/drop-hop/DropHopScene";
+
+const DishWishStage = lazy(async () => {
+  const module = await import("./games/dish-wish/DishWishStage");
+  return { default: module.DishWishStage };
+});
+
+const DropHopMap = lazy(async () => {
+  const module = await import("./games/drop-hop/DropHopMap");
+  return { default: module.DropHopMap };
+});
 
 type FoodId = "rice" | "fish" | "chicken" | "egg" | "noodles" | "soup" | "salad" | "tea" | "bread";
 
@@ -68,8 +69,6 @@ type SeatLayout = {
   table: TilePoint;
   customer: TilePoint;
   facing: WalkDirection;
-  bubbleShift: string;
-  mobileBubbleShift: string;
 };
 
 type DifficultyProfile = {
@@ -121,13 +120,6 @@ type BeltFood = {
   spawnedAt: number;
   travelMs: number;
   leavingAt?: number;
-};
-
-type DraggingDish = {
-  food: BeltFood;
-  pointerId: number;
-  x: number;
-  y: number;
 };
 
 type CharacterVisual = TilePoint & {
@@ -224,15 +216,6 @@ const CUSTOMERS: CustomerProfile[] = [
   { id: "ivy", name: "Ivy" },
   { id: "sam", name: "Sam" },
 ];
-
-const customerWalkSheetById: Record<CustomerProfile["id"], string> = {
-  mai: customerMaiWalkSheetUrl,
-  leo: customerLeoWalkSheetUrl,
-  nora: customerNoraWalkSheetUrl,
-  ben: customerBenWalkSheetUrl,
-  ivy: customerIvyWalkSheetUrl,
-  sam: customerSamWalkSheetUrl,
-};
 
 const FIRST_DISH_DELAY_MS = 1_800;
 
@@ -374,19 +357,11 @@ const DINER_FLOOR_ROWS = 5;
 const DINER_DOOR_TILE: TilePoint = { col: 0, row: DINER_FLOOR_ROWS - 1 };
 
 const SEAT_LAYOUT: SeatLayout[] = [
-  { table: { col: 2, row: 1 }, customer: { col: 1, row: 1 }, facing: "east", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 1 }, customer: { col: 8, row: 1 }, facing: "west", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 2, row: 3 }, customer: { col: 2, row: 4 }, facing: "north", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 3 }, customer: { col: 7, row: 2 }, facing: "south", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 1 }, customer: { col: 1, row: 1 }, facing: "east" },
+  { table: { col: 7, row: 1 }, customer: { col: 8, row: 1 }, facing: "west" },
+  { table: { col: 2, row: 3 }, customer: { col: 2, row: 4 }, facing: "north" },
+  { table: { col: 7, row: 3 }, customer: { col: 7, row: 2 }, facing: "south" },
 ];
-
-const DINER_FLOOR_TILES: TilePoint[] = Array.from(
-  { length: DINER_FLOOR_COLUMNS * DINER_FLOOR_ROWS },
-  (_, index) => ({
-    col: index % DINER_FLOOR_COLUMNS,
-    row: Math.floor(index / DINER_FLOOR_COLUMNS),
-  }),
-);
 
 const foodById = new Map(FOODS.map((food) => [food.id, food]));
 
@@ -989,68 +964,6 @@ function FoodArt({ id }: { id: FoodId }) {
   );
 }
 
-function CharacterActor({
-  visual,
-  customer,
-  active = false,
-  phase,
-}: {
-  visual: CharacterVisual;
-  customer: CustomerProfile;
-  active?: boolean;
-  phase?: GuestPhase;
-}) {
-  const actorStyle = {
-    "--actor-col": visual.col + 0.5,
-    "--actor-row": visual.row + 0.5,
-    "--actor-position-transition-ms": `${DINER_CLOCK_MS}ms`,
-    zIndex: Math.round(14 + visual.row),
-  } as CSSProperties;
-  const spriteStyle = {
-    backgroundImage: `url(${customerWalkSheetById[customer.id]})`,
-  } as CSSProperties;
-
-  return (
-    <div
-      className={cx(
-        "characterActor",
-        "characterActor--customer",
-        phase && `characterActor--${phase}`,
-        `characterActor--${visual.direction}`,
-        visual.walking && "characterActor--walking",
-        phase !== "seated" && visual.done && !visual.walking && "characterActor--routeDone",
-        active && "characterActor--active",
-      )}
-      style={actorStyle}
-      aria-hidden="true"
-    >
-      <span className="characterSprite">
-        <span className="characterSprite__shadow" />
-        <span className="characterSprite__sheet" style={spriteStyle} />
-      </span>
-    </div>
-  );
-}
-
-function CustomerActor({
-  guest,
-  now,
-  selected,
-}: {
-  guest: ActiveGuest;
-  now: number;
-  selected: boolean;
-}) {
-  return (
-    <CharacterActor
-      active={selected}
-      customer={guest.customer}
-      phase={guest.phase}
-      visual={getGuestVisual(guest, now)}
-    />
-  );
-}
-
 function StatPill({
   icon,
   label,
@@ -1069,279 +982,6 @@ function StatPill({
   );
 }
 
-function GuestTable({
-  guest,
-  seatIndex,
-  now,
-  selected,
-  dropActive,
-  dropReady,
-  onFoodDragOver,
-  onFoodDrop,
-  onSelect,
-}: {
-  guest: ActiveGuest | null;
-  seatIndex: number;
-  now: number;
-  selected: boolean;
-  dropActive: boolean;
-  dropReady: boolean;
-  onFoodDragOver: (event: DragEvent<HTMLButtonElement>) => void;
-  onFoodDrop: (guest: ActiveGuest, event: DragEvent<HTMLButtonElement>) => void;
-  onSelect: () => void;
-}) {
-  const patienceRatio = guest
-    ? clamp((guest.expiresAt - now) / (guest.expiresAt - guest.serviceStartsAt), 0, 1)
-    : 0;
-  const seat = getSeatLayout(seatIndex);
-  const tableStyle = {
-    "--table-col": seat.table.col + 0.5,
-    "--table-row": seat.table.row + 0.5,
-    "--bubble-shift": seat.bubbleShift,
-    "--bubble-shift-mobile": seat.mobileBubbleShift,
-  } as CSSProperties;
-  const showOrder = Boolean(guest?.heardOrder);
-  const tableIsInteractive = guest?.phase === "seated";
-
-  return (
-    <button
-      className={cx(
-        "guestTable",
-        !guest && "guestTable--empty",
-        selected && "guestTable--selected",
-        Boolean(guest && !guest.heardOrder) && "guestTable--unheard",
-        guest?.phase === "entering" && "guestTable--entering",
-        guest?.phase === "leaving" && "guestTable--leaving",
-        dropActive && "guestTable--dropTarget",
-        dropReady && "guestTable--dropReady",
-      )}
-      data-guest-id={guest?.instanceId}
-      disabled={!tableIsInteractive}
-      style={tableStyle}
-      type="button"
-      onDragOver={onFoodDragOver}
-      onDrop={(event) => guest && onFoodDrop(guest, event)}
-      onClick={onSelect}
-      aria-label={
-        guest
-          ? guest.heardOrder
-            ? `${guest.customer.name} ordered ${formatList(guest.foods)}`
-            : `Hear ${guest.customer.name}'s order`
-          : `Empty table ${seatIndex + 1}`
-      }
-    >
-      <span className="dinerChair dinerChair--top" aria-hidden="true" />
-      <span className="dinerChair dinerChair--right" aria-hidden="true" />
-      <span className="dinerChair dinerChair--bottom" aria-hidden="true" />
-      <span className="dinerChair dinerChair--left" aria-hidden="true" />
-      <span className="dinerTable" aria-hidden="true" />
-
-      {guest && (
-        <>
-          <span className="guestSpeech">
-            <strong>{showOrder ? renderOrderPhrase(guest) : "Tap to hear order"}</strong>
-          </span>
-
-          <span
-            className="guestTimer"
-            role="progressbar"
-            aria-label={`${guest.customer.name} order time remaining`}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(patienceRatio * 100)}
-          >
-            <span style={{ width: `${patienceRatio * 100}%` }} />
-          </span>
-        </>
-      )}
-    </button>
-  );
-}
-
-function KitchenStation({
-  beltFoods,
-  now,
-  profile,
-  draggingFoodId,
-  onFoodDragEnd,
-  onFoodKeyDown,
-  onNativeFoodDragStart,
-  onStartFoodDrag,
-}: {
-  beltFoods: BeltFood[];
-  now: number;
-  profile: DifficultyProfile;
-  draggingFoodId: string | null;
-  onFoodDragEnd: (food: BeltFood) => void;
-  onFoodKeyDown: (food: BeltFood, event: KeyboardEvent<HTMLButtonElement>) => void;
-  onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
-  onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
-}) {
-  const beltFoodBySlot = new Map(beltFoods.map((food) => [food.slot, food]));
-
-  return (
-    <div className="kitchenStation" aria-label="Kitchen cooking station">
-      <div className="stoveBank" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="prepCounter" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="dishRail" aria-label={`Kitchen pass dishes, ${DISH_PASS_CAPACITY} dish capacity`}>
-        <span className="dishRail__label">
-          {beltFoods.length}/{DISH_PASS_CAPACITY} dishes · {formatTime(profile.beltTravelMs)} pass
-        </span>
-        <div className="dishRail__items">
-          {Array.from({ length: DISH_PASS_CAPACITY }, (_, slot) => {
-            const food = beltFoodBySlot.get(slot);
-
-            if (!food) {
-              return <span className="dishRail__slot" aria-hidden="true" key={`empty-dish-slot-${slot}`} />;
-            }
-
-            const progress = clamp((now - food.spawnedAt) / food.travelMs, 0, 1);
-            const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
-
-            return (
-              <button
-                className={cx(
-                  "beltFood",
-                  `beltFood--lane${food.lane}`,
-                  draggingFoodId === food.id && "beltFood--dragging",
-                  Boolean(food.leavingAt) && "beltFood--leaving",
-                )}
-                data-belt-id={food.id}
-                data-belt-food={food.foodId}
-                disabled={Boolean(food.leavingAt)}
-                draggable={!food.leavingAt}
-                key={food.id}
-                type="button"
-                style={{ "--dish-life": `${Math.max(0, 1 - progress)}` } as CSSProperties}
-                onDragEnd={() => onFoodDragEnd(food)}
-                onDragStart={(event) => onNativeFoodDragStart(food, event)}
-                onKeyDown={(event) => onFoodKeyDown(food, event)}
-                onPointerDown={(event) => onStartFoodDrag(food, event)}
-                aria-label={`Drag ${foodName} to a guest`}
-              >
-                <span className="beltFood__dish">
-                  <FoodArt id={food.foodId} />
-                  <strong>{foodName}</strong>
-                </span>
-                <span className="beltFood__timer" aria-hidden="true">
-                  <span />
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RestaurantStage({
-  guests,
-  now,
-  selectedGuest,
-  gameStatus,
-  beltFoods,
-  profile,
-  draggingDish,
-  onSelectGuest,
-  onFoodDragEnd,
-  onFoodDragOver,
-  onFoodDrop,
-  onFoodKeyDown,
-  onNativeFoodDragStart,
-  onStartFoodDrag,
-}: {
-  guests: ActiveGuest[];
-  now: number;
-  selectedGuest: ActiveGuest | null;
-  gameStatus: GameStatus;
-  beltFoods: BeltFood[];
-  profile: DifficultyProfile;
-  draggingDish: DraggingDish | null;
-  onSelectGuest: (guest: ActiveGuest) => void;
-  onFoodDragEnd: (food: BeltFood) => void;
-  onFoodDragOver: (event: DragEvent<HTMLButtonElement>) => void;
-  onFoodDrop: (guest: ActiveGuest, event: DragEvent<HTMLButtonElement>) => void;
-  onFoodKeyDown: (food: BeltFood, event: KeyboardEvent<HTMLButtonElement>) => void;
-  onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
-  onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
-}) {
-  const guestBySeatIndex = new Map(guests.map((guest) => [guest.seatIndex, guest]));
-
-  return (
-    <section className="restaurantStage" aria-label="Top down restaurant floor">
-      <div className="floorTiles" aria-hidden="true">
-        {DINER_FLOOR_TILES.map((tile) => (
-          <span className="floorTile" key={`${tile.col}-${tile.row}`} />
-        ))}
-      </div>
-      <div className="restaurantDoor" aria-hidden="true">
-        <span />
-      </div>
-      <KitchenStation
-        beltFoods={beltFoods}
-        draggingFoodId={draggingDish?.food.id ?? null}
-        now={now}
-        profile={profile}
-        onFoodDragEnd={onFoodDragEnd}
-        onFoodKeyDown={onFoodKeyDown}
-        onNativeFoodDragStart={onNativeFoodDragStart}
-        onStartFoodDrag={onStartFoodDrag}
-      />
-
-      {SEAT_LAYOUT.map((_, seatIndex) => {
-        const guest = guestBySeatIndex.get(seatIndex) ?? null;
-        const guestCanReceiveInput = guest?.phase === "seated";
-
-        return (
-          <GuestTable
-            guest={guest}
-            key={`table-${seatIndex}`}
-            seatIndex={seatIndex}
-            now={now}
-            dropActive={Boolean(draggingDish && guestCanReceiveInput)}
-            dropReady={Boolean(draggingDish && guestCanReceiveInput && guest.heardOrder && needsFood(guest, draggingDish.food.foodId))}
-            selected={Boolean(guest && selectedGuest?.instanceId === guest.instanceId)}
-            onFoodDragOver={onFoodDragOver}
-            onFoodDrop={onFoodDrop}
-            onSelect={() => guest && onSelectGuest(guest)}
-          />
-        );
-      })}
-
-      {guests.map((guest) => (
-        <CustomerActor
-          guest={guest}
-          key={`${guest.instanceId}-actor`}
-          now={now}
-          selected={selectedGuest?.instanceId === guest.instanceId}
-        />
-      ))}
-
-      {guests.length === 0 && (
-        <div className="emptyGuests">
-          <ChefHat size={24} />
-          <span>{gameStatus === "ended" ? "All guests served." : "Waiting for guests to be seated."}</span>
-        </div>
-      )}
-
-      {draggingDish && (
-        <div className="dragDishPreview" style={{ left: draggingDish.x, top: draggingDish.y }} aria-hidden="true">
-          <FoodArt id={draggingDish.food.foodId} />
-          <strong>{foodById.get(draggingDish.food.foodId)?.name ?? draggingDish.food.foodId}</strong>
-        </div>
-      )}
-    </section>
-  );
-}
 
 function CityCargoArt({ item, quantity }: { item: DeliveryItem; quantity: number }) {
   return (
@@ -1349,179 +989,6 @@ function CityCargoArt({ item, quantity }: { item: DeliveryItem; quantity: number
       {item.foodId ? <FoodArt id={item.foodId} /> : item.icon === "mail" ? <Mail size={28} /> : item.icon === "book" ? <BookOpen size={28} /> : <Package size={28} />}
       {quantity > 1 && <strong>{quantity}</strong>}
     </span>
-  );
-}
-
-function CityLocationIcon({ location }: { location: CityLocation }) {
-  if (location.kind === "hub") {
-    return <Navigation size={20} />;
-  }
-
-  if (location.kind === "school") {
-    return <School size={20} />;
-  }
-
-  if (location.kind === "park") {
-    return <Trees size={20} />;
-  }
-
-  if (location.kind === "library") {
-    return <BookOpen size={20} />;
-  }
-
-  if (location.kind === "post") {
-    return <Mail size={20} />;
-  }
-
-  if (location.kind === "shop") {
-    return <Store size={20} />;
-  }
-
-  if (location.kind === "bridge") {
-    return <Route size={20} />;
-  }
-
-  return <Home size={20} />;
-}
-
-function getRoadStyle(from: CityLocation, to: CityLocation) {
-  const deltaX = to.x - from.x;
-  const deltaY = to.y - from.y;
-
-  return {
-    left: `${from.x}%`,
-    top: `${from.y}%`,
-    width: `${Math.hypot(deltaX, deltaY)}%`,
-    transform: `rotate(${Math.atan2(deltaY, deltaX)}rad)`,
-  } as React.CSSProperties;
-}
-
-function CityMap({
-  currentLocationId,
-  mission,
-  packagePicked,
-  path,
-  deliveredLocationId,
-  onLocationClick,
-}: {
-  currentLocationId: LocationId;
-  mission: CityMission;
-  packagePicked: boolean;
-  path: LocationId[];
-  deliveredLocationId: LocationId | null;
-  onLocationClick: (locationId: LocationId) => void;
-}) {
-  const pickupId = packagePicked ? null : mission.pickup;
-  const usedRoads = new Set(
-    path.slice(1).map((locationId, index) => getCityRoadKey(path[index], locationId)),
-  );
-  const dropoffLocation = cityLocationById.get(mission.dropoff) ?? CITY_LOCATIONS[0];
-  const requiredStopLocation = mission.requiredStop ? cityLocationById.get(mission.requiredStop) : null;
-
-  return (
-    <section className="cityMapPanel" aria-label="Drop Hop map">
-      <div className="cityMap">
-        <div className="cityRiver" aria-hidden="true" />
-        <div className="cityRiver cityRiver--lower" aria-hidden="true" />
-
-        {CITY_ROADS.map(([fromId, toId]) => {
-          const from = cityLocationById.get(fromId);
-          const to = cityLocationById.get(toId);
-
-          if (!from || !to) {
-            return null;
-          }
-
-          const roadWasUsed = usedRoads.has(getCityRoadKey(fromId, toId));
-          return (
-            <span
-              className={cx("cityRoad", roadWasUsed && "cityRoad--used")}
-              key={`${fromId}-${toId}`}
-              style={getRoadStyle(from, to)}
-              aria-hidden="true"
-            />
-          );
-        })}
-
-        {path.map((locationId, index) => {
-          const location = cityLocationById.get(locationId);
-
-          if (!location) {
-            return null;
-          }
-
-          return (
-            <span
-              className="routeDot"
-              key={`${locationId}-${index}`}
-              style={{ "--x": `${location.x}%`, "--y": `${location.y}%` } as React.CSSProperties}
-              aria-hidden="true"
-            />
-          );
-        })}
-
-        <span
-          className="cityWordBadge cityWordBadge--dropoff"
-          style={{ "--x": `${dropoffLocation.x}%`, "--y": `${dropoffLocation.y}%` } as React.CSSProperties}
-        >
-          {mission.relationLabel}
-        </span>
-        {requiredStopLocation && (
-          <span
-            className="cityWordBadge cityWordBadge--bridge"
-            style={{ "--x": `${requiredStopLocation.x}%`, "--y": `${requiredStopLocation.y}%` } as React.CSSProperties}
-          >
-            over
-          </span>
-        )}
-
-        {CITY_LOCATIONS.map((location) => {
-          const isCurrent = location.id === currentLocationId;
-          const isPickup = location.id === pickupId;
-          const isDropoff = location.id === mission.dropoff;
-          const isRequiredStop = location.id === mission.requiredStop;
-          const isDelivered = location.id === deliveredLocationId;
-
-          return (
-            <button
-              className={cx(
-                "cityLocation",
-                `cityLocation--${location.kind}`,
-                isCurrent && "cityLocation--current",
-                isPickup && "cityLocation--pickup",
-                isDropoff && "cityLocation--dropoff",
-                isRequiredStop && "cityLocation--required",
-                isDelivered && "cityLocation--delivered",
-              )}
-              key={location.id}
-              style={{ "--x": `${location.x}%`, "--y": `${location.y}%` } as React.CSSProperties}
-              type="button"
-              onClick={() => onLocationClick(location.id)}
-              aria-label={location.name}
-            >
-              <span className="cityLocation__icon">
-                <CityLocationIcon location={location} />
-              </span>
-              <strong>{location.shortName}</strong>
-            </button>
-          );
-        })}
-
-        {(() => {
-          const current = cityLocationById.get(currentLocationId) ?? CITY_LOCATIONS[0];
-          return (
-            <span
-              className={cx("cityCourier", packagePicked && "cityCourier--loaded")}
-              style={{ "--x": `${current.x}%`, "--y": `${current.y}%` } as React.CSSProperties}
-              aria-hidden="true"
-            >
-              <Bike size={34} />
-              {packagePicked && <Package size={16} />}
-            </span>
-          );
-        })()}
-      </div>
-    </section>
   );
 }
 
@@ -1781,6 +1248,34 @@ function DropHopGame({ onExit }: { onExit: () => void }) {
     };
   }, []);
 
+  const dropHopSnapshot: DropHopSnapshot = useMemo(
+    () => ({
+      status: gameStatus,
+      locations: CITY_LOCATIONS,
+      roads: CITY_ROADS,
+      usedRoadKeys: path.slice(1).map((locationId, index) => getCityRoadKey(path[index], locationId)),
+      path,
+      currentLocationId,
+      pickupId: packagePicked ? null : mission.pickup,
+      dropoffId: mission.dropoff,
+      requiredStopId: mission.requiredStop ?? null,
+      deliveredLocationId,
+      packagePicked,
+      relationLabel: mission.relationLabel,
+    }),
+    [
+      currentLocationId,
+      deliveredLocationId,
+      gameStatus,
+      mission.dropoff,
+      mission.pickup,
+      mission.relationLabel,
+      mission.requiredStop,
+      packagePicked,
+      path,
+    ],
+  );
+
   return (
     <div className={cx("appShell", "appShell--city", gameStatus === "playing" && "appShell--playing")}>
       <div className="sceneBackdrop" aria-hidden="true">
@@ -1875,14 +1370,9 @@ function DropHopGame({ onExit }: { onExit: () => void }) {
             </div>
           </section>
 
-          <CityMap
-            currentLocationId={currentLocationId}
-            deliveredLocationId={deliveredLocationId}
-            mission={mission}
-            packagePicked={packagePicked}
-            path={path}
-            onLocationClick={handleCityLocationClick}
-          />
+          <Suspense fallback={<div className="gameRendererFallback">Loading city map…</div>}>
+            <DropHopMap snapshot={dropHopSnapshot} onLocationSelect={handleCityLocationClick} />
+          </Suspense>
 
           <aside className="enginePanel cityWordPanel">
             <div>
@@ -1933,7 +1423,6 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const [score, setScore] = useState(0);
   const [served, setServed] = useState(0);
   const [combo, setCombo] = useState(0);
-  const [draggingDish, setDraggingDish] = useState<DraggingDish | null>(null);
   const [feedback, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a seated guest to hear an order.",
@@ -1944,16 +1433,10 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const nextGuestAtRef = useRef(Date.now());
   const nextDecoyAtRef = useRef(Date.now());
   const audioContextRef = useRef<AudioContext | null>(null);
-  const draggingDishRef = useRef<DraggingDish | null>(null);
   const consumedDishIdsRef = useRef<Set<string>>(new Set());
 
   const level = levelForServed(served);
   const difficulty = useMemo(() => difficultyForLevel(level), [level]);
-
-  const selectedGuest = useMemo(
-    () => activeGuests.find((guest) => guest.instanceId === selectedGuestId && guest.phase !== "leaving") ?? null,
-    [activeGuests, selectedGuestId],
-  );
 
   const activeGuestCount = activeGuests.filter((guest) => guest.phase !== "leaving").length;
   const isShiftWon = served >= TARGET_SERVES;
@@ -2021,9 +1504,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     setScore(0);
     setServed(0);
     setCombo(0);
-    draggingDishRef.current = null;
     consumedDishIdsRef.current.clear();
-    setDraggingDish(null);
     setFeedback({
       kind: "neutral",
       text: `${firstGuest.guest.customer.name} is walking to table 1. Tap the table after they sit down to hear the order.`,
@@ -2194,146 +1675,6 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     },
     [activeGuests, combo, difficulty.level, gameStatus, playSound, served],
   );
-
-  const handleFoodKeyDown = useCallback(
-    (food: BeltFood, event: KeyboardEvent<HTMLButtonElement>) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-
-      event.preventDefault();
-      handleFoodDrop(food, selectedGuest?.instanceId ?? null);
-    },
-    [handleFoodDrop, selectedGuest],
-  );
-
-  const handleStartFoodDrag = useCallback((food: BeltFood, event: PointerEvent<HTMLButtonElement>) => {
-    if (event.button !== 0 || gameStatus !== "playing" || food.leavingAt) {
-      return;
-    }
-
-    event.preventDefault();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    const nextDraggingDish = {
-      food,
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-    };
-    draggingDishRef.current = nextDraggingDish;
-    setDraggingDish(nextDraggingDish);
-    setFeedback({ kind: "neutral", text: `Serve ${foodById.get(food.foodId)?.name ?? food.foodId} to the correct guest.` });
-  }, [gameStatus]);
-
-  const handleNativeFoodDragStart = useCallback((food: BeltFood, event: DragEvent<HTMLButtonElement>) => {
-    if (gameStatus !== "playing" || food.leavingAt) {
-      event.preventDefault();
-      return;
-    }
-
-    const nextDraggingDish = {
-      food,
-      pointerId: -1,
-      x: event.clientX,
-      y: event.clientY,
-    };
-
-    draggingDishRef.current = nextDraggingDish;
-    setDraggingDish(nextDraggingDish);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/x-belt-food", food.id);
-    event.dataTransfer.setData("text/plain", food.id);
-    setFeedback({ kind: "neutral", text: `Serve ${foodById.get(food.foodId)?.name ?? food.foodId} to the correct guest.` });
-  }, [gameStatus]);
-
-  const handleFoodDragEnd = useCallback((food: BeltFood) => {
-    if (draggingDishRef.current?.food.id === food.id) {
-      draggingDishRef.current = null;
-      setDraggingDish(null);
-    }
-  }, []);
-
-  const handleFoodDragOver = useCallback((event: DragEvent<HTMLButtonElement>) => {
-    if (!draggingDishRef.current) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const handleGuestFoodDrop = useCallback(
-    (guest: ActiveGuest, event: DragEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-
-      const droppedFoodId =
-        event.dataTransfer.getData("application/x-belt-food") || event.dataTransfer.getData("text/plain");
-      const droppedFood =
-        (droppedFoodId && draggingDishRef.current?.food.id === droppedFoodId ? draggingDishRef.current.food : null) ||
-        beltFoods.find((food) => food.id === droppedFoodId && !food.leavingAt) ||
-        null;
-
-      draggingDishRef.current = null;
-      setDraggingDish(null);
-
-      if (!droppedFood) {
-        return;
-      }
-
-      handleFoodDrop(droppedFood, guest.instanceId);
-    },
-    [beltFoods, handleFoodDrop],
-  );
-
-  useEffect(() => {
-    const handlePointerMove = (event: globalThis.PointerEvent) => {
-      const currentDish = draggingDishRef.current;
-
-      if (!currentDish || event.pointerId !== currentDish.pointerId) {
-        return;
-      }
-
-      setDraggingDish((currentDish) =>
-        currentDish && currentDish.pointerId === event.pointerId
-          ? { ...currentDish, x: event.clientX, y: event.clientY }
-          : currentDish,
-      );
-    };
-
-    const finishDrag = (event: globalThis.PointerEvent) => {
-      const currentDish = draggingDishRef.current;
-
-      if (!currentDish || event.pointerId !== currentDish.pointerId) {
-        return;
-      }
-
-      const droppedElement = document.elementFromPoint(event.clientX, event.clientY);
-      const guestElement = droppedElement?.closest<HTMLElement>("[data-guest-id]");
-
-      draggingDishRef.current = null;
-      setDraggingDish(null);
-      handleFoodDrop(currentDish.food, guestElement?.dataset.guestId ?? null);
-    };
-
-    const cancelDrag = (event: globalThis.PointerEvent) => {
-      const currentDish = draggingDishRef.current;
-
-      if (currentDish && event.pointerId === currentDish.pointerId) {
-        draggingDishRef.current = null;
-        setDraggingDish(null);
-      }
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", finishDrag);
-    window.addEventListener("pointercancel", cancelDrag);
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", finishDrag);
-      window.removeEventListener("pointercancel", cancelDrag);
-    };
-  }, [handleFoodDrop]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -2603,6 +1944,63 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     };
   }, []);
 
+  const dishWishSnapshot: DishWishSnapshot = useMemo(
+    () => ({
+      now,
+      status: gameStatus,
+      selectedGuestId,
+      guests: activeGuests.map((guest) => ({
+        id: guest.instanceId,
+        customerId: guest.customer.id,
+        customerName: guest.customer.name,
+        phase: guest.phase,
+        seatIndex: guest.seatIndex,
+        heardOrder: guest.heardOrder,
+        phrase: guest.phrase,
+        foods: guest.foods,
+        servedFoods: guest.servedFoods,
+        patienceRatio: clamp(
+          (guest.expiresAt - now) / Math.max(1, guest.expiresAt - guest.serviceStartsAt),
+          0,
+          1,
+        ),
+        visual: getGuestVisual(guest, now),
+      })),
+      foods: beltFoods.map((food) => ({
+        id: food.id,
+        foodId: food.foodId,
+        lane: food.lane,
+        slot: food.slot,
+        progress: clamp((now - food.spawnedAt) / food.travelMs, 0, 1),
+        leaving: Boolean(food.leavingAt),
+      })),
+      beltTravelLabel: `${beltFoods.length}/${DISH_PASS_CAPACITY} dishes · ${formatTime(difficulty.beltTravelMs)} pass`,
+    }),
+    [activeGuests, beltFoods, difficulty.beltTravelMs, gameStatus, now, selectedGuestId],
+  );
+
+  const handlePhaserGuestSelect = useCallback(
+    (guestId: string) => {
+      const guest = activeGuests.find((candidate) => candidate.instanceId === guestId);
+
+      if (guest) {
+        handleGuestSelect(guest);
+      }
+    },
+    [activeGuests, handleGuestSelect],
+  );
+
+  const handlePhaserFoodDrop = useCallback(
+    (foodId: string, guestId: string | null) => {
+      const food = beltFoods.find((candidate) => candidate.id === foodId && !candidate.leavingAt);
+
+      if (food) {
+        handleFoodDrop(food, guestId);
+      }
+    },
+    [beltFoods, handleFoodDrop],
+  );
+
   return (
     <div className={cx("appShell", gameStatus === "playing" && "appShell--playing")}>
       <div className="sceneBackdrop" aria-hidden="true">
@@ -2638,22 +2036,13 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         )}
 
         <section className="gameGrid">
-          <RestaurantStage
-            beltFoods={beltFoods}
-            gameStatus={gameStatus}
-            guests={activeGuests}
-            now={now}
-            profile={difficulty}
-            draggingDish={draggingDish}
-            selectedGuest={selectedGuest}
-            onFoodDragEnd={handleFoodDragEnd}
-            onFoodDragOver={handleFoodDragOver}
-            onFoodDrop={handleGuestFoodDrop}
-            onFoodKeyDown={handleFoodKeyDown}
-            onNativeFoodDragStart={handleNativeFoodDragStart}
-            onSelectGuest={handleGuestSelect}
-            onStartFoodDrag={handleStartFoodDrag}
-          />
+          <Suspense fallback={<div className="gameRendererFallback gameRendererFallback--dish">Loading restaurant…</div>}>
+            <DishWishStage
+              snapshot={dishWishSnapshot}
+              onGuestSelect={handlePhaserGuestSelect}
+              onFoodDrop={handlePhaserFoodDrop}
+            />
+          </Suspense>
         </section>
       </main>
     </div>

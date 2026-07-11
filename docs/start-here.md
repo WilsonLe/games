@@ -11,12 +11,12 @@ references: []
 
 1. Read `AGENTS.md` and `README.md`.
 2. Confirm the checkout root, branch, worktree, remote default branch, and working-tree status.
-3. Open `src/App.tsx`; portal routing and both games intentionally live in this file.
-4. Scan the source anchors below.
-5. Open `src/styles.css`, paying special attention to the diner-only selector scope near
-   `/* Top-down restaurant game stage */`.
-6. Check `src/assets/` before changing imports or filenames.
-7. Run the appropriate checks before delivery.
+3. Open `src/App.tsx` for routing, game rules, state, scoring, speech, and scene snapshots.
+4. Open `src/game-runtime/PhaserGameHost.tsx` and the relevant scene under `src/games/` for rendering.
+5. Scan the source anchors below.
+6. Open `src/styles.css` for shell/HUD/canvas sizing and the diner-only shared-selector scope.
+7. Check `src/assets/` before changing imports or filenames.
+8. Run the appropriate checks before delivery.
 
 ## Source Anchors
 
@@ -25,15 +25,16 @@ references: []
 | `DISH_WISH_PATH`, `DROP_HOP_PATH`, `canonicalizePath`, `App` | Client-side path selection, legacy aliases, history updates, document titles, and portal fallback. |
 | `GamePortal` | Root two-game chooser and preview cards. |
 | `FOODS`, `foodArtById` | Diner food inventory and image mapping. |
-| `CUSTOMERS`, `customerWalkSheetById` | Guest inventory and per-character directional walk sheets. |
+| `CUSTOMERS`, `DishWishScene.CUSTOMER_ASSETS` | Guest inventory and Phaser directional-sheet preload map. |
 | `DINER_LEVELS`, `TARGET_SERVES`, `difficultyForLevel` | Diner progression and pacing. |
-| `DINER_DOOR_TILE`, `SEAT_LAYOUT`, `DINER_FLOOR_TILES` | Customer coordinates, four persistent tables, and the responsive 10 × 5 floor model. |
-| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Collision-free diner tile routes, interpolated customer positions, and directional actor state. |
+| `DINER_DOOR_TILE`, `SEAT_LAYOUT` | Door, table-edge customer coordinates, facing, and four persistent logical table positions. |
+| `buildTileRoute`, `getRouteVisual`, `getGuestVisual` | Collision-free diner tile routes, interpolated positions, and directional actor state. |
 | `makeGuest`, `makeDecoyFood`, `chooseAvailableDishSlot`, `chooseSpawnLane` | Diner guest and stable-slot dish generation. |
 | `handleGuestSelect`, `revealGuestOrder`, `handleFoodDrop` | Diner order-taking and serving decisions. |
 | `CITY_LOCATIONS`, `CITY_ROADS`, `CITY_MISSIONS` | Drop Hop map, road graph, and lesson content. |
 | `DropHopGame`, `handleCityLocationClick`, `completeCityMission` | Drop Hop state, movement, scoring, and completion. |
-| `getCityRoadKey`, `CityMap` | Exact traversed-edge highlighting and map rendering. |
+| `getCityRoadKey`, `DropHopMap`, `DropHopScene` | Exact traversed-edge snapshots, accessible controls, and Phaser map rendering. |
+| `PhaserGameHost`, `DishWishStage`, `DishWishScene` | Shared renderer lifecycle and Dish Wish canvas boundary. |
 
 ## Product Shape
 
@@ -54,12 +55,12 @@ provider-specific deployment configuration.
 | Task | Start in |
 | --- | --- |
 | Change portal cards or path behavior | `GamePortal`, `App`, and portal styles. |
-| Add a diner food or guest | Types/data/imports in `src/App.tsx`, then `src/assets/`. |
+| Add a diner food or guest | Model/data in `src/App.tsx`, preload maps in `DishWishScene`, then `src/assets/`. |
 | Tune diner difficulty | Named constants and `difficultyForLevel`. |
 | Change serving or scoring | `handleFoodDrop`, `resetCombo`, and completion branches. |
-| Change city locations or roads | `LocationId`, `CITY_LOCATIONS`, and `CITY_ROADS`. |
+| Change city locations or roads | `LocationId`, `CITY_LOCATIONS`, `CITY_ROADS`, then `DropHopScene` geometry if needed. |
 | Add or alter city missions | `CITY_MISSIONS`; keep phrase and structured fields aligned. |
-| Change layout or animation | `src/styles.css`; preserve diner-only selector scoping. |
+| Change playfield layout or animation | Owning Phaser scene plus canvas-host CSS; preserve diner-only selector scoping. |
 | Tune speech or tones | `speak`, both `playSound` callbacks, and `scheduleTone`. |
 
 ## High-Risk Gotchas
@@ -72,8 +73,9 @@ provider-specific deployment configuration.
 | `selectFoods` requires enough unique foods | Never allow `orderSize > FOODS.length`. |
 | Diner has no mid-shift pause | Drop Hop has ready/play/pause/end controls; the diner starts automatically and only offers a new shift after completion. |
 | Audio is browser-dependent | Speech and Web Audio may be absent or gesture-gated. |
-| Empty and entering tables are not selectable | Empty tables and tables with entering guests ignore pointer input; once seated, selecting the customer/table area reveals and speaks the order immediately. |
-| Road highlighting is edge-based | Keep consecutive-path logic; checking only whether both stops appear in the path produces false highlights. |
+| Empty and entering tables are not selectable | The Dish Wish scene adds hit areas only for seated guests; once seated, table selection reveals and speaks the order immediately. |
+| Road highlighting is edge-based | Keep consecutive-path logic in React and pass exact edge keys to Phaser; checking only whether both stops appear in the path produces false highlights. |
+| Phaser is a renderer, not the state owner | Scenes emit IDs and drops. React remains authoritative for rules, score, timing, pickup, delivery, and cleanup. |
 
 ## Verification
 

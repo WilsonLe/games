@@ -21,7 +21,7 @@ references: []
 ### Add A Diner Food
 
 1. Add `src/assets/sprites/food-{id}.png`.
-2. Update `FoodId`, the import, `FOODS`, and `foodArtById`.
+2. Update `FoodId`, `DishWishFoodId`, both imports, `FOODS`, `foodArtById`, `FOOD_ASSETS`, and `FOOD_NAMES`.
 3. Confirm `difficultyForLevel().orderSize <= FOODS.length`.
 4. Update `docs/assets.md`.
 5. Build and smoke-test food rendering in the portal/game where applicable.
@@ -30,7 +30,7 @@ references: []
 
 1. Add a 4 × 4 directional sheet at
    `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` using the shared cell size and row order.
-2. Update `CustomerProfile`, `CUSTOMERS`, the sheet import, and `customerWalkSheetById`.
+2. Update `CustomerProfile`, `DishWishCustomerId`, `CUSTOMERS`, and `CUSTOMER_ASSETS` in `DishWishScene`.
 3. Add a still image only if the portal or another component imports it.
 4. Update `src/assets/sprites/generated/walk/manifest.json` and `docs/assets.md`.
 5. Verify direction-matched idle, south, north, east, west, reduced-motion, and responsive rendering states.
@@ -43,12 +43,12 @@ references: []
 | `HAPPY_GUEST_COMBO_BONUS` | Consecutive completed-guest bonus. |
 | `FIRST_DISH_DELAY_MS` | First ordered dish timing. |
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | Replacement pacing. |
-| `DINER_CLOCK_MS`, `CHARACTER_STEP_MS` | Customer-route sampling interval and linearly interpolated travel time per tile. |
+| `DINER_CLOCK_MS`, `CHARACTER_STEP_MS` | React route-sampling interval and travel time per tile; the Phaser scene bridges samples with short tweens. |
 | `LEAVING_GUEST_LINGER_MS` | Post-route doorway fade and guest cleanup. |
 | `DISH_EXIT_MS` | Serving-line exit-animation cleanup delay. |
 | `WRONG_DISH_PATIENCE_BASE_MS`, `WRONG_DISH_PATIENCE_PER_LEVEL_MS` | Level-scaled patience removed by an incorrect dish. |
 | `SERVED_DISH_PATIENCE_BONUS_MS` | Patience rewarded by a correct dish. |
-| `ORDER_LANES` | Lane selection/lift; requires matching CSS support. |
+| `ORDER_LANES` | Lane selection/lift; requires matching `DishWishScene` placement support. |
 | `difficultyForLevel` | Capacity, order size, dish timing, decoys, and patience. |
 
 Test scheduled spawn, blocked-lane retry (`650ms`), recycle, expiration, replacement guests, scoring,
@@ -65,12 +65,21 @@ and completion after changes.
 Test pickup at the depot and elsewhere, invalid roads, detours, required stops, score, win, loss,
 pause guidance, and exact edge highlighting.
 
+### Change A Phaser Scene
+
+- Keep gameplay decisions in `RestaurantGame` or `DropHopGame`; scenes render snapshots and emit IDs.
+- Preload textures in the owning scene and keep scene ID unions aligned with `src/App.tsx`.
+- Create/destroy scenes only through `PhaserGameHost`.
+- Keep Dish Wish static geometry cached between resizes; its snapshot updates every `100ms`.
+- Preserve native companion buttons in `.phaserA11yControls` when changing canvas input.
+- Verify WebGL and Canvas-capable browsers, reduced motion, desktop/mobile sizing, and route unmounts.
+
 ### Change Shared Layout
 
-Before editing `.mainSurface`, `.gameGrid`, `.resultBanner`, `.sceneBackdrop`, or `.appShell`, inspect
-both game routes. Both games are fixed to the dynamic viewport with scrolling disabled, while diner
-stage overrides must remain scoped with `.appShell:not(.appShell--city)` so Drop Hop keeps its own
-responsive grid.
+Before editing `.mainSurface`, `.gameGrid`, `.resultBanner`, `.sceneBackdrop`, `.appShell`, or a
+`.phaserStage` host, inspect both game routes. Both games are fixed to the dynamic viewport with
+scrolling disabled, while diner overrides must remain scoped with `.appShell:not(.appShell--city)` so
+Drop Hop keeps its own responsive grid.
 
 ### Replace Art Or Cursor
 
@@ -100,15 +109,15 @@ Run `npm run dev`, then inspect the console throughout.
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1, and six kitchen-pass slots are visible. Patience and ordered-food timing wait until seating. |
 | Guest selection | After seating, the full customer/table area reveals and speaks the order immediately; selecting another customer replaces unfinished speech, and earlier orders remain visible. |
-| Character travel and walk cycles | All six customers take collision-free routes around table tiles, move smoothly at `360ms` per tile, advance four distinct frames at `180ms` per frame in south, north, east, and west movement, finish the endpoint transition on the correct facing row, and fade naturally at the doorway without flicker or size jitter. |
-| Reduced motion | With reduced motion enabled, position transitions and gait/step/shadow loops stop while required route-position updates continue. |
+| Character travel and walk cycles | All six Phaser sprites take collision-free routes around table tiles, move smoothly at `360ms` per tile, advance four distinct frames near `180ms` per frame in dedicated south, north, east, and west rows, and settle on the configured table-facing row. |
+| Reduced motion | With reduced motion enabled, Phaser route tweens and walk loops stop while required route-position updates continue. |
 | Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
 | Drop before order | Dish remains and status asks the player to select the customer and hear the order. |
 | Drop outside | Dish remains and status explains where to serve it. |
 | Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and bad feedback appears. |
 | Expiration | Guest leaves and owned dishes animate off before cleanup. |
-| Pass capacity | At most six dishes occupy the pass; removing a middle card leaves its slot blank, other cards do not shift, the next eligible dish fills an available blank, additional ordered dishes retry, and decoys wait until a slot opens. |
-| Keyboard service | `Enter`/`Space` serves to selected table. |
+| Pass capacity | At most six dishes occupy stable slots; removing a middle dish leaves its slot blank, other dishes do not shift, the next eligible dish fills an available blank, additional ordered dishes retry, and decoys wait until a slot opens. |
+| Keyboard service | Tab into the focus-revealed native controls; guest activation selects/hears an order and dish activation serves to the selected table. |
 | Win | At 24 orders, completion banner and `New Shift` appear. |
 | New Shift | All diner counters and runtime state reset. |
 
@@ -117,7 +126,7 @@ Run `npm run dev`, then inspect the console throughout.
 | Test | Expected |
 | --- | --- |
 | Initial load | Ready state with Start Route and no movement until start. |
-| Valid adjacent move | Courier/path advances and only the traversed edge highlights. |
+| Valid adjacent move | Phaser courier/path advances and only the traversed edge highlights. |
 | Invalid move | No movement, one life lost, streak reset. |
 | Pickup | Basket updates at the configured pickup. |
 | Valid detour | Allowed with guidance; no mistake. |
@@ -138,7 +147,8 @@ Check at least:
 - a short mobile viewport around 620px height.
 
 Verify portal scrolling, both game routes remain viewport-locked with no document scrolling, diner
-HUD/status/table overlap, Drop Hop map readability, and no clipped controls.
+HUD/status/table overlap, Drop Hop map readability, canvas sizing, focus-revealed native controls,
+and no clipped controls.
 
 ## Command Verification
 
@@ -158,7 +168,8 @@ git diff --check
 ```
 
 No automated test script exists today. `npm audit` should report zero known vulnerabilities before
-publication.
+publication. The production build should keep Phaser out of the initial portal chunk; confirm the
+engine chunk is fetched only after opening a game.
 
 ## Documentation Validation
 

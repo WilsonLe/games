@@ -1,5 +1,5 @@
 ---
-description: "Speech, Web Audio, portal and game UI layers, CSS scope, animation, and responsive layout."
+description: "Speech, Web Audio, React UI layers, Phaser scenes, accessibility, and responsive layout."
 references: []
 ---
 
@@ -55,117 +55,99 @@ callers currently do not surface that failure.
 - a CSS-built Drop Hop preview;
 - stacked cards below `980px` and tighter art/card dimensions below `560px`.
 
-The portal scrolls vertically when the two cards exceed the viewport.
+The portal scrolls vertically when the two cards exceed the viewport. Phaser is dynamically imported
+only after a game route renders, so the chooser does not pay the engine download cost.
 
-## Shared Game UI
+## React And Phaser Layers
 
-- `.appShell` is the fixed, full-viewport root for either game.
-- `.mainSurface` is the primary game content wrapper.
-- `.topBar`, `.scoreStrip`, `.statPill`, `.resultBanner`, buttons, and feedback classes are shared.
-- Both game routes lock document scrolling and fit their interface into the dynamic viewport.
-- The portal remains a normal vertically scrollable document.
+React and CSS own:
+
+- `.appShell`, `.mainSurface`, navigation, HUDs, score/status panels, result banners, and feedback;
+- the Drop Hop ticket/clue/fact panels and each game's fixed dynamic-viewport shell;
+- `.phaserStage` sizing, renderer loading fallbacks, and focus-revealed keyboard controls.
+
+Phaser owns the two interactive playfields:
+
+| Scene | Canvas content |
+| --- | --- |
+| `DishWishScene` | Kitchen pass, six slots, floor grid, door, tables/chairs, customer sprites, speech bubbles, patience bars, dish sprites, lifetime bars, drag targets, and movement tweens. |
+| `DropHopScene` | City blocks, river, roads, traversed edges, route dots, location markers/labels, mission rings, courier/cargo, relation label, and movement tween. |
+
+Gameplay truth remains in React. Scenes consume snapshots and emit semantic selection/drop events.
+Both game routes lock document scrolling; the portal remains vertically scrollable. See
+[Phaser Rendering Engine](./rendering-engine.md) for the exact boundary.
 
 ## Critical CSS Scope
 
-The later section headed `/* Top-down restaurant game stage */` overrides generic classes for the
-diner. Any override touching `.appShell`, `.sceneBackdrop`, `.mainSurface`, `.gameGrid`, or
-`.resultBanner` must remain scoped under:
+Both games use fixed dynamic-viewport shells, with separate responsive rules for Dish Wish and Drop Hop. Any shared override
+touching `.appShell`, `.sceneBackdrop`, `.mainSurface`, `.gameGrid`, or `.resultBanner` must remain
+scoped under:
 
 ```css
 .appShell:not(.appShell--city)
 ```
 
-Without that scope, Drop Hop's responsive grid can become a block and its result banner can inherit
-the wrong placement. Diner-specific classes such as `.restaurantStage`, `.guestTable`, and
-`.kitchenStation` do not need the extra qualifier because Drop Hop does not render them.
+Without that scope, Drop Hop's responsive fixed-viewport grid can inherit diner placement. The old
+DOM-scene selectors remain separate from the active `.restaurantStage--phaser`,
+`.cityMapPanel--phaser`, and `.phaserStage` host rules. New visual scene work belongs in Phaser.
 
-## Dish Wish Layers
+## Dish Wish Grid And Animation
 
-| Layer/class | Position | z-index | Role |
-| --- | --- | ---: | --- |
-| `.floorTiles` / `.floorTile` | responsive grid below kitchen | 0 | Opaque 10 × 5 dining-floor grid aligned to actor coordinates. |
-| stage frame/wall pseudo-elements | absolute | 1–2 | Room boundary and kitchen wall. |
-| `.kitchenStation` | absolute top | 4 | Expanded kitchen-art backdrop, burners, cabinets, and six-slot dish rail. |
-| `.restaurantDoor` | tile-positioned | 8 | Guest entry/exit. |
-| `.guestTable` | tile-positioned | 11 / 18 selected | One of four persistent tables; guest UI appears only while occupied. |
-| `.characterActor--customer` | tile-positioned | `14 + row` | Guest art rendered by the directional actor. |
-| `.gameHud` | fixed | 30 | Portal button and three stats. |
-| `.dinerFeedback` / result | fixed | 31 | Visible status or completion controls. |
-| `.dragDishPreview` | fixed | 60 | Pointer drag preview. |
+Dish Wish keeps the logical 10 × 5 route grid. The scene computes the largest square tile size that
+fits below the kitchen and centers the floor. Under `560px`, `gridPoint` transposes the logical axes
+into a 5 × 10 portrait floor without changing route data.
 
-The 100ms React clock samples fractional progress along each route segment, and matching linear
-`top`/`left` transitions bridge those samples so customers travel smoothly at `360ms` per tile. A
-final 100ms transition sample keeps the directional gait active until the actor reaches the exact
-route endpoint. The customer renderer loops dedicated four-frame south, north, east, or west sheet
-rows at `720ms` (`180ms` per frame) while a route is active. Entering actors fade in at the door,
-departing actors keep their final directional frame and fade into the doorway, and seated actors use
-column 0 of the row that faces their table edge.
+The 100ms React clock supplies fractional route visuals. Persistent guest sprites tween between
+samples and play dedicated four-frame south, north, east, or west sheet rows at approximately
+`180ms` per frame. Seated guests display column 0 of the row that faces their table edge. Static
+kitchen/floor graphics are cached until a resize instead of being rebuilt on every clock sample.
 
-## Dish Wish Tile System
+Dish containers persist by instance ID. Phaser pointer/touch drag events move the visible container,
+resolve a seated table on release, then call React for validation. Correct and wrong outcomes,
+patience, score, speech, tones, and cleanup stay in React.
 
-`restaurantStage` defines the dining inset/top and fits the floor into the remaining viewport below the
-expanded kitchen while keeping `--tile-width` and `--tile-height` equal. The stage renders 50 opaque
-`floorTile` elements as a 10 × 5 CSS grid on wider screens. Logical coordinates use columns 0–9 and
-rows 0–4; actors, the door, and four persistent tables use the corresponding responsive cell centers:
-
-```css
-calc(var(--dining-left) + var(--column-center) * var(--tile-width))
-calc(var(--dining-top) + var(--row-center) * var(--tile-height))
-```
-
-Below `560px`, the floor transposes to a 5 × 10 portrait grid so square tiles remain large enough for
-touch targets. The visual formulas swap logical row and column axes for the door, tables, and actors;
-directional sheet rows are remapped to those visual axes while gameplay coordinates and routes stay
-unchanged. `--tile-size` scales character art from the square
-cell dimension, while the dining inset/top, kitchen dimensions, table/sprite size, and speech bubble
-offsets are reduced independently. Check all four tables and route movement after changing these
-variables.
-
-## Drop Hop Layout
+## Drop Hop Layout And Animation
 
 Default `.cityGameGrid` has three columns:
 
 1. mission ticket and feedback;
-2. map;
+2. Phaser map;
 3. clue/fact panel.
 
 Below `1100px`, the clue panel spans a compact full row. Below `700px`, the mission ticket and clue
-panel compress around a flexible map so the entire game remains visible without document scrolling.
-The map uses percentage-positioned location buttons and road geometry, so desktop and mobile checks
-are required after coordinate or viewport-height changes.
+panel compress around a flexible Phaser map so the entire game remains visible without document
+scrolling. The scene converts percentage location coordinates to pixels after every resize.
 
-`CityMap` marks only consecutive path edges as used. Route dots show each visited stop, including
-repeats.
+Only edge keys from consecutive path pairs are emphasized. Route dots include repeated stops. A
+valid React location change triggers the directional courier walk cycle and a `360ms` tween; cargo
+follows the courier.
 
-## Feedback And Controls
+## Accessible Controls
 
-- Dish Wish feedback is a visible fixed status toast with `aria-live="polite"` while playing.
-- Dish Wish completion replaces the toast with a result banner and `New Shift` action.
-- Drop Hop feedback stays in the mission column with `role="status"`.
-- Both game routes expose a portal-return button.
-- Buttons and location/table/dish controls remain native interactive elements.
+Canvas objects support pointer and touch interaction, but canvas alone is not the semantic interface.
+`DishWishStage` and `DropHopMap` render native buttons in `.phaserA11yControls`:
 
-## Animation Inventory
+- they remain in keyboard and assistive-technology order;
+- they become visible when focus enters the group;
+- guest buttons expose order/patience state;
+- dish buttons serve to the selected guest;
+- city buttons expose all location names and the current location.
 
-Active animations include portal backdrop pan, dish card entry/content bob/exit, selected guest bob,
-Dish Wish four-frame sheet loops, linear actor travel, actor step/shadow motion, and doorway
-entry/exit transitions, plus Drop Hop
-pickup pulse, delivery pop, and courier bob. Dish entry/exit runs on the button while its nested dish
-content bobs inside padded rail clearance. Direction classes select dedicated south, north, east, or
-west rows and remap them when the portrait floor transposes. Under `prefers-reduced-motion: reduce`, diner position transitions are
-disabled and gait, step, and shadow loops freeze on the first directional frame while route-position
-updates continue.
+React feedback remains in live/status regions. Both Phaser scenes read `prefers-reduced-motion` at
+creation and disable movement tweens/walk loops while still applying state positions.
 
 ## Visual Rules
 
 - Preserve chunky borders, offset shadows, and the compact arcade palette.
-- Keep ordinary panel/button radii at `8px` or less; circular map/courier elements are intentional.
-- Keep character actors non-interactive; tables, dishes, and map stops own input.
+- Keep ordinary panel/button radii at `8px` or less; circular map/table/courier elements are intentional.
+- Keep sprites non-semantic; scene hit areas plus native companion buttons own input.
 - Do not let diner full-viewport rules leak into `.appShell--city`.
 - Check the portal, Dish Wish, and Drop Hop at desktop, `980px`, `560px`, and a short mobile viewport.
-- Keep all six dish slots visible without horizontal scrolling, keep dish buttons stable in size, and retain keyboard service.
+- Keep all six Dish Wish pass slots visible, table bubbles readable, and map labels away from page panels.
+- Inspect the browser console for texture, WebGL, or lazy-chunk errors after renderer changes.
 
 ## Cursor
 
 `--game-cursor: url("./assets/game-cursor.svg") 7 6, auto` is applied globally. Verify the hotspot if
-the SVG changes.
+the SVG changes. Phaser canvas input inherits the page cursor except when the scene assigns a
+pointer/grab cursor to an interactive object.

@@ -27,8 +27,8 @@ loss condition.
 | --- | --- |
 | HUD | Portal button, score, completed orders, and level. |
 | Status toast | Visible neutral/good/bad gameplay feedback with `role="status"`. |
-| Restaurant stage | A responsive 10 × 5 tiled dining floor below the kitchen, four persistent tables, a door, and tile-based customer actors. |
-| Kitchen station | Stove/counter art, six visible dish slots available for service, and a visual pass-lifetime indicator. |
+| Restaurant stage | A Phaser-rendered responsive 10 × 5 tiled floor below the kitchen, four persistent tables, a door, and animated customer sprites. |
+| Kitchen pass | Six Phaser-rendered dish slots available for drag service, each with a lifetime indicator. |
 | Result banner | Completion message and `New Shift` button after 24 orders. |
 
 ## Starting And Taking Orders
@@ -44,7 +44,7 @@ Tables with an entering guest ignore pointer input. Empty tables are visible but
 Once seated:
 
 1. Select anywhere in the customer's table area.
-2. The written order appears immediately with each requested dish name underlined, and speech synthesis attempts the order phrase. The order bubble does not show a customer name or dish images, so the player must read the dish name and choose the matching kitchen-pass dish.
+2. The written order and a `○`/`✓` dish-progress line appear immediately, and speech synthesis attempts the order phrase. The bubble shows neither a customer name nor reference dish images, so the player must read the dish name and choose the matching kitchen-pass dish.
 3. Selecting another seated customer immediately cancels unfinished speech, switches the visual
    selection, and speaks that customer's order even when the previous order is incomplete.
 4. Previously revealed orders remain visible and serviceable; selection does not lock service to one
@@ -57,16 +57,15 @@ available and asks the player to select the customer first.
 
 | Control | Behavior |
 | --- | --- |
-| Pointer drag | Press a dish, move the custom preview over a table, and release. |
-| Native drag/drop | Browser drag events also carry a dish ID to a table. |
-| Keyboard | Focus a dish and press `Enter` or `Space`; it is served to the selected guest. |
+| Pointer/touch drag | Press a Phaser dish, move it over a table, and release. |
+| Keyboard | Tab into the native companion controls, select/hear a guest, then activate a dish with `Enter` or `Space`; it is served to that guest. |
 | Drop outside a table | The dish remains available and the status toast explains where to drag it. |
 
 ## Serving Outcomes
 
 | Situation | Outcome |
 | --- | --- |
-| Guest still needs the dish | Dish animates off the pass, its underlined name changes to the served color, patience rises slightly, score increases, and correct feedback plays. |
+| Guest still needs the dish | Dish leaves the pass, its bubble marker changes from `○` to `✓`, patience rises slightly, score increases, and correct feedback plays. |
 | Dish completes the order | Guest leaves, completed orders and combo increase, owned leftovers animate off, and completion feedback plays. |
 | Guest does not need the dish | Dish remains available, wrong feedback plays, and that guest loses 2.5–5 seconds of patience based on level; score and combo do not change. |
 | Guest has not given the order | Dish remains, and the game asks the player to select the customer and hear the order. |

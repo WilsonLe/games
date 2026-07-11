@@ -8,8 +8,8 @@ references: []
 ## Assets
 
 - Runtime art lives under `src/assets/`.
-- Explicit imports in `src/App.tsx` cover portal previews, food sprites, and generated character sheets.
-- CSS references the kitchen background for both scene and in-stage cooking visuals, plus the custom cursor.
+- `src/App.tsx` imports portal/React-panel art; Phaser scenes import and preload game textures.
+- CSS references portal backgrounds and the custom cursor; `DishWishScene` preloads the kitchen texture.
 - Keep descriptive lowercase kebab-case names and update `docs/assets.md` when inventory changes.
 
 ## Styling Guardrails
@@ -17,7 +17,7 @@ references: []
 - `src/styles.css` is global; portal, diner, and city selectors coexist.
 - Keep diner full-screen overrides for shared classes scoped with
   `.appShell:not(.appShell--city)`.
-- Preserve native controls and visible focus/feedback behavior.
+- Preserve visible focus/feedback and `.phaserA11yControls` native companion controls.
 - Avoid text overlap with HUDs, status messages, sprites, dishes, map stops, and result controls.
 - Keep ordinary panel/button radii compact and preserve chunky borders/offset shadows.
 
@@ -35,6 +35,6 @@ Also verify:
 
 - portal and game home controls;
 - kitchen, player, customer, food, and cursor assets;
-- dish entry/bob/exit, linear guest tile-route movement and directional frame loops, city pickup pulse, and courier motion;
+- Phaser dish drag/exit, linear guest tile-route movement and directional frame loops, route highlights, and courier motion;
 - no console errors or missing assets;
 - exact traversed-road highlighting, including routes that revisit stops.
