@@ -702,6 +702,55 @@ h2 {
   border: 0;
 }
 
+.missedRecap {
+  display: grid;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: #fff4dd;
+  border: 2px solid rgba(241, 184, 63, 0.82);
+  border-radius: 8px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.18);
+}
+
+.missedRecap__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.missedRecap__copy strong {
+  color: #17312d;
+}
+
+.missedRecap__copy span {
+  color: #5b615b;
+}
+
+.missedRecap__foods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.missedRecap__food {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-weight: 800;
+  color: #17312d;
+  background: rgba(255, 253, 248, 0.92);
+  border: 2px solid rgba(23, 49, 45, 0.12);
+  border-radius: 999px;
+}
+
+.missedRecap__food .foodArt {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+  box-shadow: none;
+}
+
 .gameGrid {
   display: grid;
   grid-template-columns: minmax(470px, 0.95fr) minmax(520px, 1.05fr);

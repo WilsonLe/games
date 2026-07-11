@@ -70,11 +70,13 @@ export function DishWishStage({ snapshot, onGuestSelect, onFoodDrop }: DishWishS
                 aria-pressed={guest.id === snapshot.selectedGuestId}
                 aria-label={
                   guest.heardOrder
-                    ? `${guest.customerName} ordered ${guest.foods.join(", ")}`
+                    ? `${guest.customerName} ordered ${guest.foods.join(", ")}${guest.practiceHint ? `. ${guest.practiceHint}` : ""}${guest.supplyHint ? `. ${guest.supplyHint}` : ""}`
                     : `Hear ${guest.customerName}'s order`
                 }
               >
                 {guest.customerName}: {guest.heardOrder ? guest.phrase : "hear order"}
+                {guest.heardOrder && guest.practiceHint ? ` · ${guest.practiceHint}` : ""}
+                {guest.heardOrder && guest.supplyHint ? ` · ${guest.supplyHint}` : ""}
                 <span
                   role="progressbar"
                   aria-label={`${guest.customerName} order time remaining`}

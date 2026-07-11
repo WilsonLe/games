@@ -41,6 +41,8 @@ export type DishWishGuestView = {
   phrase: string;
   foods: DishWishFoodId[];
   servedFoods: DishWishFoodId[];
+  practiceHint: string | null;
+  supplyHint: string | null;
   patienceRatio: number;
   visual: {
     col: number;
@@ -488,7 +490,7 @@ export class DishWishScene extends Phaser.Scene {
       if (guest) {
         if (guest.phase === "seated") {
           const bubbleText = guest.heardOrder
-            ? `${guest.phrase}\n${formatFoodProgress(guest)}`
+            ? `${guest.phrase}\n${formatFoodProgress(guest)}${guest.practiceHint ? `\n${guest.practiceHint}` : ""}${guest.supplyHint ? `\n${guest.supplyHint}` : ""}`
             : "?";
           const bubbleWidth = clamp(layout.tile * (layout.mobile ? 3.1 : 3.6), 112, 270);
           const bubble = this.add.text(0, -radius - 12, bubbleText, {

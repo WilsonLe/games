@@ -27,6 +27,7 @@ loss condition.
 | --- | --- |
 | HUD | Portal button, score, completed orders, and level. |
 | Status announcements | Screen-reader gameplay feedback with `role="status"`; no narration bubble is displayed over the stage. |
+| Missed words recap | A brief visible recap card with food pictures/labels after an expiration, including which word will return later when queued. |
 | Restaurant stage | A Phaser-rendered responsive 10 × 5 tiled floor below the kitchen, four persistent tables, a door, and animated customer sprites. |
 | Kitchen pass | Six Phaser-rendered dish slots available for drag service, each with a lifetime indicator. |
 | Result banner | Completion message and `New Shift` button after 24 orders. |
@@ -44,7 +45,7 @@ Tables with an entering guest ignore pointer input. Empty tables are visible but
 Once seated:
 
 1. Select anywhere in the customer's table area.
-2. The written order and a `○`/`✓` dish-progress line appear immediately, and speech synthesis attempts the order phrase. The bubble shows neither a customer name nor reference dish images, so the player must read the dish name and choose the matching kitchen-pass dish.
+2. The written order and a `○`/`✓` dish-progress line appear immediately, and speech synthesis attempts the order phrase. The bubble shows neither a customer name nor reference dish images, so the player must read the dish name and choose the matching kitchen-pass dish. When relevant, the bubble also shows `Practice again` for a repeated missed word and `Coming next`/`On the pass` for the next needed dish.
 3. Selecting another seated customer immediately cancels unfinished speech, switches the visual
    selection, and speaks that customer's order even when the previous order is incomplete.
 4. Previously revealed orders remain visible and serviceable; selection does not lock service to one
@@ -69,7 +70,7 @@ available and asks the player to select the customer first.
 | Dish completes the order | Guest leaves, completed orders and combo increase, owned leftovers animate off, and completion feedback plays. |
 | Guest does not need the dish | Dish remains available, wrong feedback plays, and that guest loses 2.5–5 seconds of patience based on level; score and combo do not change. |
 | Guest has not given the order | Dish remains, and the game asks the player to select the customer and hear the order. |
-| Guest expires | Guest leaves, owned scheduled food is removed, visible dishes animate off, and combo resets. |
+| Guest expires | Guest leaves, owned scheduled food is removed, visible dishes animate off, combo resets, and a brief missed-word recap appears; at least one missed food is queued to return in a later order when the retry cap allows it. |
 
 A decoy can satisfy an order when its food matches. `targetGuestId` governs dish lifecycle, not which
 table may receive it.
@@ -84,13 +85,19 @@ table may receive it.
 - The table renders an accessible progress bar, not a numeric seconds label.
 - The kitchen pass holds up to six dishes in stable visible slots. Removing a dish leaves that exact slot blank; later dishes fill available blanks without shifting the other cards.
 - Ordered dishes animate onto the pass over the guest's last-dish timing window.
+- Every requested dish has a deterministic ready time. If a due requested dish is blocked by pass
+  congestion or lane gating, the game retries every `650ms`, shows `Coming next`, and grants matching
+  patience compensation so waiting for withheld supply cannot silently cause an unfair expiration.
 - Missed ordered dishes animate off and recycle while the owning guest still needs them.
 - Decoys animate off when their pass lifetime ends.
-- Level 1 is a two-order introduction. Later levels require 3, 4, 4, 5, and 6 completed orders,
-  preserving the six-level, 24-order shift.
-- Level 1 serves one guest at a time with one-item orders. Higher levels gradually allow up to four
-  concurrent guests, increase orders to two and then three items, speed up the pass and arrivals,
-  add decoys more often, and reduce the extra patience buffer.
+- Each of the six levels now lasts 4 completed orders, preserving the 24-order shift while spacing
+  new challenge more deliberately.
+- The progression rationale is: level 1 teaches one-item service, level 2 keeps one-item orders while
+  decoys start gently, level 3 introduces two-item memory without concurrency, levels 4 and 5 add two
+  simultaneous guests and then faster two-item pacing, and level 6 finishes with three-item orders,
+  three guests, and the fastest pressure.
+- When a guest expires, the recap names and shows the missed food word(s). One missed item is queued
+  for later deliberate repetition, bounded to avoid infinite retries or overly repetitive shifts.
 
 ## Diner Score And Completion
 
