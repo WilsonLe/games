@@ -68,8 +68,9 @@ pause guidance, and exact edge highlighting.
 ### Change Shared Layout
 
 Before editing `.mainSurface`, `.gameGrid`, `.resultBanner`, `.sceneBackdrop`, or `.appShell`, inspect
-both game routes. Diner full-viewport overrides must remain scoped with
-`.appShell:not(.appShell--city)` so Drop Hop keeps its grid and scroll behavior.
+both game routes. Both games are fixed to the dynamic viewport with scrolling disabled, while diner
+stage overrides must remain scoped with `.appShell:not(.appShell--city)` so Drop Hop keeps its own
+responsive grid.
 
 ### Replace Art Or Cursor
 
@@ -136,8 +137,8 @@ Check at least:
 - 320–380px width;
 - a short mobile viewport around 620px height.
 
-Verify portal scrolling, diner HUD/status/table overlap, Drop Hop document scrolling, map readability,
-and no clipped controls.
+Verify portal scrolling, both game routes remain viewport-locked with no document scrolling, diner
+HUD/status/table overlap, Drop Hop map readability, and no clipped controls.
 
 ## Command Verification
 

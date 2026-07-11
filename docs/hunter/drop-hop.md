@@ -30,11 +30,12 @@ references: []
 - Do not replace consecutive-edge highlighting with a set of visited locations; that marks roads that
   were never traversed.
 - Keep map stops as native buttons.
-- Do not let diner full-screen `.gameGrid` or overflow rules leak into `.appShell--city`.
+- Keep diner-specific `.gameGrid` rules out of `.appShell--city`; Drop Hop has its own fixed-viewport
+  grid and overflow rules.
 - Percentage coordinates and CSS road lengths require desktop/mobile visual checks.
 
 ## Verify
 
 Ready/start, depot/non-depot pickup, valid move, invalid road, valid detour, required stop, delivery,
 score/streak, pause guidance, repeat audio, reset, five-mistake loss, ten-delivery win, New Route,
-portal return, exact road highlights, scrolling, and mobile layout.
+portal return, exact road highlights, full-viewport scroll locking, and mobile layout.

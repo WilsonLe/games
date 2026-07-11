@@ -2717,6 +2717,13 @@ function App() {
           : PORTAL_TITLE;
   }, [path]);
 
+  useEffect(() => {
+    const isGameRoute = path === DISH_WISH_PATH || path === DROP_HOP_PATH;
+    document.documentElement.classList.toggle("gameRouteActive", isGameRoute);
+
+    return () => document.documentElement.classList.remove("gameRouteActive");
+  }, [path]);
+
   const navigateToGame = useCallback((nextPath: string) => {
     const canonicalPath = canonicalizePath(nextPath);
 
