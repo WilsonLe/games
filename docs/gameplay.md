@@ -26,7 +26,7 @@ loss condition.
 | Area | Purpose |
 | --- | --- |
 | HUD | Portal button, score, completed orders, and level. |
-| Status toast | Visible neutral/good/bad gameplay feedback with `role="status"`. |
+| Status announcements | Screen-reader gameplay feedback with `role="status"`; no narration bubble is displayed over the stage. |
 | Restaurant stage | A Phaser-rendered responsive 10 × 5 tiled floor below the kitchen, four persistent tables, a door, and animated customer sprites. |
 | Kitchen pass | Six Phaser-rendered dish slots available for drag service, each with a lifetime indicator. |
 | Result banner | Completion message and `New Shift` button after 24 orders. |
@@ -59,7 +59,7 @@ available and asks the player to select the customer first.
 | --- | --- |
 | Pointer/touch drag | Press a Phaser dish, move it over a table, and release. |
 | Keyboard | Tab into the native companion controls, select/hear a guest, then activate a dish with `Enter` or `Space`; it is served to that guest. |
-| Drop outside a table | The dish remains available and the status toast explains where to drag it. |
+| Drop outside a table | The dish remains available and the screen-reader status announcement explains where to drag it. |
 
 ## Serving Outcomes
 

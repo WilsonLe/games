@@ -19,7 +19,7 @@ references: []
   available and reduce only that guest's patience; expiration resets the combo.
 - Completing all requested food sends the guest out, awards points, and advances order/level progress.
 - The target is 24 orders; there is no diner loss state.
-- A visible status toast reports feedback, and completion offers `New Shift`.
+- Screen-reader status announcements report feedback without a visible narration bubble, and completion offers `New Shift`.
 
 ## Implementation Map
 
@@ -41,7 +41,7 @@ references: []
 - Keep empty tables and tables with entering guests non-interactive, preserve table occupancy until a
   leaving guest is removed, and reveal orders immediately once customers are seated.
 - Keep diner full-viewport generic selectors scoped away from `.appShell--city`.
-- Update visible feedback, speech, tones, score, combo, and cleanup together when changing outcomes.
+- Update status announcements, speech, tones, score, combo, and cleanup together when changing outcomes.
 
 ## Verify
 
