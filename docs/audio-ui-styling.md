@@ -59,11 +59,11 @@ The portal scrolls vertically when the two cards exceed the viewport.
 
 ## Shared Game UI
 
-- `.appShell` is the root for either game.
+- `.appShell` is the fixed, full-viewport root for either game.
 - `.mainSurface` is the primary game content wrapper.
 - `.topBar`, `.scoreStrip`, `.statPill`, `.resultBanner`, buttons, and feedback classes are shared.
-- Drop Hop uses the normal document layout and must be allowed to scroll at narrow sizes.
-- Dish Wish intentionally uses a fixed full-viewport stage.
+- Both game routes lock document scrolling and fit their interface into the dynamic viewport.
+- The portal remains a normal vertically scrollable document.
 
 ## Critical CSS Scope
 
@@ -75,10 +75,9 @@ diner. Any override touching `.appShell`, `.sceneBackdrop`, `.mainSurface`, `.ga
 .appShell:not(.appShell--city)
 ```
 
-Without that scope, Drop Hop's three-column grid becomes a block, its result banner becomes fixed,
-and its content can be clipped by diner overflow rules. Diner-specific classes such as
-`.restaurantStage`, `.guestTable`, and `.kitchenStation` do not need the extra qualifier because Drop
-Hop does not render them.
+Without that scope, Drop Hop's responsive grid can become a block and its result banner can inherit
+the wrong placement. Diner-specific classes such as `.restaurantStage`, `.guestTable`, and
+`.kitchenStation` do not need the extra qualifier because Drop Hop does not render them.
 
 ## Dish Wish Layers
 
@@ -129,9 +128,10 @@ Default `.cityGameGrid` has three columns:
 2. map;
 3. clue/fact panel.
 
-Below `1360px`, the clue panel spans the full row. Below `980px`, the layout becomes one column. The
-map uses percentage-positioned location buttons and road geometry, so desktop and mobile checks are
-required after coordinate or minimum-height changes.
+Below `1100px`, the clue panel spans a compact full row. Below `700px`, the mission ticket and clue
+panel compress around a flexible map so the entire game remains visible without document scrolling.
+The map uses percentage-positioned location buttons and road geometry, so desktop and mobile checks
+are required after coordinate or viewport-height changes.
 
 `CityMap` marks only consecutive path edges as used. Route dots show each visited stop, including
 repeats.

@@ -29,7 +29,7 @@ Check all three screens:
 | --- | --- | --- | --- | --- |
 | Portal | Two cards, art, scroll | Cards stack | Compact previews | No clipped cards/header |
 | Dish Wish | Four persistent tables, responsive floor, kitchen, HUD | Scaled stage | Compact HUD/tables | Status and controls remain reachable |
-| Drop Hop | Three-column layout | One column | Compact map/stats | Document scroll and labels remain usable |
+| Drop Hop | Three-column layout | Compact two-column layout | Viewport-fitted stack | No scroll; map labels and controls remain usable |
 
 Also verify:
 
