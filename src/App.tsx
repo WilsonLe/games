@@ -67,6 +67,7 @@ type TilePoint = {
 type SeatLayout = {
   table: TilePoint;
   customer: TilePoint;
+  facing: WalkDirection;
   bubbleShift: string;
   mobileBubbleShift: string;
 };
@@ -116,6 +117,7 @@ type BeltFood = {
   foodId: FoodId;
   targetGuestId: string | null;
   lane: number;
+  slot: number;
   spawnedAt: number;
   travelMs: number;
   leavingAt?: number;
@@ -370,14 +372,12 @@ const HAPPY_GUEST_LINES = [
 const DINER_FLOOR_COLUMNS = 10;
 const DINER_FLOOR_ROWS = 5;
 const DINER_DOOR_TILE: TilePoint = { col: 0, row: DINER_FLOOR_ROWS - 1 };
-const DINER_AISLE_ROW = DINER_FLOOR_ROWS - 1;
-const CUSTOMER_SEAT_ROW_OFFSET = 1;
 
 const SEAT_LAYOUT: SeatLayout[] = [
-  { table: { col: 2, row: 1 }, customer: { col: 2, row: 1 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 1 }, customer: { col: 7, row: 1 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 2, row: 3 }, customer: { col: 2, row: 3 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
-  { table: { col: 7, row: 3 }, customer: { col: 7, row: 3 + CUSTOMER_SEAT_ROW_OFFSET }, bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 1 }, customer: { col: 1, row: 1 }, facing: "east", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 1 }, customer: { col: 8, row: 1 }, facing: "west", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 2, row: 3 }, customer: { col: 2, row: 4 }, facing: "north", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
+  { table: { col: 7, row: 3 }, customer: { col: 7, row: 2 }, facing: "south", bubbleShift: "-50%", mobileBubbleShift: "-50%" },
 ];
 
 const DINER_FLOOR_TILES: TilePoint[] = Array.from(
@@ -597,41 +597,72 @@ function getWalkDirection(from: TilePoint, to: TilePoint): WalkDirection {
   return "south";
 }
 
-function appendTileLine(path: TilePoint[], target: TilePoint) {
-  const current = path[path.length - 1];
-
-  if (!current) {
-    path.push(target);
-    return;
-  }
-
-  const colStep = Math.sign(target.col - current.col);
-  if (colStep !== 0) {
-    for (let col = current.col + colStep; colStep > 0 ? col <= target.col : col >= target.col; col += colStep) {
-      path.push({ col, row: current.row });
-    }
-  }
-
-  const afterCol = path[path.length - 1] ?? current;
-  const rowStep = Math.sign(target.row - afterCol.row);
-  if (rowStep !== 0) {
-    for (let row = afterCol.row + rowStep; rowStep > 0 ? row <= target.row : row >= target.row; row += rowStep) {
-      path.push({ col: target.col, row });
-    }
-  }
+function getTileKey(point: TilePoint) {
+  return `${point.col}:${point.row}`;
 }
 
-function buildTileRoute(start: TilePoint, end: TilePoint, aisleRow = DINER_AISLE_ROW) {
-  const path: TilePoint[] = [{ col: start.col, row: start.row }];
+function buildTileRoute(start: TilePoint, end: TilePoint) {
+  const startKey = getTileKey(start);
+  const endKey = getTileKey(end);
+  const blockedTileKeys = new Set(SEAT_LAYOUT.map((seat) => getTileKey(seat.table)));
+  blockedTileKeys.delete(startKey);
+  blockedTileKeys.delete(endKey);
 
-  appendTileLine(path, { col: start.col, row: aisleRow });
-  appendTileLine(path, { col: end.col, row: aisleRow });
-  appendTileLine(path, end);
+  const pointsByKey = new Map<string, TilePoint>([[startKey, start]]);
+  const previousKeyByKey = new Map<string, string | null>([[startKey, null]]);
+  const queue: TilePoint[] = [start];
+  const neighborOffsets: TilePoint[] = [
+    { col: 1, row: 0 },
+    { col: 0, row: -1 },
+    { col: 0, row: 1 },
+    { col: -1, row: 0 },
+  ];
 
-  return path.filter((point, index, points) => {
-    const previous = points[index - 1];
-    return !previous || previous.col !== point.col || previous.row !== point.row;
-  });
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const current = queue[queueIndex];
+    const currentKey = getTileKey(current);
+
+    if (currentKey === endKey) {
+      break;
+    }
+
+    for (const offset of neighborOffsets) {
+      const next = { col: current.col + offset.col, row: current.row + offset.row };
+      const nextKey = getTileKey(next);
+      const isOnFloor =
+        next.col >= 0 &&
+        next.col < DINER_FLOOR_COLUMNS &&
+        next.row >= 0 &&
+        next.row < DINER_FLOOR_ROWS;
+
+      if (!isOnFloor || blockedTileKeys.has(nextKey) || previousKeyByKey.has(nextKey)) {
+        continue;
+      }
+
+      pointsByKey.set(nextKey, next);
+      previousKeyByKey.set(nextKey, currentKey);
+      queue.push(next);
+    }
+  }
+
+  if (!previousKeyByKey.has(endKey)) {
+    return [{ ...start }];
+  }
+
+  const reversedPath: TilePoint[] = [];
+  let currentKey: string | null = endKey;
+
+  while (currentKey) {
+    const point = pointsByKey.get(currentKey);
+
+    if (point) {
+      reversedPath.push(point);
+    }
+
+    currentKey = previousKeyByKey.get(currentKey) ?? null;
+  }
+
+  return reversedPath.reverse();
 }
 
 function getRouteDuration(path: TilePoint[], stepMs: number) {
@@ -690,7 +721,7 @@ function getGuestVisual(guest: ActiveGuest, now: number): CharacterVisual {
     return getRouteVisual(path, guest.leavingAt ?? now, now, CHARACTER_STEP_MS);
   }
 
-  return { ...seat.customer, direction: "south", walking: false, done: true };
+  return { ...seat.customer, direction: seat.facing, walking: false, done: true };
 }
 
 function formatTime(ms: number) {
@@ -860,7 +891,7 @@ function makeGuest(sequence: number, now: number, profile: DifficultyProfile, se
   return { guest, scheduledFoods };
 }
 
-function makeDecoyFood(sequence: number, now: number, profile: DifficultyProfile): BeltFood {
+function makeDecoyFood(sequence: number, now: number, profile: DifficultyProfile, slot: number): BeltFood {
   const foodId = FOODS[(sequence * 5 + profile.level) % FOODS.length].id;
 
   return {
@@ -868,9 +899,22 @@ function makeDecoyFood(sequence: number, now: number, profile: DifficultyProfile
     foodId,
     targetGuestId: null,
     lane: (sequence + profile.level) % ORDER_LANES,
+    slot,
     spawnedAt: now,
     travelMs: profile.beltTravelMs,
   };
+}
+
+function chooseAvailableDishSlot(currentFoods: BeltFood[]) {
+  const occupiedSlots = new Set(currentFoods.map((food) => food.slot));
+
+  for (let slot = 0; slot < DISH_PASS_CAPACITY; slot += 1) {
+    if (!occupiedSlots.has(slot)) {
+      return slot;
+    }
+  }
+
+  return null;
 }
 
 function chooseSpawnLane(preferredLane: number, currentFoods: BeltFood[], now: number) {
@@ -1094,8 +1138,6 @@ function GuestTable({
 
       {guest && (
         <>
-          <span className="guestTable__name">{guest.customer.name}</span>
-
           <span className="guestSpeech">
             <strong>{showOrder ? renderOrderPhrase(guest) : "Tap to hear order"}</strong>
           </span>
@@ -1135,6 +1177,8 @@ function KitchenStation({
   onNativeFoodDragStart: (food: BeltFood, event: DragEvent<HTMLButtonElement>) => void;
   onStartFoodDrag: (food: BeltFood, event: PointerEvent<HTMLButtonElement>) => void;
 }) {
+  const beltFoodBySlot = new Map(beltFoods.map((food) => [food.slot, food]));
+
   return (
     <div className="kitchenStation" aria-label="Kitchen cooking station">
       <div className="stoveBank" aria-hidden="true">
@@ -1152,7 +1196,13 @@ function KitchenStation({
           {beltFoods.length}/{DISH_PASS_CAPACITY} dishes · {formatTime(profile.beltTravelMs)} pass
         </span>
         <div className="dishRail__items">
-          {beltFoods.map((food) => {
+          {Array.from({ length: DISH_PASS_CAPACITY }, (_, slot) => {
+            const food = beltFoodBySlot.get(slot);
+
+            if (!food) {
+              return <span className="dishRail__slot" aria-hidden="true" key={`empty-dish-slot-${slot}`} />;
+            }
+
             const progress = clamp((now - food.spawnedAt) / food.travelMs, 0, 1);
             const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
 
@@ -1187,9 +1237,6 @@ function KitchenStation({
               </button>
             );
           })}
-          {Array.from({ length: Math.max(0, DISH_PASS_CAPACITY - beltFoods.length) }, (_, index) => (
-            <span className="dishRail__slot" aria-hidden="true" key={`empty-dish-slot-${index}`} />
-          ))}
         </div>
       </div>
     </div>
@@ -2337,20 +2384,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         nextGuestAtRef.current = now + difficulty.guestIntervalMs;
       }
     }
-
-    if (now >= nextDecoyAtRef.current) {
-      const decoy = makeDecoyFood(foodSequenceRef.current, now, difficulty);
-      const lane = chooseSpawnLane(decoy.lane, beltFoods, now);
-
-      if (beltFoods.length >= DISH_PASS_CAPACITY || lane === null) {
-        nextDecoyAtRef.current = now + 650;
-      } else {
-        foodSequenceRef.current += 1;
-        setBeltFoods([...beltFoods, { ...decoy, lane }]);
-        nextDecoyAtRef.current = now + difficulty.decoyIntervalMs;
-      }
-    }
-  }, [activeGuestCount, activeGuests, addGuest, beltFoods, difficulty, gameStatus, now, served]);
+  }, [activeGuestCount, activeGuests, addGuest, difficulty, gameStatus, now, served]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -2358,46 +2392,60 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     }
 
     const readyFoods = scheduledFoods.filter((food) => food.dueAt <= now);
+    const decoyIsDue = now >= nextDecoyAtRef.current;
 
-    if (readyFoods.length === 0) {
+    if (readyFoods.length === 0 && !decoyIsDue) {
       return;
     }
 
+    const nextBeltFoods = [...beltFoods];
     const futureFoods = scheduledFoods.filter((food) => food.dueAt > now);
-    const spawnedFoods: BeltFood[] = [];
     const delayedFoods: ScheduledFood[] = [];
 
     for (const food of readyFoods) {
-      if (beltFoods.length + spawnedFoods.length >= DISH_PASS_CAPACITY) {
-        delayedFoods.push({ ...food, dueAt: now + 650 });
-        continue;
-      }
+      const slot = chooseAvailableDishSlot(nextBeltFoods);
+      const lane = slot === null ? null : chooseSpawnLane(food.lane, nextBeltFoods, now);
 
-      const lane = chooseSpawnLane(food.lane, [...beltFoods, ...spawnedFoods], now);
-
-      if (lane === null) {
+      if (slot === null || lane === null) {
         delayedFoods.push({ ...food, dueAt: now + 650 });
         continue;
       }
 
       const spawnSequence = foodSequenceRef.current;
       foodSequenceRef.current += 1;
-      spawnedFoods.push({
+      nextBeltFoods.push({
         id: `belt-${food.id}-${now}-${spawnSequence}`,
         foodId: food.foodId,
         targetGuestId: food.targetGuestId,
         lane,
+        slot,
         spawnedAt: now,
         travelMs: difficulty.beltTravelMs,
       });
     }
 
-    setScheduledFoods([...futureFoods, ...delayedFoods]);
-
-    if (spawnedFoods.length > 0) {
-      setBeltFoods([...beltFoods, ...spawnedFoods]);
+    if (readyFoods.length > 0) {
+      setScheduledFoods([...futureFoods, ...delayedFoods]);
     }
-  }, [beltFoods, difficulty.beltTravelMs, gameStatus, now, scheduledFoods]);
+
+    if (decoyIsDue) {
+      const slot = chooseAvailableDishSlot(nextBeltFoods);
+      const decoy = slot === null ? null : makeDecoyFood(foodSequenceRef.current, now, difficulty, slot);
+      const lane = decoy ? chooseSpawnLane(decoy.lane, nextBeltFoods, now) : null;
+
+      if (!decoy || lane === null) {
+        nextDecoyAtRef.current = now + 650;
+      } else {
+        foodSequenceRef.current += 1;
+        nextBeltFoods.push({ ...decoy, lane });
+        nextDecoyAtRef.current = now + difficulty.decoyIntervalMs;
+      }
+    }
+
+    if (nextBeltFoods.length !== beltFoods.length) {
+      setBeltFoods(nextBeltFoods);
+    }
+  }, [beltFoods, difficulty, gameStatus, now, scheduledFoods]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {

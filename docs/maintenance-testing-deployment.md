@@ -33,7 +33,7 @@ references: []
 2. Update `CustomerProfile`, `CUSTOMERS`, the sheet import, and `customerWalkSheetById`.
 3. Add a still image only if the portal or another component imports it.
 4. Update `src/assets/sprites/generated/walk/manifest.json` and `docs/assets.md`.
-5. Verify idle, south, north, east, mirrored-west, reduced-motion, and responsive rendering states.
+5. Verify direction-matched idle, south, north, east, west, reduced-motion, and responsive rendering states.
 
 ### Tune Diner Difficulty
 
@@ -100,14 +100,14 @@ Run `npm run dev`, then inspect the console throughout.
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1, and six kitchen-pass slots are visible. Patience and ordered-food timing wait until seating. |
 | Guest selection | After seating, the full customer/table area reveals and speaks the order immediately; selecting another customer replaces unfinished speech, and earlier orders remain visible. |
-| Character travel and walk cycles | All six customers move smoothly at `360ms` per tile, advance four distinct frames at `180ms` per frame in south, north, east, and mirrored-west movement, finish the endpoint transition before returning to front idle, and fade naturally at the doorway without flicker or size jitter. |
+| Character travel and walk cycles | All six customers take collision-free routes around table tiles, move smoothly at `360ms` per tile, advance four distinct frames at `180ms` per frame in south, north, east, and west movement, finish the endpoint transition on the correct facing row, and fade naturally at the doorway without flicker or size jitter. |
 | Reduced motion | With reduced motion enabled, position transitions and gait/step/shadow loops stop while required route-position updates continue. |
 | Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
 | Drop before order | Dish remains and status asks the player to select the customer and hear the order. |
 | Drop outside | Dish remains and status explains where to serve it. |
 | Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and bad feedback appears. |
 | Expiration | Guest leaves and owned dishes animate off before cleanup. |
-| Pass capacity | At most six dishes occupy the pass; additional ordered dishes retry and decoys wait until a slot opens. |
+| Pass capacity | At most six dishes occupy the pass; removing a middle card leaves its slot blank, other cards do not shift, the next eligible dish fills an available blank, additional ordered dishes retry, and decoys wait until a slot opens. |
 | Keyboard service | `Enter`/`Space` serves to selected table. |
 | Win | At 24 orders, completion banner and `New Shift` appear. |
 | New Shift | All diner counters and runtime state reset. |

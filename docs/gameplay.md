@@ -34,15 +34,17 @@ loss condition.
 ## Starting And Taking Orders
 
 `RestaurantGame` starts automatically and creates one entering guest. Four tables are placed before
-service starts and remain visible; each new guest walks to an available table, and the same table can
-be reused after that guest leaves. Level 1 allows one active customer; later levels gradually add
-concurrent customers as timing and capacity allow.
+service starts and remain visible; each new guest walks to an available table without crossing table
+tiles, and the same table can be reused after that guest leaves. The four seat anchors are centered on
+the left, right, bottom, and top table edges respectively, with each seated guest facing the table.
+Level 1 allows one active customer; later levels gradually add concurrent customers as timing and
+capacity allow.
 
 Tables with an entering guest ignore pointer input. Empty tables are visible but non-interactive.
 Once seated:
 
 1. Select anywhere in the customer's table area.
-2. The written order appears immediately with each requested dish name underlined, and speech synthesis attempts the order phrase. The order bubble does not show dish images, so the player must read the dish name and choose the matching kitchen-pass dish.
+2. The written order appears immediately with each requested dish name underlined, and speech synthesis attempts the order phrase. The order bubble does not show a customer name or dish images, so the player must read the dish name and choose the matching kitchen-pass dish.
 3. Selecting another seated customer immediately cancels unfinished speech, switches the visual
    selection, and speaks that customer's order even when the previous order is incomplete.
 4. Previously revealed orders remain visible and serviceable; selection does not lock service to one
@@ -81,7 +83,7 @@ table may receive it.
 - An incorrect dish removes 2.5 seconds of patience at level 1, increasing by 0.5 seconds per level
   through a 5-second penalty at level 6. The attempted dish stays on the pass.
 - The table renders an accessible progress bar, not a numeric seconds label.
-- The kitchen pass holds up to six dishes in visible slots; new dishes wait briefly when all slots are occupied.
+- The kitchen pass holds up to six dishes in stable visible slots. Removing a dish leaves that exact slot blank; later dishes fill available blanks without shifting the other cards.
 - Ordered dishes animate onto the pass over the guest's last-dish timing window.
 - Missed ordered dishes animate off and recycle while the owning guest still needs them.
 - Decoys animate off when their pass lifetime ends.

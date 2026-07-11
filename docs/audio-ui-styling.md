@@ -96,10 +96,10 @@ the wrong placement. Diner-specific classes such as `.restaurantStage`, `.guestT
 The 100ms React clock samples fractional progress along each route segment, and matching linear
 `top`/`left` transitions bridge those samples so customers travel smoothly at `360ms` per tile. A
 final 100ms transition sample keeps the directional gait active until the actor reaches the exact
-route endpoint. The customer renderer loops four-frame south, north, or east sheet rows at `720ms`
-(`180ms` per frame) while a route is active; west mirrors east. Entering actors fade in at the door,
-departing actors keep their final west-facing frame and fade into the doorway, and seated actors use
-the front idle cell.
+route endpoint. The customer renderer loops dedicated four-frame south, north, east, or west sheet
+rows at `720ms` (`180ms` per frame) while a route is active. Entering actors fade in at the door,
+departing actors keep their final directional frame and fade into the doorway, and seated actors use
+column 0 of the row that faces their table edge.
 
 ## Dish Wish Tile System
 
@@ -115,7 +115,8 @@ calc(var(--dining-top) + var(--row-center) * var(--tile-height))
 
 Below `560px`, the floor transposes to a 5 × 10 portrait grid so square tiles remain large enough for
 touch targets. The visual formulas swap logical row and column axes for the door, tables, and actors;
-the gameplay coordinates and routes do not change. `--tile-size` scales character art from the square
+directional sheet rows are remapped to those visual axes while gameplay coordinates and routes stay
+unchanged. `--tile-size` scales character art from the square
 cell dimension, while the dining inset/top, kitchen dimensions, table/sprite size, and speech bubble
 offsets are reduced independently. Check all four tables and route movement after changing these
 variables.
@@ -150,8 +151,8 @@ Active animations include portal backdrop pan, dish card entry/content bob/exit,
 Dish Wish four-frame sheet loops, linear actor travel, actor step/shadow motion, and doorway
 entry/exit transitions, plus Drop Hop
 pickup pulse, delivery pop, and courier bob. Dish entry/exit runs on the button while its nested dish
-content bobs inside padded rail clearance. Direction classes select south, north, or east rows;
-west-facing art mirrors east. Under `prefers-reduced-motion: reduce`, diner position transitions are
+content bobs inside padded rail clearance. Direction classes select dedicated south, north, east, or
+west rows and remap them when the portrait floor transposes. Under `prefers-reduced-motion: reduce`, diner position transitions are
 disabled and gait, step, and shadow loops freeze on the first directional frame while route-position
 updates continue.
 

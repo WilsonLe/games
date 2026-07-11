@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-07-10",
+  "directionalRowsCompletedAt": "2026-07-11",
   "issue": 19,
   "runId": "2026-07-10-table-talk-walk-cycles",
   "styleHandle": "table-talk-diner-current-character-cartoon",
@@ -12,7 +13,7 @@
     "sourceSize": "1536x1024",
     "nativeTransparencySupported": false,
     "backgroundRemoval": "Uniform chroma background removed during normalization",
-    "postProcessing": "Frames normalized to equal height and stable bottom-center anchors; disconnected artifacts under 40 pixels removed"
+    "postProcessing": "Frames normalized to equal height and stable bottom-center anchors; disconnected artifacts under 40 pixels removed; west-facing row derived cell-by-cell from the east-facing source row"
   },
   "layout": {
     "columns": 4,
@@ -21,48 +22,48 @@
     "cellHeight": 256,
     "characterHeight": 220,
     "bottomPadding": 16,
-    "rowOrder": ["south-walk", "north-walk", "east-walk", "front-idle"],
+    "rowOrder": ["south-walk", "north-walk", "east-walk", "west-walk"],
     "walkFrameOrder": ["left-contact", "passing", "right-contact", "opposite-passing"],
-    "idleFrame": { "column": 0, "row": 3 },
-    "westBehavior": "Mirror east in CSS",
-    "loopDurationMs": 480
+    "idleBehavior": "Use column 0 of the row matching the character's facing direction",
+    "westBehavior": "Dedicated mirrored frames stored in row 3",
+    "loopDurationMs": 720
   },
   "files": [
     {
       "characterId": "mai",
       "displayName": "Mia",
       "file": "customer-mai-walk-sheet.png",
-      "sha256": "de26963db62be4e3d870e199575ccdfe94d5cf3bdcf0c9d3ce05b442a08cdc63"
+      "sha256": "ce61a2e26e731e3bfd21ea3dc07687473d1f4d567df3f541cba2cd094f66a483"
     },
     {
       "characterId": "leo",
       "displayName": "Leo",
       "file": "customer-leo-walk-sheet.png",
-      "sha256": "698c90ef8711974c8aa40fef9e23fd177da8fd5cb9552863a8aa557c83cab9e2"
+      "sha256": "abb48589d5545e1df0e15aa4b2e0b6e360996981fea459cad1cdaf75ed41e1fa"
     },
     {
       "characterId": "nora",
       "displayName": "Nora",
       "file": "customer-nora-walk-sheet.png",
-      "sha256": "cf0dc9b1f4b48545331dc63552d76c05800ba3f00af2d7619d298d51805446af"
+      "sha256": "7250b992f9272ee26e5cb0806f8848c54ba30f3dccadc16b4fa536809dc17623"
     },
     {
       "characterId": "ben",
       "displayName": "Ben",
       "file": "customer-ben-walk-sheet.png",
-      "sha256": "8d61c159848a90b462d4a0ecaf45de0cc26cfa0fdceca7640d16b7d00003fc86"
+      "sha256": "a27b0d3c61a58e615e07d1a2015752777810c27cc0e1b323f6c28729d9f0b2a6"
     },
     {
       "characterId": "ivy",
       "displayName": "Ivy",
       "file": "customer-ivy-walk-sheet.png",
-      "sha256": "0c1f3bc50b6ca73d45cd64f54612d1cc4f3e947e1a71c614386b499c9cc9d6b9"
+      "sha256": "1dbcf689fc29215dc6131c9a228a98b7312ef73d0e6ae5cd73bb3fd86e8f1063"
     },
     {
       "characterId": "sam",
       "displayName": "Sam",
       "file": "customer-sam-walk-sheet.png",
-      "sha256": "2762c8d40f70c35d34829b53e9e41d34597c6dce6b353ffde508aa97e3d0c0c3"
+      "sha256": "94f10909c3b7833c6ab5b24ab7c10f57075bfdfe7e81305d2ae5a832a81f902e"
     }
   ]
 }

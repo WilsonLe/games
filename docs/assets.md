@@ -20,7 +20,7 @@ from CSS scene styles, and the cursor URL is declared in `src/styles.css`.
 | `src/assets/player-chef-source.png` | `1024 x 1536` | Not imported by app code | Source/reference image kept in the repo. |
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
 | `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | Not imported by app code | Legacy/reference kitchen sprite sheet. |
-| `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` | `1536 x 1024` each | `customerWalkSheetById` in `CharacterActor` | Six runtime 4-column × 4-row sheets. Rows contain south, north, east, and front-idle art; four walk frames loop at `720ms` (`180ms` per frame), and west mirrors east. |
+| `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` | `1536 x 1024` each | `customerWalkSheetById` in `CharacterActor` | Six runtime 4-column × 4-row sheets. Rows contain dedicated south, north, east, and west art; four walk frames loop at `720ms` (`180ms` per frame). |
 | `src/assets/sprites/generated/walk/manifest.json` | JSON | Maintainer metadata | Generation model, layout, frame order, post-processing, character mapping, and SHA-256 hashes for the runtime sheets. |
 | `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | Not imported by app code | Legacy/reference 4-column × 6-row customer sheet retained for visual history. |
 
@@ -57,10 +57,10 @@ Customer IDs are defined by `CustomerProfile`, `CUSTOMERS`, and `customerWalkShe
 | `ivy` | `Ivy` | `customer-ivy-walk-sheet.png` |
 | `sam` | `Sam` | `customer-sam-walk-sheet.png` |
 
-Every runtime sheet is a transparent 4 × 4 grid with `384 x 256` cells. Rows 0–2 contain four-frame
-south, north, and east walk cycles. Row 3 column 0 contains the front idle pose; the remaining cells
-are transparent. The figures share a `220px` source height and stable bottom-center foot anchor.
-West-facing movement mirrors the east row in CSS.
+Every runtime sheet is a transparent 4 × 4 grid with `384 x 256` cells. Rows 0–3 contain four-frame
+south, north, east, and west walk cycles. The west row stores cell-by-cell mirrored east art so every
+direction has a dedicated sheet row. Non-walking actors use column 0 of the row matching their facing
+direction. The figures share a `220px` source height and stable bottom-center foot anchor.
 
 Individual `src/assets/sprites/customer-*.png` files remain in the repo. The portal preview imports
 `customer-mai.png`; the active Dish Wish actors use the per-character generated walk sheets.
@@ -101,7 +101,7 @@ Use lowercase kebab-case filenames. Keep `FoodId` and customer IDs lowercase bec
 4. Add `{ id, name }` to `CUSTOMERS`.
 5. Import the sheet and add it to `customerWalkSheetById`.
 6. Update `src/assets/sprites/generated/walk/manifest.json` and this guide's customer table.
-7. Verify all directions, west mirroring, idle state, reduced-motion behavior, and responsive sizing.
+7. Verify all four directional rows, direction-matched idle state, reduced-motion behavior, and responsive sizing.
 8. Run `npm run build`.
 
 ## Replacing Existing Art
@@ -111,7 +111,7 @@ If the filename stays the same, no import changes are needed. Still check:
 | Asset | Check |
 | --- | --- |
 | Food sprites | They crop well inside fixed food-art wrappers. |
-| Customer sheets | Every file is `1536 x 1024`; 4 × 4 slicing, row order, transparent idle cells, scale, foot anchors, west mirroring, and animation keyframes remain aligned. |
+| Customer sheets | Every file is `1536 x 1024`; 4 × 4 slicing, four-direction row order, scale, foot anchors, and animation keyframes remain aligned. |
 | Portal chef sprite | Transparent background works in the portal preview. |
 | Kitchen background | `background-size: cover` and mobile inset still frame the useful part. |
 | Cursor | Hotspot in `--game-cursor` still feels accurate. |
