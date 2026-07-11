@@ -111,10 +111,10 @@ Run `npm run dev`, then inspect the console throughout.
 | Guest selection | After seating, the full customer/table area reveals and speaks the order immediately; selecting another customer replaces unfinished speech, and earlier orders remain visible. |
 | Character travel and walk cycles | All six Phaser sprites take collision-free routes around table tiles, move smoothly at `360ms` per tile, advance four distinct frames near `180ms` per frame in dedicated south, north, east, and west rows, and settle on the configured table-facing row. |
 | Reduced motion | With reduced motion enabled, Phaser route tweens and walk loops stop while required route-position updates continue. |
-| Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
-| Drop before order | Dish remains and status asks the player to select the customer and hear the order. |
-| Drop outside | Dish remains and status explains where to serve it. |
-| Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and bad feedback appears. |
+| Correct dish | Dish animates off, chip and patience update, score rises, and correct audio feedback plays. |
+| Drop before order | Dish remains; speech and the screen-reader status announcement ask the player to select the customer and hear the order. |
+| Drop outside | Dish remains and the screen-reader status announcement explains where to serve it. |
+| Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and wrong audio feedback plays. |
 | Expiration | Guest leaves and owned dishes animate off before cleanup. |
 | Pass capacity | At most six dishes occupy stable slots; removing a middle dish leaves its slot blank, other dishes do not shift, the next eligible dish fills an available blank, additional ordered dishes retry, and decoys wait until a slot opens. |
 | Keyboard service | Tab into the focus-revealed native controls; guest activation selects/hears an order and dish activation serves to the selected table. |
@@ -147,7 +147,7 @@ Check at least:
 - a short mobile viewport around 620px height.
 
 Verify portal scrolling, both game routes remain viewport-locked with no document scrolling, diner
-HUD/status/table overlap, Drop Hop map readability, canvas sizing, focus-revealed native controls,
+HUD/table overlap, Drop Hop map readability, canvas sizing, focus-revealed native controls,
 and no clipped controls.
 
 ## Command Verification
