@@ -50,7 +50,7 @@ Once seated:
 4. Previously revealed orders remain visible and serviceable; selection does not lock service to one
    customer.
 
-Before an order is heard, its bubble says `Tap to hear order`. Dropping a dish there keeps the dish
+Before an order is heard, a `?` appears above the customer. Dropping a dish there keeps the dish
 available and asks the player to select the customer first.
 
 ## Serving Controls
