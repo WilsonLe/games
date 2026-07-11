@@ -107,15 +107,23 @@ table may receive it.
   Levels 4 and 5 use two guests with two-item orders, first steady and then faster. Level 6 finishes
   with three-item orders, three guests, and the fastest pressure.
 - When a guest expires, the recap names and shows the missed food word(s). One missed item is queued
-  for later deliberate repetition, bounded to avoid infinite retries or overly repetitive shifts.
+  for later deliberate repetition, bounded to avoid infinite retries or overly repetitive shifts. If
+  several guests expire in the same clock sample, all eligible missed words can enter the bounded
+  practice queue, while the visible recap stays focused on the first expired guest.
+- A replacement guest does not begin entering while that missed-word recap is visible. After the
+  recap clears, at most one overdue replacement enters and receives the normal full service window
+  and ordered-dish schedule from seating; recap time is not charged to the new order. Guests who were
+  already active before the recap keep their normal timers rather than receiving recap compensation.
 
 ## Diner Score And Completion
 
 Each correct dish awards 35 base points, remaining whole seconds, and `level * 5`. Completing a
 consecutive happy guest can also add `(combo - 1) * 15`.
 
-At 24 completed orders, timers stop, `Dinner service complete` appears, and `New Shift` resets all
-diner state. The portal button remains available throughout. There is no mid-shift pause/reset.
+At 24 completed orders, timers stop, `Dinner service complete` appears, pending recap/scheduled food
+are cleared, visible pass food and active guests settle into their leaving cleanup, and `New Shift`
+resets all diner state. The portal button remains available throughout. There is no mid-shift
+pause/reset.
 
 # Drop Hop
 

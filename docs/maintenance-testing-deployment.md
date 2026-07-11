@@ -120,11 +120,12 @@ Run `npm run dev`, then inspect the console throughout.
 | Drop outside | Dish remains and the screen-reader status announcement explains where to serve it. |
 | Incorrect dish | Dish remains available, the receiving guest loses level-scaled patience, score/combo stay unchanged, and wrong audio feedback plays; the untimed opening order gives guidance without a patience penalty. |
 | Supply fairness | When a due requested dish is blocked by pass capacity or lane gating, the revealed order shows `Coming next` until the dish appears and the guest does not lose patience solely because the game withheld supply. |
-| Expiration | Guest leaves and owned dishes animate off before cleanup; a visible missed-word recap appears with food art/labels, and at least one missed item later returns in a bounded `Practice again` order. |
+| Expiration | Guest leaves and owned dishes animate off before cleanup; a visible missed-word recap appears with food art/labels, and at least one missed item later returns in a bounded `Practice again` order. If multiple guests expire together, source-review that all eligible retries queue while the recap copy stays first-guest-only. |
+| Recap/replacement fairness | While the expiration recap remains visible, no replacement guest starts entering and no replacement scheduled food is created. When it clears, one overdue replacement enters without a burst; its patience and ordered-food ready/due times start from its own seating time. Existing active guests keep normal timers, and existing blocked-supply retries still add only their matched `650ms` compensation before expiration is decided. |
 | Pass capacity | At most six dishes occupy stable slots; removing a middle dish leaves its slot blank, other dishes do not shift, the next eligible dish fills an available blank, additional ordered dishes retry, and decoys wait until a slot opens. |
 | Keyboard service | Tab into the focus-revealed native controls; guest activation selects/hears an order and dish activation serves to the selected table. Verify the opening guided order can be completed without pointer drag. |
-| Win | At 24 orders, completion banner and `New Shift` appear. |
-| New Shift | All diner counters and runtime state reset. |
+| Win | At 24 orders, completion banner and `New Shift` appear; no earlier recap remains visible or later clears replacement state, pending scheduled foods are empty, and active guests/visible foods are in or past leaving cleanup. |
+| New Shift | All diner counters, recap/timeout state, practice refs, guest schedule refs, scheduled foods, and seat occupancy reset. |
 
 ### Drop Hop
 
