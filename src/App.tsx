@@ -2030,9 +2030,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
             </button>
           </section>
         ) : (
-          <div className={cx("dinerFeedback", `feedbackBar--${feedback.kind}`)} role="status" aria-live="polite">
+          <p className="dinerNarration" role="status" aria-live="polite">
             {feedback.text}
-          </div>
+          </p>
         )}
 
         <section className="gameGrid">

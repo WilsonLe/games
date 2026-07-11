@@ -44,7 +44,7 @@ for `popstate`, and updates `document.title`. Modified clicks retain normal anch
 | Primary input | Select a table, then drag or keyboard-serve dishes. | Click adjacent map locations. |
 | Language focus | Practical food requests and listening. | Places, quantities, directions, and prepositions. |
 | Progress | Score, completed orders, and level 1–6. | Score, deliveries, streak, lives, and level 1–5. |
-| Feedback | Visible status toast, speech, and Web Audio tones. | Visible feedback panel, speech, and Web Audio tones. |
+| Feedback | Screen-reader status announcements, speech, and Web Audio tones. | Visible feedback panel, speech, and Web Audio tones. |
 | Restart | `New Shift` after the target is reached. | Reset button or `New Route` after win/loss. |
 
 ## Target User

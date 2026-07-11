@@ -90,7 +90,7 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `selectedGuestId` | Current table used by keyboard service. |
 | `scheduledFoods`, `beltFoods` | Future and visible dishes. |
 | `score`, `served`, `combo` | Progress and scoring. |
-| `feedback` | Visible diner status toast. |
+| `feedback` | Screen-reader diner status announcements; narration text is not visually rendered. |
 | `dishWishSnapshot` | Immutable scene view derived from React state on each render sample. |
 | sequence/timer refs | Unique IDs and next guest/decoy times. |
 | `consumedDishIdsRef` | Duplicate-drop protection. |
