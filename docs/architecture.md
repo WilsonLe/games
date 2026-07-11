@@ -117,7 +117,7 @@ The diner starts automatically. It has no mid-shift pause or reset control. Comp
 | `NEXT_GUEST_AFTER_COMPLETE_MS` | 3000 | Replacement delay when the next spawn is already due. |
 | `DINER_CLOCK_MS` | 100 | Gameplay and customer-route render sampling interval. |
 | `CHARACTER_STEP_MS` | 360 | Guest route time per tile, with linearly interpolated rendering between tiles. |
-| `LEAVING_GUEST_LINGER_MS` | 350 | Removal delay after a reverse exit route. |
+| `LEAVING_GUEST_LINGER_MS` | 350 | Doorway fade/removal delay after a reverse exit route settles. |
 | `DISH_EXIT_MS` | 360 | Time retained for a dish's serving-line exit animation. |
 | `WRONG_DISH_PATIENCE_BASE_MS` | 2500 | Level-1 patience removed by an incorrect dish. |
 | `WRONG_DISH_PATIENCE_PER_LEVEL_MS` | 500 | Additional wrong-dish patience loss for each level above 1. |
@@ -145,16 +145,18 @@ orders it is half that time.
 - `selectFoods` deterministically selects unique foods for a sequence and level.
 - `chooseAvailableSeatIndex` reserves one of the four persistent table positions, including while a
   departing guest is still walking out, so two guests cannot occupy the same table.
-- `makeGuest` rotates customer profiles, assigns the available table, creates the phrase and
-  expiration, and schedules each ordered food from 1800ms through `timeToLastDishMs`.
+- `makeGuest` rotates customer profiles, assigns the available table, creates the phrase, and derives
+  `serviceStartsAt` from the entry route plus its final render sample. Patience and ordered-food due
+  times then start at seating, from 1800ms through `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
 - The pass exposes six stable dish slots. Ordered dishes retry after `650ms` and decoys wait when all six slots are occupied.
 - `buildTileRoute` routes customers through the diner aisle; `getRouteVisual` linearly interpolates
   between each pair of route tiles and derives facing from the current segment.
 - The 100ms clock samples customer route progress, and a matching linear CSS transition bridges
-  samples smoothly. The same clock drives route completion, spawning, dish recycling, expiration,
-  and leaving-guest removal.
+  samples smoothly. The gait remains active for the final transition sample before the guest becomes
+  interactive. The same clock drives route completion, spawning, dish recycling, expiration, and
+  leaving-guest removal.
 - Ordered food recycles if its owning guest still needs it; decoys animate off at the end of the pass.
 - Removed dishes stay in `beltFoods` with `leavingAt` through `DISH_EXIT_MS`, then a timeout removes
   them after the serving-line exit animation.

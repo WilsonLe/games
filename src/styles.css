@@ -2456,6 +2456,14 @@ h2 {
   animation: guestCustomerBob 1.1s ease-in-out infinite;
 }
 
+.characterActor--entering {
+  animation: guestActorEnter 240ms ease-out both;
+}
+
+.characterActor--leaving.characterActor--routeDone .characterSprite {
+  animation: guestDoorExit 350ms ease-in forwards;
+}
+
 .guestTable--entering .guestSpeech,
 .guestTable--leaving .guestSpeech,
 .guestTable--entering .guestTimer,
@@ -2505,6 +2513,23 @@ h2 {
 }
 
 .characterActor--walking.characterActor--west .characterSprite__sheet {
+  transform: scaleX(-1);
+}
+
+.characterActor--routeDone.characterActor--south .characterSprite__sheet {
+  background-position: 0 0;
+}
+
+.characterActor--routeDone.characterActor--north .characterSprite__sheet {
+  background-position: 0 33.3333%;
+}
+
+.characterActor--routeDone.characterActor--east .characterSprite__sheet,
+.characterActor--routeDone.characterActor--west .characterSprite__sheet {
+  background-position: 0 66.6667%;
+}
+
+.characterActor--routeDone.characterActor--west .characterSprite__sheet {
   transform: scaleX(-1);
 }
 
@@ -2695,6 +2720,28 @@ h2 {
 
   50% {
     transform: translate(-50%, 3%);
+  }
+}
+
+@keyframes guestActorEnter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes guestDoorExit {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 8%) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-72%, 12%) scale(0.78);
   }
 }
 
@@ -3480,6 +3527,15 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   .characterActor {
     transition: none;
+  }
+
+  .characterActor--entering,
+  .characterActor--leaving.characterActor--routeDone .characterSprite {
+    animation: none;
+  }
+
+  .characterActor--leaving.characterActor--routeDone .characterSprite {
+    opacity: 0;
   }
 
   .characterActor--walking .characterSprite,

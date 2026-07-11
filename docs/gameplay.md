@@ -48,8 +48,8 @@ Once seated:
 4. Previously revealed orders remain visible and serviceable; selection does not lock service to one
    customer.
 
-Before an order is heard, its bubble shows `...`. Dropping a dish there keeps the dish available and
-asks the player to select the customer first.
+Before an order is heard, its bubble says `Tap to hear order`. Dropping a dish there keeps the dish
+available and asks the player to select the customer first.
 
 ## Serving Controls
 
@@ -75,7 +75,8 @@ table may receive it.
 
 ## Diner Timing And Progress
 
-- Patience starts at guest creation, including entry time.
+- Patience and ordered-dish timing start after the guest reaches the table, so longer walking routes do
+  not reduce the service window or age the guest's food early.
 - Revealing or replaying an order does not change patience; each correct dish adds 2 seconds.
 - An incorrect dish removes 2.5 seconds of patience at level 1, increasing by 0.5 seconds per level
   through a 5-second penalty at level 6. The attempted dish stays on the pass.
