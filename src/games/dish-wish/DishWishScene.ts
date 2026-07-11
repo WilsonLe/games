@@ -136,14 +136,10 @@ const TABLE_TILES = [
   { col: 7, row: 3 },
 ] as const;
 
+const DISH_BOB_DURATION_MS = 1_500;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
-}
-
-function guestNeedsFood(guest: DishWishGuestView, foodId: DishWishFoodId) {
-  const required = guest.foods.filter((id) => id === foodId).length;
-  const served = guest.servedFoods.filter((id) => id === foodId).length;
-  return served < required;
 }
 
 function formatFoodProgress(guest: DishWishGuestView) {
@@ -219,6 +215,20 @@ export class DishWishScene extends Phaser.Scene {
     this.renderSnapshot();
   }
 
+  update(time: number) {
+    this.foodEntries.forEach((entry, foodId) => {
+      if (this.draggingFoodId === foodId) {
+        return;
+      }
+
+      const homeY = entry.container.getData("home-y") as number | undefined;
+
+      if (homeY !== undefined) {
+        entry.container.setY(homeY + this.getDishBobOffset(entry.container, time));
+      }
+    });
+  }
+
   shutdown() {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
   }
@@ -262,6 +272,7 @@ export class DishWishScene extends Phaser.Scene {
 
         this.draggingFoodId = gameObject.getData("food-instance-id") as string;
         gameObject.setDepth(100);
+        gameObject.input!.cursor = "grabbing";
         this.renderTables();
       },
     );
@@ -282,13 +293,13 @@ export class DishWishScene extends Phaser.Scene {
 
     this.input.on(
       "dragend",
-      (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.Container) => {
+      (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.Container) => {
         if (gameObject.getData("kind") !== "dish") {
           return;
         }
 
         const foodInstanceId = gameObject.getData("food-instance-id") as string;
-        const guestId = this.findDropGuest(pointer.x, pointer.y);
+        const guestId = this.findDropGuest(gameObject.x, gameObject.y);
         this.draggingFoodId = null;
         this.callbacks.onFoodDrop(foodInstanceId, guestId);
         this.renderSnapshot();
@@ -422,14 +433,6 @@ export class DishWishScene extends Phaser.Scene {
     pass.setStrokeStyle(4, 0x17312d);
     layer.add(pass);
 
-    const label = this.add.text(18, passY - pass.displayHeight / 2 + 7, "Kitchen pass · drag a dish to a table", {
-      color: "#17312d",
-      fontFamily: "system-ui, sans-serif",
-      fontSize: layout.mobile ? "11px" : "13px",
-      fontStyle: "bold",
-    });
-    layer.add(label);
-
     const railWidth = width - 32;
     const slotWidth = railWidth / 6;
 
@@ -458,20 +461,17 @@ export class DishWishScene extends Phaser.Scene {
 
     layer.removeAll(true);
     const layout = this.getLayout();
-    const draggingFood = snapshot.foods.find((food) => food.id === this.draggingFoodId);
+    const isDropTarget = this.draggingFoodId !== null;
 
     TABLE_TILES.forEach((tile, seatIndex) => {
       const point = this.gridPoint(tile.col, tile.row, layout);
       const guest = snapshot.guests.find((candidate) => candidate.seatIndex === seatIndex);
       const selected = guest?.id === snapshot.selectedGuestId;
-      const dropReady = Boolean(
-        draggingFood && guest?.phase === "seated" && guest.heardOrder && guestNeedsFood(guest, draggingFood.foodId),
-      );
       const radius = clamp(layout.tile * 0.58, 25, layout.mobile ? 42 : 58);
       const container = this.add.container(point.x, point.y);
       const table = this.add.graphics();
       table.fillStyle(selected ? 0xf1b83f : 0xd98f45, 1);
-      table.lineStyle(selected ? 6 : 4, dropReady ? 0xfff5ba : 0x17312d, 1);
+      table.lineStyle(selected || isDropTarget ? 6 : 4, isDropTarget ? 0xfff5ba : 0x17312d, 1);
       table.fillCircle(0, 0, radius);
       table.strokeCircle(0, 0, radius);
 
@@ -653,8 +653,9 @@ export class DishWishScene extends Phaser.Scene {
 
       const homeX = 16 + slotWidth * (food.slot + 0.5);
       const homeY = passY + (food.lane === 0 ? -7 : 8);
-      entry.container.setData("home-x", homeX);
       entry.container.setData("home-y", homeY);
+      entry.container.setData("bob-phase", (food.slot / 6) * Math.PI * 2);
+      entry.container.setData("bob-amplitude", clamp(slotWidth * 0.045, 3, 6));
       entry.container.setAlpha(food.leaving ? 0.35 : 1);
 
       if (this.draggingFoodId !== food.id) {
@@ -669,7 +670,7 @@ export class DishWishScene extends Phaser.Scene {
           this.input.setDraggable(entry.container, true);
         }
 
-        entry.container.setPosition(homeX, homeY);
+        entry.container.setPosition(homeX, homeY + this.getDishBobOffset(entry.container, this.time.now));
         entry.container.setDepth(30 + food.slot);
       }
 
@@ -682,7 +683,16 @@ export class DishWishScene extends Phaser.Scene {
       entry.life.setDisplaySize(Math.max(1, maxLifeWidth * (1 - clamp(food.progress, 0, 1))), 6);
       entry.life.setFillStyle(food.progress > 0.75 ? 0xd85b4b : 0x58aa69);
     });
+  }
 
+  private getDishBobOffset(container: Phaser.GameObjects.Container, time: number) {
+    if (this.reducedMotion) {
+      return 0;
+    }
+
+    const phase = (container.getData("bob-phase") as number | undefined) ?? 0;
+    const amplitude = (container.getData("bob-amplitude") as number | undefined) ?? 0;
+    return Math.sin((time / DISH_BOB_DURATION_MS) * Math.PI * 2 + phase) * amplitude;
   }
 
   private renderEmptyMessage() {
@@ -723,21 +733,14 @@ export class DishWishScene extends Phaser.Scene {
     const layout = this.getLayout();
     const radius = clamp(layout.tile * 0.9, 38, 92);
 
-    for (const guest of snapshot.guests) {
-      if (guest.phase !== "seated") {
-        continue;
-      }
-
-      const tile = TABLE_TILES[guest.seatIndex];
-
-      if (!tile) {
-        continue;
-      }
-
+    for (let seatIndex = 0; seatIndex < TABLE_TILES.length; seatIndex += 1) {
+      const tile = TABLE_TILES[seatIndex];
       const point = this.gridPoint(tile.col, tile.row, layout);
 
       if (Phaser.Math.Distance.Between(x, y, point.x, point.y) <= radius) {
-        return guest.id;
+        return snapshot.guests.find(
+          (guest) => guest.seatIndex === seatIndex && guest.phase === "seated",
+        )?.id ?? null;
       }
     }
 
