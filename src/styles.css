@@ -751,6 +751,17 @@ h2 {
   box-shadow: none;
 }
 
+.appShell:not(.appShell--city) .missedRecap {
+  position: fixed;
+  top: 92px;
+  left: 18px;
+  z-index: 29;
+  width: min(380px, calc(100vw - 36px));
+  max-height: calc(var(--viewport-height) - 116px);
+  margin: 0;
+  overflow: auto;
+}
+
 .gameGrid {
   display: grid;
   grid-template-columns: minmax(470px, 0.95fr) minmax(520px, 1.05fr);
@@ -4462,6 +4473,12 @@ html.gameRouteActive #root {
     right: 12px;
     width: min(330px, calc(100vw - 24px));
   }
+
+  .appShell:not(.appShell--city) .missedRecap {
+    top: 84px;
+    left: 12px;
+    width: min(330px, calc(100vw - 24px));
+  }
 }
 
 @media (max-width: 560px), (max-height: 760px) {
@@ -4485,6 +4502,16 @@ html.gameRouteActive #root {
   .dishWishWordCard {
     min-width: 92px;
     padding: 8px;
+  }
+
+  .appShell:not(.appShell--city) .missedRecap {
+    top: 72px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: min(34vh, 220px);
+    gap: 8px;
+    padding: 10px;
   }
 }
 
