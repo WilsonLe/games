@@ -1881,6 +1881,250 @@ h2 {
   box-shadow: 0 6px 0 rgba(23, 49, 45, 0.28), 0 12px 22px rgba(23, 49, 45, 0.2);
 }
 
+@keyframes dishWishCoachPop {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.appShell:not(.appShell--city) .dishWishCoach {
+  position: fixed;
+  top: 92px;
+  right: 18px;
+  z-index: 29;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  width: min(360px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.dishWishCoach__panel {
+  width: 100%;
+  padding: 12px;
+  color: #17312d;
+  background: rgba(255, 253, 248, 0.96);
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.26), 0 18px 28px rgba(23, 49, 45, 0.16);
+  pointer-events: auto;
+}
+
+.dishWishCoach__panel--guide,
+.dishWishCoach__panel--echo {
+  animation: dishWishCoachPop 180ms ease-out;
+}
+
+.dishWishCoach__panelHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dishWishCoach__panelHeader h2 {
+  margin: 2px 0 0;
+  font-size: 1rem;
+}
+
+.dishWishCoach__eyebrow {
+  margin: 0;
+  color: #5c7182;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dishWishCoach__steps {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 12px 0 0;
+  list-style: none;
+}
+
+.dishWishCoach__step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  background: #fff7d8;
+  border: 2px solid rgba(23, 49, 45, 0.14);
+  border-radius: 8px;
+}
+
+.dishWishCoach__step--current {
+  border-color: rgba(241, 184, 63, 0.72);
+  box-shadow: inset 0 0 0 2px rgba(241, 184, 63, 0.18);
+}
+
+.dishWishCoach__step--done {
+  background: #e7f6ed;
+  border-color: rgba(22, 116, 81, 0.28);
+}
+
+.dishWishCoach__step > span:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.dishWishCoach__step strong {
+  font-size: 0.92rem;
+}
+
+.dishWishCoach__step small {
+  color: #42524d;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.dishWishCoach__stepBadge {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: #17312d;
+  background: #f1b83f;
+  border: 2px solid #17312d;
+  border-radius: 999px;
+}
+
+.dishWishCoach__phrase {
+  margin: 12px 0 0;
+  color: #17312d;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.dishWishCoach__hint,
+.dishWishCoach__status {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.dishWishCoach__hint {
+  color: #42524d;
+}
+
+.dishWishCoach__status {
+  padding-top: 10px;
+  border-top: 2px solid rgba(23, 49, 45, 0.12);
+}
+
+.dishWishCoach__status--neutral {
+  color: #35556f;
+}
+
+.dishWishCoach__status--good {
+  color: #145941;
+}
+
+.dishWishCoach__status--bad {
+  color: #a83b33;
+}
+
+.dishWishWordCards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dishWishWordCard {
+  display: grid;
+  min-width: 102px;
+  gap: 8px;
+  justify-items: center;
+  padding: 10px 10px 9px;
+  text-align: center;
+  background: #fff7d8;
+  border: 2px solid rgba(23, 49, 45, 0.14);
+  border-radius: 8px;
+}
+
+.dishWishWordCard .foodArt {
+  width: 54px;
+  height: 54px;
+}
+
+.dishWishWordCard__labelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dishWishWordCard__labelRow strong {
+  font-size: 0.94rem;
+  text-transform: lowercase;
+}
+
+.dishWishWordCard--served {
+  background: #e7f6ed;
+  border-color: rgba(22, 116, 81, 0.32);
+}
+
+.dishWishCoach__audioButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  color: #17312d;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 850;
+  background: #fff7d8;
+  border: 2px solid #17312d;
+  border-radius: 7px;
+}
+
+.dishWishCoach__audioButton--card {
+  width: 100%;
+}
+
+.dishWishCoach__audioButton--iconOnly {
+  width: 34px;
+  padding: 0;
+}
+
+.dishWishCoach__echoRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.dishWishCoach__echoRow .foodArt {
+  width: 56px;
+  height: 56px;
+}
+
+.dishWishCoach__echoRow strong {
+  display: block;
+  font-size: 1rem;
+  text-transform: lowercase;
+}
+
+.dishWishCoach__echoRow small {
+  color: #42524d;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
 .appShell:not(.appShell--city) .resultBanner {
   position: fixed;
   top: 78px;
@@ -4161,6 +4405,38 @@ html.gameRouteActive #root {
 .phaserA11yControls--city {
   top: 12px;
   left: 12px;
+}
+
+@media (max-width: 980px) {
+  .appShell:not(.appShell--city) .dishWishCoach {
+    top: 84px;
+    right: 12px;
+    width: min(330px, calc(100vw - 24px));
+  }
+}
+
+@media (max-width: 560px), (max-height: 760px) {
+  .appShell:not(.appShell--city) .dishWishCoach {
+    top: auto;
+    right: 8px;
+    bottom: 10px;
+    left: 8px;
+    width: auto;
+  }
+
+  .dishWishCoach__panel {
+    padding: 10px;
+  }
+
+  .dishWishCoach__steps,
+  .dishWishWordCards {
+    gap: 6px;
+  }
+
+  .dishWishWordCard {
+    min-width: 92px;
+    padding: 8px;
+  }
 }
 
 @media (max-width: 560px) {

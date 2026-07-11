@@ -70,8 +70,8 @@ export function DishWishStage({ snapshot, onGuestSelect, onFoodDrop }: DishWishS
                 aria-pressed={guest.id === snapshot.selectedGuestId}
                 aria-label={
                   guest.heardOrder
-                    ? `${guest.customerName} ordered ${guest.foods.join(", ")}`
-                    : `Hear ${guest.customerName}'s order`
+                    ? `${guest.customerName} ordered ${guest.foods.join(", ")}${guest.patiencePaused ? ". Practice order with no timer yet." : ""}`
+                    : `Hear ${guest.customerName}'s order${guest.patiencePaused ? ". Practice order with no timer yet." : ""}`
                 }
               >
                 {guest.customerName}: {guest.heardOrder ? guest.phrase : "hear order"}

@@ -133,6 +133,14 @@ type Feedback = {
   text: string;
 };
 
+type DinerIntroStep = "wait" | "select" | "serve";
+
+type ServedEcho = {
+  id: string;
+  foodId: FoodId;
+  guestName: string;
+};
+
 type GameStatus = "ready" | "playing" | "paused" | "ended";
 type SoundKind = "correct" | "complete" | "wrong";
 type AudioContextWindow = Window & {
@@ -330,9 +338,10 @@ function canonicalizePath(path: string) {
   return normalizedPath;
 }
 
+const INTRO_ORDER_TEMPLATE = (items: string) => `I'd like ${items}, please.`;
+
 const ORDER_TEMPLATES: Array<(items: string) => string> = [
   (items) => `Could I please have ${items}?`,
-  (items) => `I'd like ${items}, please.`,
   (items) => `May I order ${items}?`,
   (items) => `Can I get ${items} for dinner?`,
   (items) => `I'm hungry for ${items}.`,
@@ -783,7 +792,23 @@ function selectFoods(sequence: number, count: number, level: number) {
   return foods;
 }
 
-function makeOrderPhrase(seed: number, foodNames: string[]) {
+function getFoodName(foodId: FoodId) {
+  return foodById.get(foodId)?.name ?? foodId;
+}
+
+function getNextRequiredFood(guest: Pick<ActiveGuest, "foods" | "servedFoods">) {
+  return guest.foods.find((foodId) => {
+    const required = guest.foods.filter((candidate) => candidate === foodId).length;
+    const served = guest.servedFoods.filter((candidate) => candidate === foodId).length;
+    return served < required;
+  }) ?? guest.foods[0] ?? null;
+}
+
+function makeOrderPhrase(seed: number, foodNames: string[], level: number) {
+  if (level === 1) {
+    return INTRO_ORDER_TEMPLATE(formatList(foodNames));
+  }
+
   const template = ORDER_TEMPLATES[Math.abs(seed) % ORDER_TEMPLATES.length];
   return template(formatList(foodNames));
 }
@@ -823,8 +848,8 @@ function renderOrderPhrase(guest: ActiveGuest) {
 function makeGuest(sequence: number, now: number, profile: DifficultyProfile, seatIndex: number) {
   const customer = CUSTOMERS[sequence % CUSTOMERS.length];
   const foods = selectFoods(sequence, profile.orderSize, profile.level);
-  const foodNames = foods.map((foodId) => foodById.get(foodId)?.name ?? foodId);
-  const phrase = makeOrderPhrase(sequence + Math.floor(now / 1000), foodNames);
+  const foodNames = foods.map((foodId) => getFoodName(foodId));
+  const phrase = makeOrderPhrase(sequence + Math.floor(now / 1000), foodNames, profile.level);
   const instanceId = `guest-${sequence}-${now}`;
   const provisionalGuest: ActiveGuest = {
     instanceId,
@@ -1423,6 +1448,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const [score, setScore] = useState(0);
   const [served, setServed] = useState(0);
   const [combo, setCombo] = useState(0);
+  const [guidedGuestId, setGuidedGuestId] = useState<string | null>(null);
+  const [introOrderComplete, setIntroOrderComplete] = useState(false);
+  const [servedEcho, setServedEcho] = useState<ServedEcho | null>(null);
   const [feedback, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a seated guest to hear an order.",
@@ -1437,6 +1465,35 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
 
   const level = levelForServed(served);
   const difficulty = useMemo(() => difficultyForLevel(level), [level]);
+
+  const guidedGuest = useMemo(
+    () => activeGuests.find((guest) => guest.instanceId === guidedGuestId) ?? null,
+    [activeGuests, guidedGuestId],
+  );
+  const introStep = useMemo<DinerIntroStep | null>(() => {
+    if (introOrderComplete || !guidedGuest) {
+      return null;
+    }
+
+    if (guidedGuest.phase !== "seated") {
+      return "wait";
+    }
+
+    return guidedGuest.heardOrder ? "serve" : "select";
+  }, [guidedGuest, introOrderComplete]);
+  const introTargetFoodId = useMemo(() => {
+    if (introStep !== "serve" || !guidedGuest) {
+      return null;
+    }
+
+    return getNextRequiredFood(guidedGuest);
+  }, [guidedGuest, introStep]);
+  const introTargetFoodName = introTargetFoodId ? getFoodName(introTargetFoodId) : null;
+  const selectedGuest = useMemo(
+    () => activeGuests.find((guest) => guest.instanceId === selectedGuestId && guest.phase !== "leaving") ?? null,
+    [activeGuests, selectedGuestId],
+  );
+  const orderPanelGuest = selectedGuest?.heardOrder ? selectedGuest : guidedGuest?.heardOrder ? guidedGuest : null;
 
   const activeGuestCount = activeGuests.filter((guest) => guest.phase !== "leaving").length;
   const isShiftWon = served >= TARGET_SERVES;
@@ -1474,6 +1531,25 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     return true;
   }, []);
 
+  const replayFoodWord = useCallback((foodId: FoodId) => {
+    const foodName = getFoodName(foodId);
+    const hasAudio = speak(foodName, 1.02);
+
+    setFeedback({
+      kind: hasAudio ? "neutral" : "bad",
+      text: hasAudio ? `Listen: ${foodName}.` : "Audio is not available in this browser.",
+    });
+  }, []);
+
+  const replayGuestPhrase = useCallback((guest: ActiveGuest) => {
+    const hasAudio = speak(guest.phrase);
+
+    setFeedback({
+      kind: hasAudio ? "neutral" : "bad",
+      text: hasAudio ? `${guest.customer.name}: ${guest.phrase}` : "Audio is not available in this browser.",
+    });
+  }, []);
+
   const addGuest = useCallback((spawnNow: number, profile: DifficultyProfile, seatIndex: number) => {
     const { guest, scheduledFoods: guestFoods } = makeGuest(guestSequenceRef.current, spawnNow, profile, seatIndex);
     guestSequenceRef.current += 1;
@@ -1499,15 +1575,18 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     setNow(startTime);
     setActiveGuests([firstGuest.guest]);
     setSelectedGuestId(null);
+    setGuidedGuestId(firstGuest.guest.instanceId);
+    setIntroOrderComplete(false);
     setScheduledFoods([...firstGuest.scheduledFoods]);
     setBeltFoods([]);
     setScore(0);
     setServed(0);
     setCombo(0);
+    setServedEcho(null);
     consumedDishIdsRef.current.clear();
     setFeedback({
       kind: "neutral",
-      text: `${firstGuest.guest.customer.name} is walking to table 1. Tap the table after they sit down to hear the order.`,
+      text: `${firstGuest.guest.customer.name} is walking to table 1. Watch for the glow, then tap the table to hear the order.`,
     });
     setGameStatus("playing");
   }, []);
@@ -1523,6 +1602,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     }
 
     const hasAudio = speak(guest.phrase);
+    const isGuidedFirstOrder = !introOrderComplete && guest.instanceId === guidedGuestId;
+    const guidedFoodId = isGuidedFirstOrder ? getNextRequiredFood(guest) : null;
+    const guidedFoodName = guidedFoodId ? getFoodName(guidedFoodId) : "the matching dish";
 
     setActiveGuests((currentGuests) =>
       currentGuests.map((currentGuest) =>
@@ -1533,9 +1615,15 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     );
     setFeedback({
       kind: hasAudio ? "neutral" : "bad",
-      text: hasAudio ? `${guest.customer.name}: ${guest.phrase}` : "Audio is not available in this browser.",
+      text: isGuidedFirstOrder
+        ? hasAudio
+          ? `Now serve ${guidedFoodName}. This first order is untimed.`
+          : `Audio is not available. Read the order card and serve ${guidedFoodName}. This first order is untimed.`
+        : hasAudio
+          ? `${guest.customer.name}: ${guest.phrase}`
+          : "Audio is not available in this browser.",
     });
-  }, []);
+  }, [guidedGuestId, introOrderComplete]);
 
   const handleGuestSelect = useCallback(
     (guest: ActiveGuest) => {
@@ -1556,7 +1644,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         return;
       }
 
-      const foodName = foodById.get(food.foodId)?.name ?? food.foodId;
+      const foodName = getFoodName(food.foodId);
       const droppedGuest = activeGuests.find((guest) => guest.phase !== "leaving" && guest.instanceId === guestId);
 
       if (!droppedGuest) {
@@ -1564,8 +1652,17 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         return;
       }
 
+      const isGuidedFirstOrder = !introOrderComplete && droppedGuest.instanceId === guidedGuestId;
+      const guidedFoodId = isGuidedFirstOrder ? getNextRequiredFood(droppedGuest) : null;
+      const guidedFoodName = guidedFoodId ? getFoodName(guidedFoodId) : "the matching dish";
+
       if (!droppedGuest.heardOrder) {
-        setFeedback({ kind: "neutral", text: `Select ${droppedGuest.customer.name} to hear the order before serving.` });
+        setFeedback({
+          kind: "neutral",
+          text: isGuidedFirstOrder
+            ? `Step 1: tap ${droppedGuest.customer.name}'s table to hear the order.`
+            : `Select ${droppedGuest.customer.name} to hear the order before serving.`,
+        });
         speak(`Select ${droppedGuest.customer.name} to hear the order first.`, 1.02);
         return;
       }
@@ -1577,6 +1674,16 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       const interactionAt = Date.now();
 
       if (!needsFood(droppedGuest, food.foodId)) {
+        if (isGuidedFirstOrder) {
+          playSound("wrong");
+          speak(`Try ${guidedFoodName}.`, 1.02);
+          setFeedback({
+            kind: "neutral",
+            text: `Try again. Look for ${guidedFoodName}. This first order is untimed.`,
+          });
+          return;
+        }
+
         const patiencePenaltyMs =
           WRONG_DISH_PATIENCE_BASE_MS + (difficulty.level - 1) * WRONG_DISH_PATIENCE_PER_LEVEL_MS;
         const patiencePenaltySeconds = patiencePenaltyMs / 1000;
@@ -1597,6 +1704,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       }
 
       consumedDishIdsRef.current.add(food.id);
+      setServedEcho({ id: `${food.id}-${interactionAt}`, foodId: food.foodId, guestName: droppedGuest.customer.name });
       setBeltFoods((currentFoods) =>
         currentFoods.map((currentFood) =>
           currentFood.id === food.id
@@ -1651,6 +1759,10 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
           ),
         );
         setSelectedGuestId((currentSelected) => (currentSelected === completedGuest.instanceId ? null : currentSelected));
+        if (isGuidedFirstOrder) {
+          setIntroOrderComplete(true);
+          setGuidedGuestId(null);
+        }
         if (nextGuestAtRef.current <= completedAt) {
           nextGuestAtRef.current = completedAt + NEXT_GUEST_AFTER_COMPLETE_MS;
         }
@@ -1659,7 +1771,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
           text:
             nextServed >= TARGET_SERVES
               ? `Dinner service complete. ${earnedLabel}`
-              : `${completedGuest.customer.name} leaves happy. ${earnedLabel}`,
+              : isGuidedFirstOrder
+                ? `Great job. You served ${foodName}. The next guests will be timed. ${earnedLabel}`
+                : `${completedGuest.customer.name} leaves happy. ${earnedLabel}`,
         });
         playSound("complete");
         speak(nextServed >= TARGET_SERVES ? "Dinner service complete. All guests are happy." : happyLine, 1);
@@ -1673,7 +1787,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         speak(`Served ${foodName}.`, 1.04);
       }
     },
-    [activeGuests, combo, difficulty.level, gameStatus, playSound, served],
+    [activeGuests, combo, difficulty.level, gameStatus, guidedGuestId, introOrderComplete, playSound, served],
   );
 
   useEffect(() => {
@@ -1684,6 +1798,18 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     const clock = window.setInterval(() => setNow(Date.now()), DINER_CLOCK_MS);
     return () => window.clearInterval(clock);
   }, [gameStatus]);
+
+  useEffect(() => {
+    if (!servedEcho) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setServedEcho((currentEcho) => (currentEcho?.id === servedEcho.id ? null : currentEcho));
+    }, 1_000);
+
+    return () => window.clearTimeout(timeout);
+  }, [servedEcho]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -1705,12 +1831,24 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
           : guest,
       ),
     );
+    const guidedGuestSeated = !introOrderComplete && guidedGuestId
+      ? newlySeatedGuests.find((guest) => guest.instanceId === guidedGuestId)
+      : null;
+
+    if (guidedGuestSeated) {
+      setFeedback({
+        kind: "neutral",
+        text: `${guidedGuestSeated.customer.name} is seated. Tap the glowing table to hear the order. This first order is untimed.`,
+      });
+      return;
+    }
+
     const seatedNames = formatList(newlySeatedGuests.map((guest) => guest.customer.name));
     setFeedback({
       kind: "neutral",
       text: `${seatedNames} ${newlySeatedGuests.length === 1 ? "is" : "are"} seated. Tap a table to hear the order.`,
     });
-  }, [activeGuests, gameStatus, now]);
+  }, [activeGuests, gameStatus, guidedGuestId, introOrderComplete, now]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -1875,7 +2013,12 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       return;
     }
 
-    const expiredGuests = activeGuests.filter((guest) => guest.phase !== "leaving" && guest.expiresAt <= now);
+    const expiredGuests = activeGuests.filter(
+      (guest) =>
+        guest.phase !== "leaving" &&
+        guest.expiresAt <= now &&
+        !(guest.instanceId === guidedGuestId && !introOrderComplete),
+    );
 
     if (expiredGuests.length === 0) {
       return;
@@ -1903,7 +2046,7 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     );
     playSound("wrong");
     resetCombo(`${expiredGuests[0].customer.name} left before the last dish.`);
-  }, [activeGuests, gameStatus, now, playSound, resetCombo]);
+  }, [activeGuests, gameStatus, guidedGuestId, introOrderComplete, now, playSound, resetCombo]);
 
   useEffect(() => {
     if (selectedGuestId && activeGuests.some((guest) => guest.instanceId === selectedGuestId && guest.phase !== "leaving")) {
@@ -1949,23 +2092,30 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
       now,
       status: gameStatus,
       selectedGuestId,
-      guests: activeGuests.map((guest) => ({
-        id: guest.instanceId,
-        customerId: guest.customer.id,
-        customerName: guest.customer.name,
-        phase: guest.phase,
-        seatIndex: guest.seatIndex,
-        heardOrder: guest.heardOrder,
-        phrase: guest.phrase,
-        foods: guest.foods,
-        servedFoods: guest.servedFoods,
-        patienceRatio: clamp(
-          (guest.expiresAt - now) / Math.max(1, guest.expiresAt - guest.serviceStartsAt),
-          0,
-          1,
-        ),
-        visual: getGuestVisual(guest, now),
-      })),
+      guests: activeGuests.map((guest) => {
+        const patiencePaused = guest.instanceId === guidedGuestId && !introOrderComplete;
+
+        return {
+          id: guest.instanceId,
+          customerId: guest.customer.id,
+          customerName: guest.customer.name,
+          phase: guest.phase,
+          seatIndex: guest.seatIndex,
+          heardOrder: guest.heardOrder,
+          phrase: guest.phrase,
+          foods: guest.foods,
+          servedFoods: guest.servedFoods,
+          patiencePaused,
+          patienceRatio: patiencePaused
+            ? 1
+            : clamp(
+                (guest.expiresAt - now) / Math.max(1, guest.expiresAt - guest.serviceStartsAt),
+                0,
+                1,
+              ),
+          visual: getGuestVisual(guest, now),
+        };
+      }),
       foods: beltFoods.map((food) => ({
         id: food.id,
         foodId: food.foodId,
@@ -1974,9 +2124,18 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         progress: clamp((now - food.spawnedAt) / food.travelMs, 0, 1),
         leaving: Boolean(food.leavingAt),
       })),
+      guide:
+        introStep && guidedGuest
+          ? {
+              step: introStep,
+              guestId: guidedGuest.instanceId,
+              seatIndex: guidedGuest.seatIndex,
+              targetFoodId: introTargetFoodId,
+            }
+          : null,
       beltTravelLabel: `${beltFoods.length}/${DISH_PASS_CAPACITY} dishes · ${formatTime(difficulty.beltTravelMs)} pass`,
     }),
-    [activeGuests, beltFoods, difficulty.beltTravelMs, gameStatus, now, selectedGuestId],
+    [activeGuests, beltFoods, difficulty.beltTravelMs, gameStatus, guidedGuest, guidedGuestId, introOrderComplete, introStep, introTargetFoodId, now, selectedGuestId],
   );
 
   const handlePhaserGuestSelect = useCallback(
@@ -2030,9 +2189,141 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
             </button>
           </section>
         ) : (
-          <p className="dinerNarration" role="status" aria-live="polite">
-            {feedback.text}
-          </p>
+          <>
+            <p className="dinerNarration" role="status" aria-live="polite">
+              {feedback.text}
+            </p>
+
+            <section className="dishWishCoach" aria-label="Dish Wish learning help">
+              {introStep && guidedGuest ? (
+                <article className="dishWishCoach__panel dishWishCoach__panel--guide">
+                  <p className="dishWishCoach__eyebrow">Guided first order · untimed</p>
+                  <ol className="dishWishCoach__steps">
+                    <li
+                      className={cx(
+                        "dishWishCoach__step",
+                        introStep === "wait" || introStep === "select"
+                          ? "dishWishCoach__step--current"
+                          : "dishWishCoach__step--done",
+                      )}
+                    >
+                      <span className="dishWishCoach__stepBadge" aria-hidden="true">
+                        {introStep === "serve" ? <Check size={15} /> : "1"}
+                      </span>
+                      <span>
+                        <strong>Hear the order</strong>
+                        <small>
+                          {introStep === "wait"
+                            ? `Watch ${guidedGuest.customer.name} sit down, then tap the glowing table.`
+                            : `Tap ${guidedGuest.customer.name}'s table to hear the order.`}
+                        </small>
+                      </span>
+                    </li>
+                    <li
+                      className={cx(
+                        "dishWishCoach__step",
+                        introStep === "serve" && "dishWishCoach__step--current",
+                      )}
+                    >
+                      <span className="dishWishCoach__stepBadge" aria-hidden="true">
+                        2
+                      </span>
+                      <span>
+                        <strong>Serve the match</strong>
+                        <small>
+                          {introStep === "serve" && introTargetFoodId
+                            ? `Find ${introTargetFoodName} on the pass, then drag it to the table or use the keyboard buttons.`
+                            : "After you hear the order, serve the matching dish."}
+                        </small>
+                      </span>
+                    </li>
+                  </ol>
+                </article>
+              ) : null}
+
+              <article className="dishWishCoach__panel dishWishCoach__panel--order">
+                <div className="dishWishCoach__panelHeader">
+                  <div>
+                    <p className="dishWishCoach__eyebrow">Order support</p>
+                    <h2>{orderPanelGuest ? `Table ${orderPanelGuest.seatIndex + 1}` : "How to play"}</h2>
+                  </div>
+                  {orderPanelGuest ? (
+                    <button
+                      className="dishWishCoach__audioButton"
+                      type="button"
+                      onClick={() => replayGuestPhrase(orderPanelGuest)}
+                      aria-label="Replay this order"
+                    >
+                      <Volume2 size={16} />
+                      Hear again
+                    </button>
+                  ) : null}
+                </div>
+
+                {orderPanelGuest ? (
+                  <>
+                    <p className="dishWishCoach__phrase">{renderOrderPhrase(orderPanelGuest)}</p>
+                    <div className="dishWishWordCards" aria-label="Target food words">
+                      {orderPanelGuest.foods.map((foodId) => {
+                        const servedFood = orderPanelGuest.servedFoods.includes(foodId);
+
+                        return (
+                          <article
+                            className={cx("dishWishWordCard", servedFood && "dishWishWordCard--served")}
+                            key={`${orderPanelGuest.instanceId}-${foodId}`}
+                          >
+                            <FoodArt id={foodId} />
+                            <div className="dishWishWordCard__labelRow">
+                              <strong>{getFoodName(foodId)}</strong>
+                              {servedFood ? <BadgeCheck size={16} aria-hidden="true" /> : null}
+                            </div>
+                            <button
+                              className="dishWishCoach__audioButton dishWishCoach__audioButton--card"
+                              type="button"
+                              onClick={() => replayFoodWord(foodId)}
+                              aria-label={`Hear ${getFoodName(foodId)}`}
+                            >
+                              <Volume2 size={14} />
+                              Say word
+                            </button>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <p className="dishWishCoach__hint">
+                    {introStep === "wait"
+                      ? "The first guest is walking to the table."
+                      : "Tap a seated table to hear the order, then serve the matching dish."}
+                  </p>
+                )}
+
+                <p className={cx("dishWishCoach__status", `dishWishCoach__status--${feedback.kind}`)}>{feedback.text}</p>
+              </article>
+
+              {servedEcho ? (
+                <article className="dishWishCoach__panel dishWishCoach__panel--echo">
+                  <p className="dishWishCoach__eyebrow">Word check</p>
+                  <div className="dishWishCoach__echoRow">
+                    <FoodArt id={servedEcho.foodId} />
+                    <div>
+                      <strong>{getFoodName(servedEcho.foodId)}</strong>
+                      <small>{servedEcho.guestName} got the right dish.</small>
+                    </div>
+                    <button
+                      className="dishWishCoach__audioButton dishWishCoach__audioButton--iconOnly"
+                      type="button"
+                      onClick={() => replayFoodWord(servedEcho.foodId)}
+                      aria-label={`Hear ${getFoodName(servedEcho.foodId)} again`}
+                    >
+                      <Volume2 size={16} />
+                    </button>
+                  </div>
+                </article>
+              ) : null}
+            </section>
+          </>
         )}
 
         <section className="gameGrid">
