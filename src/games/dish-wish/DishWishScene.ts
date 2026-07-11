@@ -489,7 +489,7 @@ export class DishWishScene extends Phaser.Scene {
         if (guest.phase === "seated") {
           const bubbleText = guest.heardOrder
             ? `${guest.phrase}\n${formatFoodProgress(guest)}`
-            : "Tap to hear order";
+            : "?";
           const bubbleWidth = clamp(layout.tile * (layout.mobile ? 3.1 : 3.6), 112, 270);
           const bubble = this.add.text(0, -radius - 12, bubbleText, {
             color: "#17312d",
