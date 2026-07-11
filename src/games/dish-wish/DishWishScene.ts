@@ -244,7 +244,7 @@ export class DishWishScene extends Phaser.Scene {
               start: row * 4,
               end: row * 4 + 3,
             }),
-            frameRate: 5.55,
+            frameRate: 8.33,
             repeat: -1,
           });
         }

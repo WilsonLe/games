@@ -109,7 +109,7 @@ Run `npm run dev`, then inspect the console throughout.
 | --- | --- |
 | Initial load | One guest enters; score 0, orders 0/24, level 1, and six kitchen-pass slots are visible. Patience and ordered-food timing wait until seating. |
 | Guest selection | After seating, the full customer/table area reveals and speaks the order immediately; selecting another customer replaces unfinished speech, and earlier orders remain visible. |
-| Character travel and walk cycles | All six Phaser sprites take collision-free routes around table tiles, move smoothly at `360ms` per tile, advance four distinct frames near `180ms` per frame in dedicated south, north, east, and west rows, and settle on the configured table-facing row. |
+| Character travel and walk cycles | All six Phaser sprites take collision-free routes around table tiles, move smoothly at `360ms` per tile, advance four distinct frames near `120ms` per frame in dedicated south, north, east, and west rows, and settle on the configured table-facing row. |
 | Reduced motion | With reduced motion enabled, Phaser route tweens and walk loops stop while required route-position updates continue. |
 | Correct dish | Dish animates off, chip and patience update, score rises, and visible good feedback appears. |
 | Drop before order | Dish remains and status asks the player to select the customer and hear the order. |

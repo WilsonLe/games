@@ -61,7 +61,8 @@ The scene preserves the logical 10 × 5 diner coordinate system used by `buildTi
 - Four table controls are rebuilt from the latest guest snapshot so speech and patience stay current.
 - Guest sprite objects persist by guest instance ID and tween between the 100ms React route samples.
 - Each `1536 × 1024` customer sheet is sliced into `384 × 256` cells. Rows 0–3 are dedicated south,
-  north, east, and west walk cycles; non-walking guests use column 0 of their facing row.
+  north, east, and west walk cycles at approximately `120ms` per frame; non-walking guests use column
+  0 of their facing row.
 - Dish containers persist by food instance ID. Phaser drag events move them and resolve a table hit
   on release; React validates the serving result.
 - Phaser renders all six kitchen-pass slots, dish lifetime bars, speech bubbles, and selected/drop
