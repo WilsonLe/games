@@ -46,7 +46,7 @@ references: []
 ## Verify
 
 Initial guest/second spawn, all four Phaser tables visible before and after occupancy, responsive floor
-coverage, collision-free route travel, all dedicated direction rows and approximate `180ms` frame cadence,
+coverage, collision-free route travel, all dedicated direction rows and approximate `120ms` frame cadence,
 immediate order reveal and speech switching, text dish progress without customer labels or order images, persistent
 revealed orders, correct-dish patience increases, dish entry/bob/exit, correct/partial/complete
 service, decoy match, drop outside, unheard

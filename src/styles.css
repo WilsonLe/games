@@ -2488,15 +2488,15 @@ h2 {
 }
 
 .characterActor--walking .characterSprite {
-  animation: characterTileStep 360ms ease-in-out infinite;
+  animation: characterTileStep 240ms ease-in-out infinite;
 }
 
 .characterActor--walking .characterSprite__shadow {
-  animation: dinerShadowStep 360ms ease-in-out infinite;
+  animation: dinerShadowStep 240ms ease-in-out infinite;
 }
 
 .characterActor--walking .characterSprite__sheet {
-  animation: characterWalkFrames 720ms step-end infinite;
+  animation: characterWalkFrames 480ms step-end infinite;
 }
 
 @keyframes beltRoll {

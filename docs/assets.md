@@ -21,7 +21,7 @@ is declared in `src/styles.css`.
 | `src/assets/player-chef-source.png` | `1024 x 1536` | Not imported by app code | Source/reference image kept in the repo. |
 | `src/assets/game-cursor.svg` | SVG | `--game-cursor` in `src/styles.css` | Custom cursor applied globally and to buttons. |
 | `src/assets/conveyor-kitchen-sprite-sheet.png` | `1536 x 1024` | Not imported by app code | Legacy/reference kitchen sprite sheet. |
-| `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` | `1536 x 1024` each | Phaser preload maps in `DishWishScene`; Mai also supplies the Drop Hop courier | Six runtime 4-column × 4-row sheets. Rows contain dedicated south, north, east, and west art; four walk frames loop near `720ms` (`180ms` per frame). |
+| `src/assets/sprites/generated/walk/customer-{id}-walk-sheet.png` | `1536 x 1024` each | Phaser preload maps in `DishWishScene`; Mai also supplies the Drop Hop courier | Six runtime 4-column × 4-row sheets. Rows contain dedicated south, north, east, and west art; Dish Wish loops four walk frames near `480ms` (`120ms` per frame). |
 | `src/assets/sprites/generated/walk/manifest.json` | JSON | Maintainer metadata | Generation model, layout, frame order, post-processing, character mapping, and SHA-256 hashes for the runtime sheets. |
 | `src/assets/sprites/generated/customer-fullbody-sheet.png` | `1448 x 1086` | Not imported by app code | Legacy/reference 4-column × 6-row customer sheet retained for visual history. |
 

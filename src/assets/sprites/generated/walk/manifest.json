@@ -26,7 +26,7 @@
     "walkFrameOrder": ["left-contact", "passing", "right-contact", "opposite-passing"],
     "idleBehavior": "Use column 0 of the row matching the character's facing direction",
     "westBehavior": "Dedicated mirrored frames stored in row 3",
-    "loopDurationMs": 720
+    "loopDurationMs": 480
   },
   "files": [
     {

@@ -97,10 +97,11 @@ Dish Wish keeps the logical 10 × 5 route grid. The scene computes the largest s
 fits below the kitchen and centers the floor. Under `560px`, `gridPoint` transposes the logical axes
 into a 5 × 10 portrait floor without changing route data.
 
-The 100ms React clock supplies fractional route visuals. Persistent guest sprites tween between
-samples and play dedicated four-frame south, north, east, or west sheet rows at approximately
-`180ms` per frame. Seated guests display column 0 of the row that faces their table edge. Static
-kitchen/floor graphics are cached until a resize instead of being rebuilt on every clock sample.
+The 100ms React clock supplies fractional route visuals at `360ms` per tile. Persistent guest sprites
+tween between samples and play dedicated four-frame south, north, east, or west sheet rows at
+approximately `120ms` per frame (`480ms` per loop). Seated guests display column 0 of the row that
+faces their table edge. Static kitchen/floor graphics are cached until a resize instead of being
+rebuilt on every clock sample.
 
 Dish containers persist by instance ID. Phaser pointer/touch drag events move the visible container,
 resolve a seated table on release, then call React for validation. Correct and wrong outcomes,
