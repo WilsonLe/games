@@ -92,7 +92,8 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `scheduledFoods`, `beltFoods` | Future and visible dishes. |
 | `score`, `served`, `combo` | Progress and scoring. |
 | `servedEcho` | Brief visible reinforcement card for the latest correctly served food word. |
-| `feedback` | Shared diner status text used by the screen-reader live region and the visible helper panel. |
+| `levelTransition` | Brief dismissible level announcement derived from the previous/next `DINER_LEVELS` profiles. |
+| `feedback` | Shared diner status text used by the screen-reader live region and active or expanded helper panel. |
 | `missedRecap` | Brief visible/accessibility recap of missed vocabulary and the queued retry word. |
 | `dishWishSnapshot` | Immutable scene view derived from React state on each render sample, including intro highlight metadata plus practice/supply cues. |
 | sequence/timer refs | Unique IDs plus next guest/decoy times. |
@@ -187,12 +188,19 @@ three-item finale with more traffic.
   immediately while earlier revealed orders remain visible. Revealed orders also show `Practice again`
   and `Coming next`/`On the pass` hints when applicable.
 - The helper panel renders the current sentence, picture + lowercase word cards, replay buttons, and a
-  one-second served-word echo without changing the core timing or scoring rules.
+  one-second served-word echo without changing the core timing or scoring rules. After the guided order,
+  its generic no-order state uses a native compact disclosure; active-order and correction support remains
+  expanded.
+- `levelForServed` detects profile boundaries. A four-second dismissible level message compares the current
+  and next `DINER_LEVELS` profiles to name the newly changed challenge, without pausing clocks or changing
+  score, combo, or progression. Its timer pauses while the dismiss control has focus, and the visual panel
+  lets stage pointer input pass through outside that control.
 - The guided first order is exempt from expiration and wrong-dish patience loss until it is served
   correctly. Each later correct dish adds 2000ms before the updated guest is committed. An incorrect
   dish remains available and removes 2500–5000ms of that guest's patience according to level.
 - When a guest expires, React shows a brief missed-word recap with food art/labels and queues at least
-  one missed food for bounded later repetition, capped per food to avoid infinite retry loops.
+  one missed food for bounded later repetition, capped per food to avoid infinite retry loops. At narrow or
+  short viewports the same 5.5-second recap uses denser type, chips, and spacing so it leaves more stage visible.
 
 `targetGuestId` controls scheduled/visible dish cleanup and recycling. It is not a serving lock: the
 drop target table and `needsFood` decide whether a dish is correct.

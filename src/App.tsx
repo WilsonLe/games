@@ -151,6 +151,11 @@ type ServedEcho = {
   guestName: string;
 };
 
+type LevelTransition = {
+  level: number;
+  message: string;
+};
+
 type GameStatus = "ready" | "playing" | "paused" | "ended";
 type SoundKind = "correct" | "complete" | "wrong";
 type AudioContextWindow = Window & {
@@ -804,6 +809,62 @@ function difficultyForLevel(level: number): DifficultyProfile {
     ...profile,
     dishGapMs: Math.round(profile.timeToLastDishMs / Math.max(1, profile.orderSize - 1)),
   };
+}
+
+function getLevelTransitionMessage(previousLevel: number, nextLevel: number) {
+  const previousProfile = DINER_LEVELS[previousLevel - 1];
+  const nextProfile = DINER_LEVELS[nextLevel - 1];
+  const changes: string[] = [];
+
+  if (!previousProfile || !nextProfile) {
+    return `Level ${nextLevel}! Keep listening carefully as the diner changes pace.`;
+  }
+
+  if (previousLevel === 1 && nextLevel > 1) {
+    changes.push("orders use more English sentence patterns");
+  }
+
+  if (nextProfile.orderSize > previousProfile.orderSize) {
+    changes.push(`orders can ask for ${nextProfile.orderSize} dishes`);
+  }
+
+  if (nextProfile.maxGuests > previousProfile.maxGuests) {
+    changes.push(`up to ${nextProfile.maxGuests} guests can order at once`);
+  }
+
+  if (previousLevel === 1 && nextProfile.firstDecoyDelayMs < previousProfile.firstDecoyDelayMs) {
+    changes.push("extra dishes appear sooner");
+  }
+
+  if (
+    nextProfile.guestIntervalMs < previousProfile.guestIntervalMs &&
+    nextProfile.orderSize === previousProfile.orderSize &&
+    nextProfile.maxGuests === previousProfile.maxGuests &&
+    changes.length < 2
+  ) {
+    changes.push("guests arrive faster");
+  }
+
+  if (nextProfile.beltTravelMs < previousProfile.beltTravelMs && changes.length < 2) {
+    changes.push("dishes leave the pass sooner");
+  }
+
+  if (nextProfile.firstDecoyDelayMs < previousProfile.firstDecoyDelayMs && changes.length < 2) {
+    changes.push("extra dishes appear sooner");
+  }
+
+  if (nextProfile.decoyIntervalMs < previousProfile.decoyIntervalMs && changes.length < 2) {
+    changes.push("extra dishes show up more often");
+  }
+
+  if (nextProfile.patienceBufferMs < previousProfile.patienceBufferMs && changes.length === 0) {
+    changes.push("guests wait a little less");
+  }
+
+  const summary = formatList(changes.length > 0 ? changes : ["the diner changes pace"]);
+  const sentence = summary.charAt(0).toUpperCase() + summary.slice(1);
+
+  return `Level ${nextLevel}! ${sentence}.`;
 }
 
 function selectFoods(sequence: number, count: number, level: number, practiceFoodId?: FoodId | null) {
@@ -1555,6 +1616,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
   const [guidedGuestId, setGuidedGuestId] = useState<string | null>(null);
   const [introOrderComplete, setIntroOrderComplete] = useState(false);
   const [servedEcho, setServedEcho] = useState<ServedEcho | null>(null);
+  const [levelTransition, setLevelTransition] = useState<LevelTransition | null>(null);
+  const [levelTransitionFocused, setLevelTransitionFocused] = useState(false);
+  const [compactHelpOpen, setCompactHelpOpen] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>({
     kind: "neutral",
     text: "Guests are arriving. Tap a seated guest to hear an order.",
@@ -1697,6 +1761,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
     setServed(0);
     setCombo(0);
     setServedEcho(null);
+    setLevelTransition(null);
+    setLevelTransitionFocused(false);
+    setCompactHelpOpen(false);
     setMissedRecap(null);
     consumedDishIdsRef.current.clear();
     practiceQueueRef.current = [];
@@ -1879,8 +1946,16 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
 
       if (completedGuest) {
         const nextServed = served + 1;
+        const nextLevel = levelForServed(nextServed);
         const happyLine = HAPPY_GUEST_LINES[(completedGuest.orderNumber + nextServed) % HAPPY_GUEST_LINES.length];
         setServed(nextServed);
+        if (nextLevel > difficulty.level) {
+          setLevelTransitionFocused(false);
+          setLevelTransition({
+            level: nextLevel,
+            message: getLevelTransitionMessage(difficulty.level, nextLevel),
+          });
+        }
         setScheduledFoods((currentFoods) =>
           currentFoods.filter((scheduledFood) => scheduledFood.targetGuestId !== completedGuest?.instanceId),
         );
@@ -1943,6 +2018,20 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
 
     return () => window.clearTimeout(timeout);
   }, [servedEcho]);
+
+  useEffect(() => {
+    if (!levelTransition || levelTransitionFocused) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setLevelTransition((currentTransition) =>
+        currentTransition?.level === levelTransition.level ? null : currentTransition,
+      );
+    }, 4_000);
+
+    return () => window.clearTimeout(timeout);
+  }, [levelTransition, levelTransitionFocused]);
 
   useEffect(() => {
     if (gameStatus !== "playing") {
@@ -2406,6 +2495,33 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
               {feedback.text}
             </p>
 
+            {levelTransition ? (
+              <aside
+                className="dishWishLevelUp"
+                aria-label={`Reached level ${levelTransition.level}`}
+                onFocus={() => setLevelTransitionFocused(true)}
+                onBlur={(event) => {
+                  const nextFocus = event.relatedTarget;
+
+                  if (!(nextFocus instanceof Node) || !event.currentTarget.contains(nextFocus)) {
+                    setLevelTransitionFocused(false);
+                  }
+                }}
+              >
+                <p role="status" aria-live="polite">{levelTransition.message}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLevelTransition(null);
+                    setLevelTransitionFocused(false);
+                  }}
+                  aria-label="Dismiss level message"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              </aside>
+            ) : null}
+
             <section className="dishWishCoach" aria-label="Dish Wish learning help">
               {introStep && guidedGuest ? (
                 <article className="dishWishCoach__panel dishWishCoach__panel--guide">
@@ -2453,8 +2569,30 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
                 </article>
               ) : null}
 
-              <article className="dishWishCoach__panel dishWishCoach__panel--order">
-                <div className="dishWishCoach__panelHeader">
+              {introOrderComplete && !orderPanelGuest ? (
+                <details
+                  className="dishWishCoach__panel dishWishCoach__panel--compact"
+                  onToggle={(event) => setCompactHelpOpen(event.currentTarget.open)}
+                >
+                  <summary>
+                    <span>
+                      <BookOpen size={17} aria-hidden="true" />
+                      How to play
+                    </span>
+                    <small>{compactHelpOpen ? "Close help" : "Open help"}</small>
+                  </summary>
+                  <div className="dishWishCoach__compactBody">
+                    <p className="dishWishCoach__hint">
+                      Tap a seated table to hear the order, then serve the matching dish.
+                    </p>
+                    <p className={cx("dishWishCoach__status", `dishWishCoach__status--${feedback.kind}`)}>
+                      {feedback.text}
+                    </p>
+                  </div>
+                </details>
+              ) : (
+                <article className="dishWishCoach__panel dishWishCoach__panel--order">
+                  <div className="dishWishCoach__panelHeader">
                   <div>
                     <p className="dishWishCoach__eyebrow">Order support</p>
                     <h2>{orderPanelGuest ? `Table ${orderPanelGuest.seatIndex + 1}` : "How to play"}</h2>
@@ -2511,8 +2649,9 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
                   </p>
                 )}
 
-                <p className={cx("dishWishCoach__status", `dishWishCoach__status--${feedback.kind}`)}>{feedback.text}</p>
-              </article>
+                  <p className={cx("dishWishCoach__status", `dishWishCoach__status--${feedback.kind}`)}>{feedback.text}</p>
+                </article>
+              )}
 
               {servedEcho ? (
                 <article className="dishWishCoach__panel dishWishCoach__panel--echo">
@@ -2539,7 +2678,12 @@ function RestaurantGame({ onExit }: { onExit: () => void }) {
         )}
 
         {missedRecap ? (
-          <section className="missedRecap" role="status" aria-live="polite" aria-label={`Missed order recap for ${missedRecap.guestName}`}>
+          <section
+            className={cx("missedRecap", levelTransition ? "missedRecap--withLevel" : undefined)}
+            role="status"
+            aria-live="polite"
+            aria-label={`Missed order recap for ${missedRecap.guestName}`}
+          >
             <div className="missedRecap__copy">
               <strong>Missed words</strong>
               <span>

@@ -762,6 +762,11 @@ h2 {
   overflow: auto;
 }
 
+.appShell:not(.appShell--city) .missedRecap--withLevel {
+  top: 164px;
+  max-height: calc(var(--viewport-height) - 188px);
+}
+
 .gameGrid {
   display: grid;
   grid-template-columns: minmax(470px, 0.95fr) minmax(520px, 1.05fr);
@@ -1979,6 +1984,111 @@ h2 {
 .dishWishCoach__panel--guide,
 .dishWishCoach__panel--echo {
   animation: dishWishCoachPop 180ms ease-out;
+}
+
+.dishWishCoach__panel--compact {
+  padding: 0;
+  overflow: hidden;
+}
+
+.dishWishCoach__panel--compact summary {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dishWishCoach__panel--compact summary::-webkit-details-marker {
+  display: none;
+}
+
+.dishWishCoach__panel--compact summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dishWishCoach__panel--compact summary small {
+  color: #35556f;
+  font-size: 0.74rem;
+}
+
+.dishWishCoach__panel--compact[open] summary {
+  border-bottom: 2px solid rgba(23, 49, 45, 0.12);
+}
+
+.dishWishCoach__panel--compact summary:focus-visible {
+  outline: 4px solid #f1b83f;
+  outline-offset: -4px;
+}
+
+.dishWishCoach__compactBody {
+  padding: 0 12px 12px;
+}
+
+@keyframes dishWishLevelUpPop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.appShell:not(.appShell--city) .dishWishLevelUp {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  z-index: 31;
+  display: flex;
+  width: min(420px, calc(100vw - 36px));
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px 9px 14px;
+  color: #17312d;
+  background: #e7f6ed;
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 7px 0 rgba(23, 49, 45, 0.26);
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: dishWishLevelUpPop 180ms ease-out;
+}
+
+.dishWishLevelUp p {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.dishWishLevelUp button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  padding: 0;
+  color: #17312d;
+  background: #fffdf8;
+  border: 2px solid #17312d;
+  border-radius: 7px;
+  pointer-events: auto;
+}
+
+.dishWishLevelUp button:focus-visible {
+  outline: 4px solid #f1b83f;
+  outline-offset: 2px;
 }
 
 .dishWishCoach__panelHeader {
@@ -4479,9 +4589,19 @@ html.gameRouteActive #root {
     left: 12px;
     width: min(330px, calc(100vw - 24px));
   }
+
+  .appShell:not(.appShell--city) .missedRecap--withLevel {
+    top: 164px;
+    max-height: calc(var(--viewport-height) - 188px);
+  }
 }
 
 @media (max-width: 560px), (max-height: 760px) {
+  .appShell:not(.appShell--city) .dishWishLevelUp {
+    top: 70px;
+    width: calc(100vw - 16px);
+  }
+
   .appShell:not(.appShell--city) .dishWishCoach {
     top: auto;
     right: 8px;
@@ -4492,6 +4612,10 @@ html.gameRouteActive #root {
 
   .dishWishCoach__panel {
     padding: 10px;
+  }
+
+  .dishWishCoach__panel--compact {
+    padding: 0;
   }
 
   .dishWishCoach__steps,
@@ -4509,9 +4633,43 @@ html.gameRouteActive #root {
     right: 8px;
     left: 8px;
     width: auto;
-    max-height: min(34vh, 220px);
-    gap: 8px;
-    padding: 10px;
+    max-height: min(22vh, 156px);
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .appShell:not(.appShell--city) .missedRecap--withLevel {
+    top: 166px;
+    max-height: min(18vh, 132px);
+  }
+
+  .missedRecap__copy {
+    gap: 2px;
+  }
+
+  .missedRecap__copy strong {
+    font-size: 0.78rem;
+  }
+
+  .missedRecap__copy span {
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+
+  .missedRecap__foods {
+    gap: 5px;
+  }
+
+  .missedRecap__food {
+    gap: 5px;
+    padding: 3px 7px;
+    font-size: 0.72rem;
+  }
+
+  .missedRecap__food .foodArt {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
   }
 }
 
