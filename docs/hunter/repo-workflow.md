@@ -7,11 +7,13 @@ references: []
 
 ## Stack And Entrypoints
 
-- React 18, patched Vite 6.4.x, and TypeScript.
+- React 18, Phaser 4.2.1 for lazy-loaded 2D playfields, patched Vite 6.4.x, and TypeScript.
 - HTML entry: `index.html`.
 - React mount: `src/main.tsx`.
-- Portal, routing, and both games: `src/App.tsx`.
-- Global styling: `src/styles.css`.
+- Portal, routing, gameplay state/rules, snapshots, and audio: `src/App.tsx`.
+- Shared Phaser host: `src/game-runtime/PhaserGameHost.tsx`.
+- Game renderers: `src/games/dish-wish/` and `src/games/drop-hop/`.
+- Global shell/HUD/canvas styling: `src/styles.css`.
 - Runtime art: `src/assets/`.
 
 ## Commands
@@ -37,8 +39,8 @@ There is no test script.
 
 ## Change Boundaries
 
-- Keep ordinary portal/game changes in `src/App.tsx` and `src/styles.css` unless extraction or build
-  configuration is genuinely needed.
+- Keep gameplay rules/state in `src/App.tsx`, renderer behavior in the owning Phaser scene, and
+  page/canvas layout in `src/styles.css`.
 - Do not edit `dist/`; rebuild it locally.
 - Do not commit `node_modules/`, `dist/`, or `.pi/` runtime state.
 - Avoid unrelated cleanup while repairing gameplay or docs.

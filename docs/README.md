@@ -7,6 +7,7 @@ references:
   - "docs/gameplay.md"
   - "docs/assets.md"
   - "docs/audio-ui-styling.md"
+  - "docs/rendering-engine.md"
   - "docs/maintenance-testing-deployment.md"
   - "docs/hunter/hunter-workflow.md"
   - "docs/hunter/repo-workflow.md"
@@ -32,6 +33,7 @@ and repository workflow.
 | [Gameplay Guide](./gameplay.md) | You need player-facing controls and rules for the portal or either game. |
 | [Assets Guide](./assets.md) | You need to add, replace, or inspect art. |
 | [Audio, UI, and Styling](./audio-ui-styling.md) | You need speech, tones, layout, selector scope, animation, or responsive guidance. |
+| [Phaser Rendering Engine](./rendering-engine.md) | You need the React/Phaser boundary, scene lifecycle, canvas input, or renderer performance guidance. |
 | [Maintenance, Testing, and Deployment](./maintenance-testing-deployment.md) | You need change recipes, browser smoke tests, build checks, or static hosting notes. |
 | [Hunter Workflow](./hunter/hunter-workflow.md) | You need Hunter skill, process, todo, or validation workflow. |
 | [Repo Workflow](./hunter/repo-workflow.md) | You need checkout, command, or change-boundary guidance. |
@@ -45,8 +47,10 @@ and repository workflow.
 | --- | --- |
 | `index.html` | Document metadata, root node, and Vite entry. |
 | `src/main.tsx` | React `StrictMode` mount and CSS import. |
-| `src/App.tsx` | Portal, History API paths, both games, state, effects, scoring, speech, and tones. |
-| `src/styles.css` | Portal, diner, city, assets, animation, and breakpoints. |
+| `src/App.tsx` | Portal, History API paths, gameplay state, effects, scoring, speech, tones, and renderer snapshots. |
+| `src/game-runtime/PhaserGameHost.tsx` | Shared Phaser creation/destruction and responsive canvas host. |
+| `src/games/` | Dish Wish and Drop Hop React adapters plus Phaser scenes. |
+| `src/styles.css` | Portal/HUD/page layout, canvas hosts, focus controls, and breakpoints. |
 | `src/assets/` | Runtime PNG and SVG assets. |
 | `package.json` | npm scripts and dependency ranges. |
 | `AGENTS.md` | Project-wide coding-session instructions. |
@@ -59,6 +63,7 @@ The docs cover:
 - direct-link/static-host fallback requirements;
 - both gameplay models and completion conditions;
 - React state, effects, timers, generation, scoring, and audio;
+- Phaser 2D scenes, snapshot/event bridges, lifecycle, and accessible fallback controls;
 - asset inventories and replacement recipes;
 - shared CSS risks and diner-only selector scoping;
 - desktop/mobile smoke tests and command verification;

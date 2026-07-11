@@ -11,8 +11,13 @@ references: []
 
 | File | Responsibility |
 | --- | --- |
-| `src/App.tsx` | Portal, History API routing, game data, components, state, timers, scoring, speech, and tones. |
-| `src/styles.css` | Portal, game layouts, scene layers, sprites, animation, and responsive behavior. |
+| `src/App.tsx` | Portal, History API routing, game data/state, timers, scoring, speech, tones, and scene snapshots. |
+| `src/game-runtime/PhaserGameHost.tsx` | Creates, resizes, and destroys the shared Phaser runtime boundary. |
+| `src/games/dish-wish/DishWishStage.tsx` | React-to-Phaser Dish Wish adapter and keyboard controls. |
+| `src/games/dish-wish/DishWishScene.ts` | Dish Wish grid, sprite, timer, hit-test, and drag rendering. |
+| `src/games/drop-hop/DropHopMap.tsx` | React-to-Phaser Drop Hop adapter and keyboard controls. |
+| `src/games/drop-hop/DropHopScene.ts` | Drop Hop map, road, stop, courier, and tween rendering. |
+| `src/styles.css` | Portal/HUD/page layout, canvas sizing, accessible controls, and responsive behavior. |
 | `src/main.tsx` | React mount and global CSS import. |
 | `index.html` | Document metadata and Vite entry. |
 
@@ -65,18 +70,16 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `ActiveGuest` | Guest order, service, timing, seat, hearing, and movement state. |
 | `ScheduledFood` | Ordered food waiting for its spawn time. |
 | `BeltFood` | Visible dish, stable pass-slot index, and lifecycle metadata. |
-| `DraggingDish` | Current custom/native drag preview data. |
+| `DishWishSnapshot` | Presentation-only guest, dish, slot, route, patience, selection, and status values sent to Phaser. |
 
 ## Components
 
 | Component | Role |
 | --- | --- |
-| `RestaurantGame` | Diner state and effects owner. |
-| `RestaurantStage` | Full-viewport kitchen and responsive dining floor, persistent tables, actors, and drag preview. |
-| `GuestTable` | Persistent table renderer with optional guest interaction, speech bubble, food checklist, and patience progressbar. |
-| `CharacterActor` | Tile-positioned directional sprite renderer for guests. |
-| `CustomerActor` | Guest wrapper that derives a visual route state for `CharacterActor`. |
-| `KitchenStation` | Animated dish rail and keyboard/pointer/native-drag controls. |
+| `RestaurantGame` | Authoritative diner state, rule, timing, scoring, speech, and effects owner. |
+| `DishWishStage` | Lazy-loaded React adapter that sends snapshots/callbacks and provides native keyboard controls. |
+| `DishWishScene` | Phaser renderer for kitchen, floor, tables, guests, dishes, timers, drag/drop, and sprite animation. |
+| `PhaserGameHost` | Shared instance lifecycle used by this scene and Drop Hop. |
 
 ## State And Refs
 
@@ -87,8 +90,8 @@ Each game owns its own `AudioContext` ref and `playSound` callback.
 | `selectedGuestId` | Current table used by keyboard service. |
 | `scheduledFoods`, `beltFoods` | Future and visible dishes. |
 | `score`, `served`, `combo` | Progress and scoring. |
-| `draggingDish` / `draggingDishRef` | Rendered drag preview and event-safe current drag. |
 | `feedback` | Visible diner status toast. |
+| `dishWishSnapshot` | Immutable scene view derived from React state on each render sample. |
 | sequence/timer refs | Unique IDs and next guest/decoy times. |
 | `consumedDishIdsRef` | Duplicate-drop protection. |
 | `audioContextRef` | Lazily created diner Web Audio context. |
@@ -150,16 +153,15 @@ orders it is half that time.
   times then start at seating, from 1800ms through `timeToLastDishMs`.
 - `makeDecoyFood` creates untargeted dishes.
 - `chooseSpawnLane` rejects a lane until existing food has passed 24% of its lifetime.
-- The pass exposes six stable dish slots. Removing a dish leaves its slot blank, the other cards keep
+- The pass exposes six stable dish slots. Removing a dish leaves its slot blank, the other dishes keep
   their positions, and the next eligible dish claims the first available blank. Ordered dishes retry
   after `650ms` and decoys wait when all six slots are occupied.
 - `buildTileRoute` uses breadth-first search across the 10 × 5 floor while treating every table tile as
-  blocked. `getRouteVisual` linearly interpolates between each pair of route tiles and derives facing
-  from the current segment; seated guests use the facing direction configured for their table edge.
-- The 100ms clock samples customer route progress, and a matching linear CSS transition bridges
-  samples smoothly. The gait remains active for the final transition sample before the guest becomes
-  interactive. The same clock drives route completion, spawning, dish recycling, expiration, and
-  leaving-guest removal.
+  blocked, so customers take a shortest collision-free path to and from their configured table edge.
+- The 100ms clock samples customer route progress. Persistent Phaser sprites use short linear tweens
+  to bridge those samples smoothly and loop the matching dedicated directional sheet row. The gait
+  remains active for the final route sample before the guest becomes interactive. The same React
+  clock drives route completion, spawning, dish recycling, expiration, and leaving-guest removal.
 - Ordered food recycles if its owning guest still needs it; decoys animate off at the end of the pass.
 - Removed dishes stay in `beltFoods` with `leavingAt` through `DISH_EXIT_MS`, then a timeout removes
   them after the serving-line exit animation.
@@ -199,11 +201,15 @@ state.
 | `DeliveryItem`, `CITY_ITEMS` | Cargo labels, plurals, icons, and optional food art. |
 | `CityMission`, `CITY_MISSIONS` | Ticket phrase, pickup, dropoff, quantity, relation, focus words, reward, and optional required stop. |
 | `getCityRoadKey` | Stable undirected edge key for exact traversed-road highlighting. |
+| `DropHopSnapshot` | Presentation-only map, route, mission marker, cargo, and status values sent to Phaser. |
 
-## State
+## Components And State
 
 `DropHopGame` owns status, mission index, current location, cargo state, full path, score,
 delivery count, streak, mistakes, last-delivered location, feedback, and its audio context.
+`DropHopMap` bridges that state to `DropHopScene` and exposes native keyboard location buttons. The
+scene draws and animates the city but returns only semantic location-selection events; React still
+validates adjacency, pickup, required stops, scoring, and completion.
 
 ## Status Flow
 
@@ -230,7 +236,7 @@ returns status-specific guidance.
   mistake.
 - Delivery completes on the correct dropoff after pickup and after any `requiredStop` appears in the
   path.
-- `CityMap` highlights only road edges that occur consecutively in the actual path.
+- `DropHopScene` highlights only road edge keys produced from consecutive stops in the actual React path.
 
 ## City Scoring
 

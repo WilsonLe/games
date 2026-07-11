@@ -4068,3 +4068,143 @@ html.gameRouteActive #root {
     animation: none;
   }
 }
+
+
+/* Phaser rendering hosts --------------------------------------------------- */
+.restaurantStage--phaser {
+  position: relative;
+  isolation: isolate;
+  background: #cc8f58;
+}
+
+.restaurantStage--phaser::before,
+.restaurantStage--phaser::after {
+  display: none;
+}
+
+.phaserStage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.phaserStage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: 0;
+}
+
+.cityMapPanel--phaser {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  background: #b9dca7;
+}
+
+.phaserStage--dropHop {
+  min-height: 0;
+}
+
+.phaserA11yControls {
+  position: absolute;
+  z-index: 110;
+  top: 82px;
+  left: 20px;
+  width: min(420px, calc(100% - 40px));
+  max-height: calc(100% - 104px);
+  padding: 10px;
+  overflow: auto;
+  color: #17312d;
+  background: #fffdf8;
+  border: 3px solid #17312d;
+  border-radius: 8px;
+  box-shadow: 0 8px 0 rgba(23, 49, 45, 0.26);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.phaserA11yControls:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.phaserA11yControls > p {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.phaserA11yControls [role="group"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.phaserA11yControls [role="group"] + [role="group"] {
+  margin-top: 8px;
+}
+
+.phaserA11yControls button {
+  min-height: 38px;
+  padding: 7px 9px;
+  color: #17312d;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 850;
+  background: #fff7d8;
+  border: 2px solid #17312d;
+  border-radius: 7px;
+}
+
+.phaserA11yControls button:focus-visible,
+.phaserA11yControls button[aria-pressed="true"],
+.phaserA11yControls button[aria-current="location"] {
+  outline: 4px solid #f1b83f;
+  outline-offset: 2px;
+}
+
+.phaserA11yControls--city {
+  top: 12px;
+  left: 12px;
+}
+
+@media (max-width: 560px) {
+  .phaserA11yControls {
+    top: 64px;
+    left: 8px;
+    width: calc(100% - 16px);
+    max-height: calc(100% - 80px);
+  }
+
+  .phaserA11yControls--city {
+    top: 8px;
+  }
+}
+
+.gameRendererFallback {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  place-items: center;
+  color: #17312d;
+  font-weight: 900;
+  background: #b9dca7;
+  border: 3px solid #17312d;
+  border-radius: 8px;
+}
+
+.gameRendererFallback--dish {
+  width: 100vw;
+  min-height: var(--viewport-height);
+  color: #fffdf8;
+  background: #17312d;
+  border: 0;
+  border-radius: 0;
+}

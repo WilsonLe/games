@@ -11,8 +11,9 @@ Lingo Game is a client-only React/Vite mini-game portal with two playable Englis
 - **Drop Hop** — a map-routing game for place words, prepositions, and quantities.
 
 The root URL is the game chooser. Each game has its own client-side path and a control that returns to
-the portal. React state, CSS animation, imported image assets, browser speech synthesis, and Web
-Audio provide the full experience; there is no backend or persistence layer.
+the portal. React owns routing and gameplay state, while lazy-loaded Phaser 4 scenes render both 2D
+playfields and handle canvas interaction. Imported image assets, browser speech synthesis, Web Audio,
+and responsive CSS complete the experience; there is no backend or persistence layer.
 
 ## Quick Start
 
@@ -64,6 +65,7 @@ Start with [docs/README.md](./docs/README.md). The fastest maintainer orientatio
 | [Gameplay Guide](./docs/gameplay.md) | Controls, rules, feedback, scoring, and completion for both games. |
 | [Assets Guide](./docs/assets.md) | Customer, food, background, player, cursor, and naming conventions. |
 | [Audio, UI, and Styling](./docs/audio-ui-styling.md) | TTS, Web Audio tones, scene layers, animations, CSS scope, and responsive layout. |
+| [Phaser Rendering Engine](./docs/rendering-engine.md) | React/Phaser boundary, scene ownership, canvas input, accessibility, and lifecycle. |
 | [Maintenance, Testing, and Deployment](./docs/maintenance-testing-deployment.md) | Change recipes, smoke tests, build checks, and static-host requirements. |
 | [Hunter Workflow](./docs/hunter/hunter-workflow.md) | Future-session skill, process, todo, and validation workflow. |
 
@@ -72,8 +74,10 @@ Start with [docs/README.md](./docs/README.md). The fastest maintainer orientatio
 ```text
 index.html               HTML metadata, root element, and Vite entry
 src/main.tsx             React mount and global CSS import
-src/App.tsx              Portal, path routing, both game engines, audio, and scoring
-src/styles.css           Portal, diner, city, animation, and responsive styles
+src/App.tsx              Portal, path routing, gameplay state, audio, scoring, and scene snapshots
+src/game-runtime/        Shared Phaser lifecycle host
+src/games/               React renderer adapters and Phaser scenes for both games
+src/styles.css           Portal/HUD layout, canvas hosts, accessibility, and responsive styles
 src/assets/              Background, character, food, and cursor assets
 docs/                    Maintainer and Hunter documentation
 dist/                    Ignored production build output
