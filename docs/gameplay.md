@@ -27,8 +27,8 @@ loss condition.
 | --- | --- |
 | HUD | Portal button, score, completed orders, and level. |
 | Status announcements | Screen-reader gameplay feedback with `role="status"`; no narration bubble is displayed over the stage. |
-| Learning help panel | A visible guide/order helper that introduces the first untimed order, shows replay buttons, highlights current instructions, and echoes the latest served word. |
-| Missed words recap | A brief visible recap card with food pictures/labels after an expiration, including which word will return later when queued. |
+| Learning help panel | A visible guide/order helper that introduces the first untimed order, shows active-order replay and word cards, and echoes the latest served word. After onboarding, generic no-order help collapses to a compact `How to play` disclosure. |
+| Missed words recap | A brief visible recap card with food pictures/labels after an expiration, including which word will return later when queued; it uses a denser layout on narrow or short screens. |
 | Restaurant stage | A Phaser-rendered responsive 10 × 5 tiled floor below the kitchen, four persistent tables, a door, animated customer sprites, and restrained intro highlights on the first table/pass flow. |
 | Kitchen pass | Six Phaser-rendered dish slots available for drag service, each with a lifetime indicator. |
 | Result banner | Completion message and `New Shift` button after 24 orders. |
@@ -53,7 +53,7 @@ Once seated:
 
 1. Select anywhere in the customer's table area.
 2. The written order and a `○`/`✓` dish-progress line appear immediately, and speech synthesis attempts the order phrase. The bubble shows neither a customer name nor reference dish images, so the player must read the dish name and choose the matching kitchen-pass dish. When relevant, the bubble also shows `Practice again` for a repeated missed word and `Coming next`/`On the pass` for the next needed dish.
-3. The helper panel also shows the current phrase with highlighted food words, picture + lowercase word cards, and replay buttons for the full order and target food words.
+3. The helper panel also shows the current phrase with highlighted food words, picture + lowercase word cards, and replay buttons for the full order and target food words. When no heard order needs support after onboarding, it becomes a compact, expandable `How to play` control.
 4. Selecting another seated customer immediately cancels unfinished speech, switches the visual
    selection, and speaks that customer's order even when the previous order is incomplete.
 5. Previously revealed orders remain visible and serviceable; selection does not lock service to one
@@ -100,15 +100,18 @@ table may receive it.
 - Missed ordered dishes animate off and recycle while the owning guest still needs them.
 - Decoys animate off when their pass lifetime ends.
 - Each of the six levels now lasts 4 completed orders, preserving the 24-order shift while spacing
-  new challenge more deliberately.
+  new challenge more deliberately. On each transition, a brief dismissible status message announces
+  the new level and explains the next changed challenge from the current level profiles; it dismisses
+  automatically and does not pause or change gameplay.
 - Level 1 serves one guest at a time with one-item orders, keeps the stable `I'd like …, please.` frame,
   and opens with one untimed guided order. Level 2 stays at one guest with one-item orders while broader
   phrase variety returns and decoys start gently. Level 3 introduces two-item memory without concurrency.
   Levels 4 and 5 use two guests with two-item orders, first steady and then faster. Level 6 finishes
   with three-item orders, three guests, and the fastest pressure.
-- When a guest expires, the recap names and shows the missed food word(s). One missed item is queued
-  for later deliberate repetition, bounded to avoid infinite retries or overly repetitive shifts. If
-  several guests expire in the same clock sample, all eligible missed words can enter the bounded
+- When a guest expires, the 5.5-second recap names and shows the missed food word(s). On narrow or short
+  screens its spacing, type, and food chips compact without changing retry behavior. One missed item is
+  queued for later deliberate repetition, bounded to avoid infinite retries or overly repetitive shifts.
+  If several guests expire in the same clock sample, all eligible missed words can enter the bounded
   practice queue, while the visible recap stays focused on the first expired guest.
 - A replacement guest does not begin entering while that missed-word recap is visible. After the
   recap clears, at most one overdue replacement enters and receives the normal full service window
